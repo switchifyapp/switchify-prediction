@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 
 from aac_experiment import sha, write_json
+from dependency_notices import generate
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,6 +29,9 @@ def main():
         for path in ['LICENSE', 'Cargo.lock']:
             shutil.copyfile(ROOT / path, stage / path)
         shutil.copyfile(ROOT / 'scripts/verify_bundle.py', stage / 'verify_bundle.py')
+        (stage / 'THIRD_PARTY_NOTICES.md').write_text(generate(ROOT, host), encoding='utf-8')
+        sysroot = Path(subprocess.check_output(['rustc', '--print', 'sysroot'], text=True).strip())
+        shutil.copyfile(sysroot / 'share/doc/rust/COPYRIGHT-library.html', stage / 'RUST_LIBRARY_COPYRIGHT.html')
         write_json(stage / 'BUILD.json', {'version': version, 'target': host, 'rustc': compiler,
                                          'platform': platform.platform(), 'libc': platform.libc_ver(),
                                          'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
@@ -38,6 +42,7 @@ def main():
             'Download and extract the separate English model into another directory.\n'
             'Run switchify-prediction validate --database /path/to/english.sqlite --production\n'
             'Run switchify-prediction predict --baseline /path/to/english.sqlite --before "I need" --prefix he\n'
+            'Retain LICENSE, THIRD_PARTY_NOTICES.md and RUST_LIBRARY_COPYRIGHT.html when redistributing.\n'
             'These standalone CLI binaries are unsigned; they are not signed/notarized app installers.\n'
             'Personal databases are local and unencrypted. Do not put them in a distributed bundle.\n', encoding='utf-8')
         files = sorted(stage.iterdir())

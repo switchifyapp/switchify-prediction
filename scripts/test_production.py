@@ -69,6 +69,21 @@ class ProductionGates(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     verify(root)
 
+class DependencyNotices(unittest.TestCase):
+    def test_licences_are_preserved_and_missing_or_unreviewed_licences_stop_packaging(self):
+        from dependency_notices import crate_notices
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            package = {'name': 'fixture', 'version': '1.0.0', 'license': 'MIT',
+                       'manifest_path': str(root / 'Cargo.toml'), 'license_file': None}
+            with self.assertRaises(ValueError):
+                crate_notices(package)
+            (root / 'LICENSE').write_text('Copyright fixture author\nPermission notice', encoding='utf-8')
+            self.assertIn('Copyright fixture author\nPermission notice', crate_notices(package))
+            package['license'] = 'Unreviewed-License'
+            with self.assertRaises(ValueError):
+                crate_notices(package)
+
 
 if __name__ == '__main__':
     unittest.main()

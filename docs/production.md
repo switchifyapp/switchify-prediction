@@ -20,6 +20,9 @@ library/data through their own signed application release process.
 
 Verify the archive SHA-256 against its `.sha256` file, then run the included
 `python verify_bundle.py` in each unpacked bundle. This checks every listed file.
+CLI bundles include target-specific third-party crate notices, bundled SQLite
+notices and Rust library copyright/licence notices; retain these when redistributing.
+New dependency licence expressions stop packaging until reviewed.
 Checksums detect corruption, not an untrusted distributor: obtain packages from
 the project's GitHub Actions or Releases. Then run:
 

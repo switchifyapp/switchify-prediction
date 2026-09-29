@@ -25,6 +25,12 @@ def main():
             archive.extractall(root / 'model')
         cli = next(p for p in root.iterdir() if p.name.startswith('switchify-prediction-'))
         verify(cli)
+        for name in ['THIRD_PARTY_NOTICES.md', 'RUST_LIBRARY_COPYRIGHT.html']:
+            if not (cli / name).is_file() or (cli / name).stat().st_size == 0:
+                raise ValueError('Packaged dependency licence notices are missing')
+        notices = (cli / 'THIRD_PARTY_NOTICES.md').read_text(encoding='utf-8')
+        if 'rusqlite' not in notices or 'Bundled SQLite public-domain notice' not in notices:
+            raise ValueError('Packaged SQLite notices are missing')
         verify(root / 'model')
         exe = cli / ('switchify-prediction.exe' if os.name == 'nt' else 'switchify-prediction')
         if os.name != 'nt':
