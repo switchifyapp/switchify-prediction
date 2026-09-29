@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "retrieved": "2026-09-29",
+  "files": {
+    "aac-train.txt": {
+      "url": "https://aactext.org/imagine/aac_comm/sent_train_aac.txt",
+      "sha256": "ddc0ad61652cec5f4a8b76f1dd63f92fa9d5c1197e0a65f7a13d71873aed91bd"
+    },
+    "aac-dev.txt": {
+      "url": "https://aactext.org/imagine/aac_comm/sent_dev_aac.txt",
+      "sha256": "ea15844416675800787f13767b3ab94d982a656094ee1865692af7947e8ad524"
+    },
+    "aac-test.txt": {
+      "url": "https://aactext.org/imagine/aac_comm/sent_test_aac.txt",
+      "sha256": "e42988d0a8345bc05499ea49cd79a0bb2518f9670cf6431e51ad58e08114091b"
+    },
+    "aac-notice.html": {
+      "url": "https://aactext.org/imagine/",
+      "sha256": "d803db680180170cbdb8f6dafd8202ba29198ce9399f7f16b9ae802406e958d0"
+    },
+    "aac-readme.txt": {
+      "url": "https://aactext.org/imagine/aac_comm/readme.txt",
+      "sha256": "556d1e4e136cf2f6b16296880df86301c260b669ea2eb4566ca164cdadc0f850"
+    },
+    "oanc-notice.html": {
+      "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/data/oanc/index.html",
+      "sha256": "d8d0e58baa168e99451586e4de0c211f801cb0a43238593a51426d98d9dea605"
+    },
+    "oanc-download.html": {
+      "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/data/oanc/download/index.html",
+      "sha256": "1a0e43a2434517dc58d8806b955b72ba3838ea47a70a77e7c767bdb38d185847"
+    },
+    "oanc-legacy-license.txt": {
+      "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/OANC/license.txt",
+      "sha256": "b0dcd84d8980a7bbe5a9d82786b95376ef1c91bbd89c34969e34ef81cdc440a6"
+    },
+    "OANC_GrAF.zip": {
+      "url": "https://github.com/nancyide/anc-website/releases/download/datasets-2026-09-25/OANC_GrAF.zip",
+      "sha256": "5a26559a1becba41a527cb674fff4fb9c4fb70b276f60422c4f07a0ef23fd867"
+    }
+  },
+  "aac": {
+    "title": "The Imagination of Crowds: Conversational AAC Language Modeling using Crowdsourcing and Large Data Sources",
+    "authors": [
+      "Keith Vertanen",
+      "Per Ola Kristensson"
+    ],
+    "year": 2011,
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "partitions": "Official train/dev/test split by workers. Only sent_*_aac.txt used. Legacy test files and pretrained models excluded."
+  },
+  "oanc": {
+    "title": "The Open American National Corpus (OANC)",
+    "authors": [
+      "Nancy Ide",
+      "Keith Suderman"
+    ],
+    "year": 2007,
+    "website_commit": "04d19109d37cce6db692452c6905c7c19c482163",
+    "terms": "Publisher states unrestricted usage and redistribution including commercial use. The current GrAF archive has no licence file; preserve both current publisher grant and historical OANC licence, including attribution and modification notices.",
+    "subset": "Only OANC-GrAF/data/spoken/**/*.txt with accompanying sentence/utterance boundaries. No written text."
+  }
+}

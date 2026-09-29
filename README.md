@@ -178,3 +178,11 @@ New software is MIT licensed. The database includes CC BY 4.0-derived Taskmaster
 and [source-manifest.json](source-manifest.json). The upstream English manifest
 identifies a Tatoeba CC0 subset but marks it `verify: false`; its attribution and
 license note are preserved rather than treating the corpus as independently audited.
+
+## AAC and spoken-English experiment
+
+An additional, separately published experiment compares the existing baseline
+with AAC-focused training messages and a controlled OANC spoken sample. It does
+not change the default database or prediction algorithm. See the
+[protocol and source terms](docs/aac-experiment.md) for the frozen mixture,
+acceptance criteria, reproducible commands and artifact download instructions.

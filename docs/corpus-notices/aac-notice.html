@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>A Crowdsourced Corpus of AAC-like Communications</title>
+<link rel="stylesheet" type="text/css" href="../style.css" />
+
+</head>
+
+<body>
+
+<hr/><a class="breadcrumb" href="../">Home</a> &gt; <span class="breadcrumb">A Crowdsourced Corpus of AAC-like Communications</span><hr/>  
+<p>
+We used Amazon Mechanical Turk to create a large set of fictional AAC-like communications.
+Workers were asked to invent communications as if they were using a scanning-style AAC interface for communication.  
+Our AAC corpus contains approximately six thousand communications.  
+We found our crowdsourced collection modeled conversational AAC better than datasets based on telephone conversations or newswire text.  
+We leveraged our crowdsourced messages to intelligently select sentences from much larger sets of Twitter, blog and Usenet data.
+For details, see our <a href="http://www.keithv.com/pub/imagine">paper</a>.
+</p>
+<p>
+Below you can download our corpus of communications, some of the test sets we used, and some of our trained language models.
+Language models are in ARPA text format.
+If you use this resource in your research, please reference:
+</p>
+
+<ul>
+<li>
+Keith Vertanen and Per Ola Kristensson. 
+The Imagination of Crowds: Conversational AAC Language Modeling using Crowdsourcing and Large Data Sources.
+In <i>Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP)</i>.
+ACL: 700-711, 2011.
+<a href="http://www.keithv.com/pub/imagine">PDF</a>&nbsp;
+<a href="imagine_aac_lm.txt">BibTeX</a>
+</li>
+</ul>
+
+<p>
+We thank Keith Trnka for allowing us to provide the <a href="aac_comm/lm_test_switch.txt">Switchboard</a> test set. 
+We thank Horabail Venkatagiri for allowing us to provide the <a href="aac_comm/lm_test_comm.txt">communication</a> test set. 
+Our specialists test set was created from the phrases suggested by AAC professionals on these pages at the University of Nebraska-Lincoln. The original pages are no longer available.
+</p>
+
+<p>
+With the exception of <a href="aac_comm/lm_test_switch.txt">lm_test_switch.txt</a> and <a href="aac_comm/lm_test_comm.txt">lm_test_comm.txt</a>, the resources listed below are licensed under a <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">Creative Commons CC BY 4.0 license</a>.</p>
+
+<table class="heading"><tr><td>Corpus:</td></tr></table>
+<table>
+<tr>
+<td width="250"><p class="link"><a href="aac_comm.zip">Communication corpus</a></p></td>
+<td><p class="link">2MB</p></td>
+<td><p class="link">The training, development and test sets of the communication corpus.  Contains the word lists we used to build our models.  It also contains several of the test sets we used for evaluation.</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/readme.txt">readme.txt</a></p></td>
+<td><p class="link">2K</p></td>
+<td><p class="link">Description of the files in the corpus (contained in the first file).</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/sent_train_aac.txt">sent_train_aac.txt</a></p></td>
+<td><p class="link">125K</p></td>
+<td><p class="link">Training set of 5K communications from 80% of the workers (contained in the first file).</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/sent_dev_aac.txt">sent_dev_aac.txt</a></p></td>
+<td><p class="link">15K</p></td>
+<td><p class="link">Development set of 551 communications from 10% of the workers (contained in the first file).</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/sent_test_aac.txt">sent_test_aac.txt</a></p></td>
+<td><p class="link">14K</p></td>
+<td><p class="link">Test set of 563 communications from 10% of the workers (contained in the first file).</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/lm_test_switch.txt">lm_test_switch.txt</a></p></td>
+<td><p class="link">3K</p></td>
+<td><p class="link">Test set of 59 sentences from the Switchboard corpus (contained in the first file).</p></td>
+</tr>
+
+<tr>
+<td><p class="link"><a href="aac_comm/lm_test_comm.txt">lm_test_comm.txt</a></p></td>
+<td><p class="link">12K</p></td>
+<td><p class="link">Test set of 251 sentences written in response to hypothetical communication situations (contained in the first file).</p></td>
+</tr>
+
+</table>
+<br />
+<table class="heading"><tr><td>Language models:</td></tr></table>
+<table>
+
+<tr>
+<td width="250"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_2gram_abs0.0.arpa.gz">2-gram mixture</a></p></td>
+<td><p class="link">24MB</p></td>
+<td><p class="link">2-gram LM, cross-entropy difference selection using TurkDev optimal thresholds.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_3gram_abs0.0.arpa.gz">3-gram mixture</a></p></td>
+<td><p class="link">122MB</p></td>
+<td><p class="link">3-gram LM, cross-entropy difference selection using TurkDev optimal thresholds.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_4gram_abs0.0.arpa.gz">4-gram mixture</a></p></td>
+<td><p class="link">316MB</p></td>
+<td><p class="link">4-gram LM, cross-entropy difference selection using TurkDev optimal thresholds.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_2gram_abs-0.3.arpa.gz">2-gram mixture, small</a></p></td>
+<td><p class="link">14MB</p></td>
+<td><p class="link">Small 2-gram LM, cross-entropy difference selection but throwing away more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_3gram_abs-0.3.arpa.gz">3-gram mixture, small</a></p></td>
+<td><p class="link">63MB</p></td>
+<td><p class="link">Small 3-gram LM, cross-entropy difference selection but throwing away more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_4gram_abs-0.3.arpa.gz">4-gram mixture, small</a></p></td>
+<td><p class="link">156MB</p></td>
+<td><p class="link">Small 4-gram LM, cross-entropy difference selection but throwing away more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_2gram_abs0.3.arpa.gz">2-gram mixture, large</a></p></td>
+<td><p class="link">42MB</p></td>
+<td><p class="link">Large 2-gram LM, cross-entropy difference selection but keeping more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_3gram_abs0.3.arpa.gz">3-gram mixture, large</a></p></td>
+<td><p class="link">232MB</p></td>
+<td><p class="link">Large 3-gram LM, cross-entropy difference selection but keeping more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_4gram_abs0.3.arpa.gz">4-gram mixture, large</a></p></td>
+<td><p class="link">635MB</p></td>
+<td><p class="link">Large 4-gram LM, cross-entropy difference selection but keeping more data.</p></td>
+</tr>
+
+<tr>
+<td width="170"><p class="link"><a href="https://data.imagineville.org/imagine/lm_mix_top3_4gram_abs-0.5.arpa.gz">4-gram mixture, tiny</a></p></td>
+<td><p class="link">98MB</p></td>
+<td><p class="link">Tiny 4-gram LM, cross-entropy difference selection but throwing away even more data.</p></td>
+</tr>
+
+</table>
+
+
+</body>
+</html>

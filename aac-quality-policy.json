@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "selection": "One mixture fixed before any AAC scoring; no tuning from development or test results. Compare with quality-v1 conversational candidate. Report both partitions even on rejection; require both to pass before recommending promotion.",
+  "weights": {"current": 1, "aac": 10, "oanc": 1},
+  "oanc_max_sentences": 20000,
+  "oanc_min_words": 2,
+  "oanc_max_words": 30,
+  "acceptance": {
+    "aac_top5_prefix2_gain_min": 0.05,
+    "general_top5_prefix2_loss_max": 0.01,
+    "conversation_top5_prefix2_loss_max": 0.02,
+    "aac_selection_savings_gain_min": 0.0,
+    "warm_p95_target_ms": 20.0
+  }
+}
