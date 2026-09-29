@@ -7,7 +7,7 @@ license = "MIT"
 description = "Offline SQLite-backed English word prediction"
 repository = "https://github.com/switchifyapp/switchify-prediction"
 readme = "README.md"
-include = ["src/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "source-manifest.json", "quality-policy.json", "production-model.json"]
+include = ["/src/**", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE", "/source-manifest.json", "/quality-policy.json", "/production-model.json"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

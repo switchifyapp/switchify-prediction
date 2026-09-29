@@ -85,5 +85,22 @@ class DependencyNotices(unittest.TestCase):
                 crate_notices(package)
 
 
+class CratePackagePrivacy(unittest.TestCase):
+    def test_generated_or_private_support_files_are_not_packaged(self):
+        import subprocess
+        generated = ROOT / 'artifacts'
+        generated.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='synthetic-package-test-', dir=generated) as temp:
+            for name in ['README.md', 'LICENSE', 'source-manifest.json']:
+                (Path(temp) / name).write_text('synthetic private fixture', encoding='utf-8')
+            listed = subprocess.check_output(
+                ['cargo', 'package', '--list', '--locked', '--allow-dirty'], cwd=ROOT, text=True).splitlines()
+            allowed = {'.cargo_vcs_info.json', 'Cargo.lock', 'Cargo.toml', 'Cargo.toml.orig',
+                       'LICENSE', 'README.md', 'production-model.json', 'quality-policy.json',
+                       'source-manifest.json', 'src/corpus.rs', 'src/evaluation.rs', 'src/lib.rs',
+                       'src/main.rs', 'src/production.rs'}
+            self.assertEqual(set(listed), allowed)
+
+
 if __name__ == '__main__':
     unittest.main()
