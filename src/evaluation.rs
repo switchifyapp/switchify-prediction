@@ -139,3 +139,108 @@ pub fn evaluate(text: &str, hardware: String) -> Result<Report> {
         warm_p95_target_ms: 20.0, warm_p95_target_met: p95 < 20.0,
     })
 }
+
+#[derive(Serialize)]
+pub struct PrefixAccuracy {
+    pub prefix_chars: usize,
+    pub queries: usize,
+    pub top1: f64,
+    pub top5: f64,
+    pub vocabulary_coverage: f64,
+}
+#[derive(Serialize)]
+pub struct ScoreReport {
+    pub evaluation_sha256: String,
+    pub database_sha256: String,
+    pub evaluated_sentences: usize,
+    pub accuracy: Vec<PrefixAccuracy>,
+    pub selection_proxy: SelectionProxy,
+    pub warm_p50_ms: f64,
+    pub warm_p95_ms: f64,
+    pub cold_load_ms: f64,
+    pub model_payload_bytes: usize,
+    pub database_bytes: u64,
+    pub hardware: String,
+}
+#[derive(Serialize)]
+pub struct SelectionProxy {
+    pub definition: String,
+    pub characters_without_prediction: usize,
+    pub simulated_selections_with_prediction: usize,
+    pub savings_fraction: f64,
+}
+/// Score a fixed database on external sentences. The quality pipeline checks partition separation.
+pub fn score_database(path: &Path, text: &str, hardware: String) -> Result<ScoreReport> {
+    let test: BTreeSet<_> = sentences(text).into_iter().map(|s| s.join(" ")).collect();
+    if test.is_empty() {
+        return Err(crate::Error::Invalid("evaluation set is empty".into()));
+    }
+    let start = Instant::now();
+    let predictor = Predictor::open(path, None)?;
+    let cold_load_ms = start.elapsed().as_secs_f64() * 1000.0;
+    let vocabulary = predictor
+        .combined
+        .0
+        .get(&Vec::new())
+        .expect("validated baseline has unigrams");
+    let mut counts = [[0usize; 4]; 5]; // queries, top1, top5, in vocabulary
+    let mut timings = Vec::new();
+    let mut chars_total = 0;
+    let mut selection_total = 0;
+    let opts = Options {
+        min_chars: 0,
+        ..Options::default()
+    };
+    predictor.predict("", "", opts);
+    for sentence in &test {
+        let words: Vec<_> = sentence.split_whitespace().collect();
+        for (i, target) in words.iter().enumerate() {
+            let graphemes: Vec<_> = target.graphemes(true).collect();
+            let before = words[i.saturating_sub(2)..i].join(" ");
+            chars_total += graphemes.len();
+            let mut best = graphemes.len();
+            for n in 0..graphemes.len() {
+                if n >= 5 && n + 1 >= best {
+                    break;
+                }
+                let prefix = graphemes[..n].concat();
+                let start = Instant::now();
+                let predictions = predictor.predict(&before, &prefix, opts);
+                let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+                let rank = predictions.iter().position(|s| s.word == *target);
+                if n < 5 {
+                    timings.push(elapsed);
+                    counts[n][0] += 1;
+                    counts[n][1] += usize::from(rank == Some(0));
+                    counts[n][2] += usize::from(rank.is_some());
+                    counts[n][3] += usize::from(vocabulary.contains_key(*target));
+                }
+                if n >= 2
+                    && let Some(rank) = rank
+                {
+                    best = best.min(n + rank + 1);
+                }
+            }
+            selection_total += best;
+        }
+    }
+    timings.sort_by(f64::total_cmp);
+    let percentile = |p: usize| {
+        timings[(timings.len() * p)
+            .div_ceil(100)
+            .saturating_sub(1)
+            .min(timings.len() - 1)]
+    };
+    Ok(ScoreReport {
+        evaluation_sha256:digest(text.as_bytes()), database_sha256:digest(&std::fs::read(path)?),
+        evaluated_sentences:test.len(),
+        accuracy:counts.into_iter().enumerate().map(|(prefix_chars,c)| PrefixAccuracy{prefix_chars,queries:c[0],top1:ratio(c[1],c[0]),top5:ratio(c[2],c[0]),vocabulary_coverage:ratio(c[3],c[0])}).collect(),
+        selection_proxy:SelectionProxy{
+            definition:"Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.".into(),
+            characters_without_prediction:chars_total,simulated_selections_with_prediction:selection_total,
+            savings_fraction:1.0-ratio(selection_total,chars_total),
+        },
+        warm_p50_ms:percentile(50),warm_p95_ms:percentile(95),cold_load_ms,
+        model_payload_bytes:predictor.model_payload_bytes(),database_bytes:std::fs::metadata(path)?.len(),hardware,
+    })
+}

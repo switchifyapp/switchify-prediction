@@ -10,6 +10,7 @@ use std::{
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod corpus;
 pub mod evaluation;
 
 #[derive(Debug, thiserror::Error)]

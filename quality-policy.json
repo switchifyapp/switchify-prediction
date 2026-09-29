@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "candidate_world_weight": 3,
+  "candidate_taskmaster_weight": 1,
+  "taskmaster_speaker": "USER",
+  "max_taskmaster_evaluation_sentences_per_domain": 100,
+  "selection": "one predeclared corpus mixture, unchanged prediction algorithm; evaluate development before test",
+  "acceptance": {
+    "conversation_top5_prefix2_gain_min": 0.05,
+    "general_top5_prefix2_loss_max": 0.02,
+    "conversation_selection_savings_gain_min": 0.0,
+    "warm_p95_target_ms": 20.0
+  }
+}

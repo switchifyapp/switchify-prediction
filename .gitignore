@@ -4,3 +4,5 @@
 *.sqlite*
 training.txt
 /personal/
+
+__pycache__/
