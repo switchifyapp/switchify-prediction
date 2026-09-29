@@ -1,5 +1,5 @@
 //! Offline English word prediction. Learning accepts non-overlapping completed segments.
-use rusqlite::{Connection, OpenFlags, params};
+use rusqlite::{Connection, OpenFlags, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -12,6 +12,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub mod corpus;
 pub mod evaluation;
+pub mod production;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -261,12 +262,16 @@ pub struct Validation {
     pub logical_sha256: String,
 }
 pub fn validate(path: &Path) -> Result<Validation> {
-    let db = readonly(path)?;
-    let kind = check(&db)?;
+    let mut connection = readonly(path)?;
+    let db = connection.transaction()?;
+    validate_connection(&db)
+}
+fn validate_connection(db: &Connection) -> Result<Validation> {
+    let kind = check(db)?;
     if kind != "baseline" && kind != "personal" {
         return Err(Error::Invalid("unknown database kind".into()));
     }
-    let counts = load_checked(&db, &kind)?;
+    let counts = load_checked(db, &kind)?;
     let mut logical = String::new();
     for (context, words) in &counts.0 {
         for (word, count) in words {
@@ -285,6 +290,14 @@ pub fn validate(path: &Path) -> Result<Validation> {
 }
 /// Creates a new baseline without replacing an existing file.
 pub fn build(path: &Path, text: &str, provenance: &str) -> Result<Validation> {
+    build_expected(path, text, provenance, None)
+}
+fn build_expected(
+    path: &Path,
+    text: &str,
+    provenance: &str,
+    expected_logical_sha256: Option<&str>,
+) -> Result<Validation> {
     let mut counts = Counts::default();
     counts.add_text(text);
     if counts.0.is_empty() {
@@ -302,6 +315,11 @@ pub fn build(path: &Path, text: &str, provenance: &str) -> Result<Validation> {
     tx.commit()?;
     db.close().map_err(|(_, e)| Error::Database(e))?;
     let validation = validate(temp.path())?;
+    if expected_logical_sha256.is_some_and(|expected| expected != validation.logical_sha256) {
+        return Err(Error::Invalid(
+            "production model count fingerprint mismatch".into(),
+        ));
+    }
     temp.as_file().sync_all()?;
     temp.persist_noclobber(path)
         .map_err(|e| Error::Io(e.error))?;
@@ -334,7 +352,8 @@ pub struct Predictor {
 }
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
-        let db = readonly(baseline)?;
+        let mut connection = readonly(baseline)?;
+        let db = connection.transaction()?;
         if check(&db)? != "baseline" {
             return Err(Error::Invalid("expected baseline database".into()));
         }
@@ -356,13 +375,15 @@ impl Predictor {
                 initialize(&tx, "personal", "local personal learning")?;
                 tx.commit()?;
                 new.close().map_err(|(_, e)| Error::Database(e))?;
-                temp.persist_noclobber(path)
-                    .map_err(|e| Error::Io(e.error))?;
+                temp.as_file().sync_all()?;
+                if let Err(error) = temp.persist_noclobber(path)
+                    && error.error.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(Error::Io(error.error));
+                }
             }
             let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
-            if check(&conn)? != "personal" {
-                return Err(Error::Invalid("expected personal database".into()));
-            }
+            conn.busy_timeout(std::time::Duration::from_secs(5))?;
             Some(conn)
         } else {
             None
@@ -372,13 +393,20 @@ impl Predictor {
             combined: counts,
             personal,
         };
-        result.reload()?;
+        result.refresh_personal()?;
         Ok(result)
     }
-    fn reload(&mut self) -> Result<()> {
+    /// Refresh the in-memory snapshot after another process changes personal learning.
+    /// On failure the previous prediction snapshot is retained.
+    pub fn refresh_personal(&mut self) -> Result<()> {
         let mut combined = self.baseline.clone();
-        if let Some(db) = &self.personal {
-            combined.merge(&load_checked(db, "personal")?, 5);
+        if let Some(db) = &mut self.personal {
+            let tx = db.transaction()?;
+            if check(&tx)? != "personal" {
+                return Err(Error::Invalid("expected personal database".into()));
+            }
+            combined.merge(&load_checked(&tx, "personal")?, 5);
+            tx.commit()?;
         }
         self.combined = combined;
         Ok(())
@@ -437,16 +465,25 @@ impl Predictor {
             .personal
             .as_mut()
             .ok_or_else(|| Error::Invalid("personal database required".into()))?;
-        let tx = db.transaction()?;
-        if let Some(hash) = hash
-            && tx.execute("INSERT OR IGNORE INTO imports VALUES (?1)", [hash])? == 0
-        {
-            return Ok(false);
+        // Serialize writers before reading shared state; validate and prepare the
+        // new memory snapshot inside the transaction. No fallible work follows commit.
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if check(&tx)? != "personal" {
+            return Err(Error::Invalid("expected personal database".into()));
         }
-        delta.write(&tx)?;
+        let imported = if let Some(hash) = hash {
+            tx.execute("INSERT OR IGNORE INTO imports VALUES (?1)", [hash])? != 0
+        } else {
+            true
+        };
+        if imported {
+            delta.write(&tx)?;
+        }
+        let mut combined = self.baseline.clone();
+        combined.merge(&load_checked(&tx, "personal")?, 5);
         tx.commit()?;
-        self.reload()?;
-        Ok(true)
+        self.combined = combined;
+        Ok(imported)
     }
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
         self.learn_inner(completed_text, None).map(|_| ())
@@ -460,10 +497,25 @@ impl Predictor {
             .personal
             .as_mut()
             .ok_or_else(|| Error::Invalid("personal database required".into()))?;
-        let tx = db.transaction()?;
+        let combined = self.baseline.clone();
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if check(&tx)? != "personal" {
+            return Err(Error::Invalid("expected personal database".into()));
+        }
         tx.execute_batch("DELETE FROM counts; DELETE FROM vocabulary; DELETE FROM imports;")?;
+        // Fail before commit if an incompatible trigger prevents a complete reset.
+        if !load_checked(&tx, "personal")?.0.is_empty() {
+            return Err(Error::Invalid("personal reset did not clear counts".into()));
+        }
+        let imports: i64 = tx.query_row("SELECT count(*) FROM imports", [], |r| r.get(0))?;
+        if imports != 0 {
+            return Err(Error::Invalid(
+                "personal reset did not clear imports".into(),
+            ));
+        }
         tx.commit()?;
-        self.reload()
+        self.combined = combined;
+        Ok(())
     }
     /// Approximate bytes of stored UTF-8 keys and counts, excluding allocator/tree overhead.
     pub fn model_payload_bytes(&self) -> usize {

@@ -1,72 +1,110 @@
 # Switchify Prediction
 
-Offline English word completion using a Rust library and SQLite databases. A
-read-only language baseline and a separate personal database feed an in-memory
-word n-gram predictor. Abbreviations and application integration are out of scope.
+Offline English word completion using a Rust library and bundled SQLite. The
+read-only baseline and a separate personal database feed an in-memory n-gram
+predictor. No keystroke capture, background monitoring, abbreviations or Switchify
+PC integration is included.
 
-## Build and try it
+The default model is **en-aac-oanc-v1**: 21,674 words and 539,151 n-grams. It adds
+AAC-focused communication and a controlled spoken-English sample to the earlier
+WorldAlphabets/Taskmaster model. Its frozen AAC-style test top-five accuracy after
+two characters is **85.17%**, compared with 78.11% for the earlier model. General
+English improves from 65.59% to 66.40%; Taskmaster falls from 86.56% to 86.24%.
+These are offline corpus measurements, not observed AAC-user outcomes.
 
-Requires Rust **1.97.1**, a C compiler for bundled SQLite, and Python 3 for fetching
-the public corpus and producing artifacts. Run commands from this repository.
+## Download and use
+
+Choose a successful run for the desired commit in
+[GitHub Actions](https://github.com/switchifyapp/switchify-prediction/actions).
+Download `english-prediction-database` and the `cli-...` artifact for your OS.
+Each contains a ZIP and archive checksum. The CLI ZIP filename identifies its
+architecture. Extract the CLI and model into **separate directories**, verify
+the checksums, and run each bundle's `python verify_bundle.py`.
 
 ```sh
-python3 scripts/fetch_corpus.py
+/path/to/switchify-prediction validate --database /path/to/model/english.sqlite --production
+/path/to/switchify-prediction predict --baseline /path/to/model/english.sqlite \
+  --before 'I need ' --prefix 'he'
+```
+
+On Windows use `switchify-prediction.exe`. The executable includes SQLite; no
+server or Rust installation is needed. CLI packages are unsigned, not desktop app
+installers. Actions downloads require GitHub login and expire after 90 days.
+Approved version tags run the same validation and prepare a draft release for
+durable distribution; see [release and operation guidance](docs/production.md).
+No network access is needed for prediction or learning.
+
+Prediction returns JSON with `word` and `score`. Defaults are five suggestions
+after two Unicode grapheme clusters. Override with `--limit` and `--min-chars`;
+use `--min-chars 0` for next-word prediction. Pass preceding completed text in
+`--before` and the unfinished current word separately in `--prefix`. Suggestions
+are lowercase; insertion and capitalization are the application's responsibility.
+Scores are interpolated probabilities before prefix filtering, not renormalized
+over the returned suggestions or calibrated confidence estimates.
+
+## Build reproducibly
+
+Requires Rust **1.97.1**, a C compiler for bundled SQLite, Python 3.9+ and curl.
+Run from this checkout:
+
+```sh
 cargo build --release --locked
-target/release/switchify-prediction prepare
+python3 scripts/artifacts.py
+```
+
+This fetches checksum-pinned public data, prepares the frozen partitions, builds
+the comparison models, evaluates development and test, checks the frozen quality
+results, then produces the production bundle in `artifacts/model-bundle` and
+unpacked files in `artifacts/production`. It never reads personal data. The OANC
+download is about 655 MB. Cached verified sources allow offline reruns.
+
+To prepare and build without repeating the quality benchmark:
+
+```sh
+python3 scripts/aac_experiment.py --prepare-only
 mkdir -p artifacts
 target/release/switchify-prediction build --output artifacts/english.sqlite
-target/release/switchify-prediction predict --baseline artifacts/english.sqlite \
-  --before 'I would like ' --prefix 'wa'
-target/release/switchify-prediction validate --database artifacts/english.sqlite
 ```
 
-On Windows use `python` and `target/release/switchify-prediction.exe`; create the
-output directory with PowerShell's `New-Item -ItemType Directory -Force artifacts`.
-After fetching, builds, predictions and learning require no network connection.
-The default build verifies `data/prepared/candidate.txt` against the pinned source
-manifest. `prepare` verifies both public sources and derives the frozen training,
-development, and test partitions using the predictor’s own tokenizer.
-`build --input training.txt --output custom.sqlite` builds from explicitly supplied
-UTF-8 text instead. Existing outputs are never replaced by the `build` command.
+The default `build` requires the exact prepared training text and verifies the
+model fingerprint before publishing. It embeds full source and policy provenance
+in SQLite. `build --input training.txt --output custom.sqlite` instead builds a
+custom model from explicit UTF-8 text. Existing output files are never overwritten.
+Plain `validate` checks any compatible model; `validate --production` additionally
+requires this binary's exact shipped model and provenance. A custom build does
+not inherit the official baseline's evaluation or distribution permissions.
 
-Prediction returns JSON objects with `word` and `score`. Defaults are five results
-after two grapheme clusters; use `--limit 3 --min-chars 1` to change them. Set
-`--min-chars 0` and omit `--prefix` for next-word prediction. Pass **only completed
-preceding text** in `--before`, with the partial current word in `--prefix`.
-Suggestions are normalized lowercase; application-specific capitalization and
-insertion remain the caller's responsibility. Scores are interpolated model
-probabilities before prefix filtering, not probabilities renormalized over results.
-
-## Personal writing and learning
+## Personal learning
 
 ```sh
-target/release/switchify-prediction import --baseline artifacts/english.sqlite \
+switchify-prediction import --baseline english.sqlite \
   --personal personal.sqlite --input training.txt
-printf 'I would like watermelon.' | target/release/switchify-prediction learn \
-  --baseline artifacts/english.sqlite --personal personal.sqlite
-target/release/switchify-prediction predict --baseline artifacts/english.sqlite \
-  --personal personal.sqlite --before 'I would like ' --prefix 'wa'
-target/release/switchify-prediction reset-personal --baseline artifacts/english.sqlite \
-  --personal personal.sqlite
+printf 'I would like watermelon.' | switchify-prediction learn \
+  --baseline english.sqlite --personal personal.sqlite
+switchify-prediction predict --baseline english.sqlite --personal personal.sqlite \
+  --before 'I would like ' --prefix 'wa'
+switchify-prediction reset-personal --baseline english.sqlite --personal personal.sqlite
 ```
 
-Imports are deduplicated by the exact UTF-8 content's SHA-256. Every `learn` call
-adds one independent, completed segment: callers must not submit overlapping text
-or repeatedly submit a growing typing buffer. The library does not capture input.
-Sentence context never crosses calls, newlines, `.`, `!`, or `?`. Apostrophes inside
-words are retained, curly apostrophes normalize to ASCII, and lookup keys use
+Imports deduplicate exact UTF-8 content by SHA-256. Every `learn` call represents
+one completed, non-overlapping segment; never repeatedly submit a growing typing
+buffer. Context does not cross calls, newlines, `.`, `!` or `?`. Internal
+apostrophes are preserved, curly apostrophes normalize to ASCII, and keys use
 Unicode NFC and lowercase. Other punctuation separates words. Numbers are ignored.
 
-A missing personal database is initialized; an existing invalid database is rejected.
-Reset removes learned counts and import markers, permitting later reimport. It is
-not a secure-erasure operation. Personal text is not retained verbatim as documents,
-but learned words and n-grams are sensitive and stored unencrypted. The project
-never searches for personal files, uploads them, or logs learned text. Keep them
-outside Git; generated databases, `data/`, `personal/`, and `training.txt` are ignored.
-Use one long-lived predictor as the learning owner; other open predictors have
-snapshots and must reopen to see its updates.
+Missing personal databases are initialized atomically; invalid existing databases
+are rejected. Writes are transactional, including validation of the new in-memory
+state before commit. Multiple writers serialize through SQLite with a five-second
+busy timeout. Each predictor uses a snapshot; call `refresh_personal()` to see
+another instance's updates. Successful writes and duplicate imports refresh the
+calling instance. Errors preserve its previous snapshot.
 
-## Rust API and storage
+Personal n-grams can reveal sensitive content and are stored unencrypted. Keep
+these files in an access-controlled application data directory, outside source
+control and distribution bundles. Reset removes logical counts and import markers,
+not forensic copies or backups. The library does not upload or log training text.
+
+## Rust API
 
 ```rust,no_run
 use std::path::Path;
@@ -75,114 +113,70 @@ use switchify_prediction::{Options, Predictor, Result};
 fn example() -> Result<()> {
     let mut predictor = Predictor::open(
         Path::new("english.sqlite"), Some(Path::new("personal.sqlite")))?;
-    let results = predictor.predict("I would like ", "wa", Options::default());
+    let suggestions = predictor.predict("I would like ", "wa", Options::default());
     predictor.learn("I would like watermelon.")?;
-    assert!(results.len() <= 5);
+    predictor.refresh_personal()?;
+    assert!(suggestions.len() <= 5);
     Ok(())
 }
 ```
 
-`build`, `validate`, `corpus::prepare`, `evaluation::score_database`, `Predictor::import`, and
-`Predictor::reset_personal` cover the remaining operations. Fallible operations
-return typed `Error` values. Prediction operates on an already loaded model.
-SQLite schema v1 stores metadata, a vocabulary, n-gram counts keyed by JSON context
-and word, and personal import hashes. The database header's `user_version` rejects
-unknown schemas; only language `en` is supported. Initial release has no migrations.
+`build`, `validate`, `production::build_english`, `production::validate_english`,
+`Predictor::import` and `Predictor::reset_personal` cover the other operations.
+Fallible operations return typed `Error` values. Reuse a long-lived predictor;
+keep loading, imports, learning, refresh and resets on a worker thread. Prediction
+uses memory only. The model uses unigram/bigram/trigram weights **0.1/0.3/0.6**,
+renormalized over available contexts, and combines baseline counts with **5×**
+personal counts before probability calculation. Prefix matches rank by score,
+then alphabetically. Schema v1 and existing personal databases remain compatible.
 
-The model uses unigram/bigram/trigram weights **0.1/0.3/0.6**, dropping unavailable
-contexts and renormalizing the weights. Baseline counts and **5× personal counts**
-are combined before computing probabilities. Candidate prefix matches are ranked
-by score, then alphabetically for ties. The baseline is immutable and replaceable
-without overwriting the personal database. Personal writes use transactions; the
-in-memory model reloads after successful writes. Keep disk access off an app's UI
-thread when integrating this library.
-
-## Validation and evaluation
+## Validation and model selection
 
 ```sh
 cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
-cargo build --release --locked
-python3 scripts/artifacts.py
+python3 -m unittest discover -s scripts -p 'test_*.py'
+cargo audit --deny warnings
 ```
 
-CI runs checks on Linux, macOS and Windows. Tests use synthetic text and temporary
-files, never real input adapters. They cover learning persistence and rollback,
-duplicate imports, deterministic builds, normalization, sentence boundaries,
-backoff, thresholds, bad databases, and the CLI.
+Install the CI-pinned auditing tool with
+`cargo install cargo-audit --locked --version 0.22.0`. CI runs these checks and
+packaged CLI/model smoke tests on macOS, Windows and Linux (dependency audit runs
+on Linux). Tests use temporary files and synthetic personal text.
 
-The current baseline combines **3× WorldAlphabets training sentences** with **1×
-unique Taskmaster-1 USER training sentences**. Taskmaster contributes human-written
-requests covering six task domains. Its assistant turns are excluded. The ranking
-algorithm is unchanged; personal learning remains separate and off during evaluation.
+[production-model.json](production-model.json) pins the accepted training and
+logical count hashes, parameters, source records and partition hashes.
+[production-quality.json](production-quality.json) preserves the accepted quality
+measurements. Production artifacts require both AAC development/test gates to
+pass and every frozen accuracy/coverage/selection result to match. Warm latency
+is reported against a 20 ms p95 target, not used as a timing-sensitive CI gate.
+The accepted candidate measured below 6 ms p95 on an Apple M2 Max.
 
-The reproducible quality pipeline is:
+The training mixture is the prior 3× WorldAlphabets / 1× Taskmaster USER model,
+plus 10× each of 4,299 eligible unique AAC training sentences and 1× each of
+20,000 hash-selected short OANC spoken utterances. Held-out text stays excluded.
+Official AAC worker and Taskmaster conversation splits are preserved; exact
+normalized sentence overlap is removed across training and evaluation.
 
-```sh
-python3 scripts/quality.py --development-only
-python3 scripts/artifacts.py
-```
+The model bundle contains `quality-report.json`, validation, source/partition
+records, checksums and attribution. The evaluated candidate's file hash differs
+from the production file because production adds full provenance; their logical
+counts are identical and checked. The selection-saving metric is an optimistic
+rank-sensitive proxy, **not measured switch savings**. AAC is imagined by crowd
+workers, OANC is older American speech and Taskmaster is simulated task dialogue.
+Near-duplicates, domain bias, misspellings and inappropriate suggestions can
+remain. English alone is supported.
 
-`quality-policy.json` freezes the mixture and acceptance criteria. The development
-comparison must gain at least five percentage points of conversational top-five
-accuracy after two characters, lose no more than two points on general English,
-and improve or match the conversation selection-saving proxy. Timing is reported
-against the 20 ms p95 target, not used as a flaky CI gate. Only a passing development
-candidate proceeds to the separate test evaluation and publication.
+The [AAC experiment protocol](docs/aac-experiment.md) and earlier
+[conversational results](docs/quality-results.md) document model-selection history.
+The `prepare` and `evaluate` commands retain the earlier comparison workflows;
+`prepare` alone does not prepare the promoted production corpus. Use the commands
+above for production. A new model-selection exercise needs a new protocol; these
+test sets are now known regression sets.
 
-WorldAlphabets uses normalized sentence deduplication and SHA-256 ordering, with
-80/10/10 training/development/test partitions (rounded held-out sizes). Its test
-partition is the same known regression set used in v1. Taskmaster uses its **official
-conversation-level train/dev/test split**. Exact normalized sentences shared with
-held-out general data are removed from Taskmaster training. Conversational dev/test
-excludes all general data and Taskmaster training matches; test also excludes all
-Taskmaster dev matches. Each conversational evaluation set samples up to 100
-sentences per domain by hash. Source and derived partition checksums are pinned.
-
-Reports compare a WorldAlphabets-only baseline and the candidate on **identical
-queries**, without personal learning. Top-1/top-5 accuracy and vocabulary coverage
-are reported at prefix lengths 0–4; fully typed words are excluded. The selection
-proxy counts each typed grapheme as one selection and accepting a completion as
-its rank (1–5), choosing the cheapest completion after at least two characters.
-It excludes scan navigation, timing, spaces and cognitive effort, and assumes
-perfect choices: **it is not measured AAC switch savings**.
-
-The downloadable database has exactly the candidate’s evaluated counts. Unlike
-v1’s full-corpus artifact, **it excludes held-out development and test sentences**,
-preserving these sets for regression checks. `quality-report.json` contains both
-development and test comparisons; `development.json` records the acceptance
-result. `partitions.json` records sizes, hashes and preparation rules. `score
---baseline PATH --input FILE` evaluates any explicit external set without learning.
-The older `evaluate` command remains available for the original WorldAlphabets
-sentence-split experiment; it is not the conversational quality benchmark.
-
-See [the frozen protocol](docs/quality-protocol.md) and [the measured results](docs/quality-results.md).
-Taskmaster is simulated task dialogue, not a representative AAC corpus. Exact
-sentence overlap is removed, but near-duplicates and shared task templates can
-remain. Domain bias, sparse everyday contexts, spelling errors, numbers, and
-non-English writing remain limitations. No ranking parameters were tuned on the
-conversational test results.
-
-## GitHub downloads
-
-Open [Actions](https://github.com/switchifyapp/switchify-prediction/actions), choose
-a successful **CI** run for the desired commit, and download
-**english-prediction-database** from its artifacts. GitHub login is required for
-artifact downloads. Retention is 90 days; a manual workflow run can rebuild them.
-The archive includes `english.sqlite`, `SHA256SUMS`, validation and quality reports,
-source and partition provenance, corpus attribution and the software license. Verify the files
-with `shasum -a 256 -c SHA256SUMS` (macOS) or `sha256sum -c SHA256SUMS` (Linux).
-
-New software is MIT licensed. The database includes CC BY 4.0-derived Taskmaster counts. Corpus rights are separate: see [ATTRIBUTION.md](ATTRIBUTION.md)
-and [source-manifest.json](source-manifest.json). The upstream English manifest
-identifies a Tatoeba CC0 subset but marks it `verify: false`; its attribution and
-license note are preserved rather than treating the corpus as independently audited.
-
-## AAC and spoken-English experiment
-
-An additional, separately published experiment compares the existing baseline
-with AAC-focused training messages and a controlled OANC spoken sample. It does
-not change the default database or prediction algorithm. See the
-[protocol and source terms](docs/aac-experiment.md) for the frozen mixture,
-acceptance criteria, reproducible commands and artifact download instructions.
+New code is MIT licensed. Corpus licences are separate: retain
+[ATTRIBUTION.md](ATTRIBUTION.md), source manifests and `corpus-notices` with model
+distributions. [Production guidance](docs/production.md) covers the recorded
+licensing evidence, OANC's differing historical/current notices, private-data
+handling, backup, upgrades, rollback and releases.

@@ -1,11 +1,15 @@
 name: CI
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   checks:
     strategy:
@@ -13,77 +17,83 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5 # 1.97.1
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
       - run: python -m unittest discover -s scripts -p "test_*.py"
+      - run: cargo package --locked
+      - run: cargo build --release --locked
+      - run: python scripts/package_cli.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cli-${{ matrix.os }}
+          path: |
+            artifacts/cli/*.zip
+            artifacts/cli/*.sha256
+          if-no-files-found: error
+          retention-days: 90
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - run: cargo install cargo-audit --locked --version 0.22.0
+      - run: cargo audit --deny warnings
   database:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5 # 1.97.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.13'
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       - run: cargo build --release --locked
       - run: python scripts/artifacts.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: english-prediction-database
           path: |
-            artifacts/english.sqlite
-            artifacts/validation.json
-            artifacts/development.json
-            artifacts/quality-report.json
-            artifacts/partitions.json
-            artifacts/source-manifest.json
-            artifacts/quality-policy.json
-            artifacts/ATTRIBUTION.md
-            artifacts/LICENSE
-            artifacts/README.txt
-            artifacts/SHA256SUMS
+            artifacts/model-bundle/*.zip
+            artifacts/model-bundle/*.sha256
           if-no-files-found: error
           retention-days: 90
-  aac-experiment:
-    runs-on: ubuntu-latest
+  packaged-smoke:
+    needs: [checks, database, audit]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.13'
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked
-      - run: python scripts/aac_experiment.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: aac-oanc-experiment
-          path: |
-            artifacts/aac-experiment/baseline.sqlite
-            artifacts/aac-experiment/candidate.sqlite
-            artifacts/aac-experiment/report.json
-            artifacts/aac-experiment/partitions.json
-            artifacts/aac-experiment/aac-source-manifest.json
-            artifacts/aac-experiment/aac-quality-policy.json
-            artifacts/aac-experiment/source-manifest.json
-            artifacts/aac-experiment/ATTRIBUTION.md
-            artifacts/aac-experiment/LICENSE
-            artifacts/aac-experiment/README.txt
-            artifacts/aac-experiment/SHA256SUMS
-            artifacts/aac-experiment/corpus-notices/aac-notice.html
-            artifacts/aac-experiment/corpus-notices/aac-readme.txt
-            artifacts/aac-experiment/corpus-notices/oanc-notice.html
-            artifacts/aac-experiment/corpus-notices/oanc-download.html
-            artifacts/aac-experiment/corpus-notices/oanc-legacy-license.txt
-          if-no-files-found: error
-          retention-days: 90
+          name: cli-${{ matrix.os }}
+          path: downloaded/cli
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: english-prediction-database
+          path: downloaded/model
+      - shell: python
+        run: |
+          from pathlib import Path
+          import subprocess, sys
+          cli = next(Path('downloaded/cli').glob('*.zip'))
+          model = next(Path('downloaded/model').glob('*.zip'))
+          subprocess.run([sys.executable, 'scripts/smoke_package.py', '--cli', str(cli), '--model', str(model)], check=True)

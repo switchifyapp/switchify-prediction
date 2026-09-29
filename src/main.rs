@@ -82,6 +82,9 @@ enum Command {
     Validate {
         #[arg(long)]
         database: PathBuf,
+        /// Require the exact shipped model and its embedded provenance.
+        #[arg(long)]
+        production: bool,
     },
     Evaluate {
         #[arg(long)]
@@ -90,7 +93,7 @@ enum Command {
         hardware: Option<String>,
     },
 }
-fn input(path: Option<PathBuf>, prepared: bool) -> Result<(String, String)> {
+fn input(path: Option<PathBuf>) -> Result<(String, String)> {
     if let Some(path) = path {
         let text = fs::read_to_string(path)?;
         let provenance = serde_json::json!({"source":"user-supplied UTF-8 text", "sha256":digest(text.as_bytes()), "language":"en", "order":3}).to_string();
@@ -98,16 +101,8 @@ fn input(path: Option<PathBuf>, prepared: bool) -> Result<(String, String)> {
     }
     let manifest: serde_json::Value =
         serde_json::from_str(include_str!("../source-manifest.json"))?;
-    let text = fs::read_to_string(if prepared {
-        "data/prepared/candidate.txt"
-    } else {
-        "data/en.txt"
-    })?;
-    let expected = if prepared {
-        &manifest["prepared"]["files"]["candidate.txt"]
-    } else {
-        &manifest["corpus"]
-    };
+    let text = fs::read_to_string("data/en.txt")?;
+    let expected = &manifest["corpus"];
     if Some(digest(text.as_bytes()).as_str()) != expected["sha256"].as_str() {
         return Err(switchify_prediction::Error::Invalid(
             "pinned corpus checksum mismatch; run scripts/fetch_corpus.py and the prepare command"
@@ -152,8 +147,15 @@ fn run() -> Result<()> {
             output,
             input: path,
         } => {
-            let (text, provenance) = input(path, true)?;
-            print(build(&output, &text, &provenance)?)
+            if path.is_none() {
+                let text = fs::read_to_string(switchify_prediction::production::TRAINING_PATH)?;
+                print(switchify_prediction::production::build_english(
+                    &output, &text,
+                )?)
+            } else {
+                let (text, provenance) = input(path)?;
+                print(build(&output, &text, &provenance)?)
+            }
         }
         Command::Predict {
             baseline,
@@ -192,12 +194,23 @@ fn run() -> Result<()> {
             Predictor::open(&baseline, Some(&personal))?.reset_personal()?;
             print(serde_json::json!({"reset":true}))
         }
-        Command::Validate { database } => print(validate(&database)?),
+        Command::Validate {
+            database,
+            production,
+        } => {
+            if production {
+                print(switchify_prediction::production::validate_english(
+                    &database,
+                )?)
+            } else {
+                print(validate(&database)?)
+            }
+        }
         Command::Evaluate {
             input: path,
             hardware,
         } => {
-            let (text, _) = input(path, false)?;
+            let (text, _) = input(path)?;
             print(evaluation::evaluate(
                 &text,
                 hardware.unwrap_or_else(|| {
