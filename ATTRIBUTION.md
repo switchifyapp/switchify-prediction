@@ -18,3 +18,23 @@ each downloadable database.
 
 License references: [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 and [CC-BY 2.0 France](https://creativecommons.org/licenses/by/2.0/fr/).
+
+# Taskmaster-1 conversational source
+
+The improved baseline also derives counts from USER utterances in the
+human-written `TM-1-2019/self-dialogs.json` dataset, by Bill Byrne, Karthik
+Krishnamoorthi, Chinnadhurai Sankar, Arvind Neelakantan, Amit Dubey, Kyu-Young Kim
+and Andy Cedilnik of Google LLC. The dataset's [copyright notice](https://github.com/google-research-datasets/Taskmaster/blob/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/README.md)
+makes it available under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+Citation: Byrne et al. (2019), [Taskmaster-1: Toward a Realistic and Diverse Dialog Dataset](https://aclanthology.org/D19-1459/), EMNLP-IJCNLP.
+
+We modify the source by selecting USER turns, normalizing text, splitting
+sentences, deduplicating, excluding held-out sentences, and extracting n-gram
+counts. The official conversation partitions remain separate; assistant turns
+are not used. The source is human-written task simulation, not real AAC user
+history. We make no claim that it comprehensively represents AAC communication.
+The pinned upstream notice, source hashes and partition hashes are recorded in
+`source-manifest.json`. The resulting database includes material derived from this
+CC BY 4.0 source; retain this attribution when redistributing it. Our MIT license
+covers the code, not a relicensing of the source data.

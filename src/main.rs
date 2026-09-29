@@ -14,6 +14,22 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Prepare checksum-verified training and frozen development/test partitions.
+    Prepare {
+        #[arg(long, default_value = "data")]
+        data: PathBuf,
+        #[arg(long, default_value = "data/prepared")]
+        output: PathBuf,
+    },
+    /// Score a prebuilt database on an explicit held-out UTF-8 text file.
+    Score {
+        #[arg(long)]
+        baseline: PathBuf,
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        hardware: Option<String>,
+    },
     /// Build a new baseline. Defaults to the verified pinned corpus.
     Build {
         #[arg(long)]
@@ -67,7 +83,7 @@ enum Command {
         hardware: Option<String>,
     },
 }
-fn input(path: Option<PathBuf>) -> Result<(String, String)> {
+fn input(path: Option<PathBuf>, prepared: bool) -> Result<(String, String)> {
     if let Some(path) = path {
         let text = fs::read_to_string(path)?;
         let provenance = serde_json::json!({"source":"user-supplied UTF-8 text", "sha256":digest(text.as_bytes()), "language":"en", "order":3}).to_string();
@@ -75,10 +91,20 @@ fn input(path: Option<PathBuf>) -> Result<(String, String)> {
     }
     let manifest: serde_json::Value =
         serde_json::from_str(include_str!("../source-manifest.json"))?;
-    let text = fs::read_to_string("data/en.txt")?;
-    if Some(digest(text.as_bytes()).as_str()) != manifest["corpus"]["sha256"].as_str() {
+    let text = fs::read_to_string(if prepared {
+        "data/prepared/candidate.txt"
+    } else {
+        "data/en.txt"
+    })?;
+    let expected = if prepared {
+        &manifest["prepared"]["files"]["candidate.txt"]
+    } else {
+        &manifest["corpus"]
+    };
+    if Some(digest(text.as_bytes()).as_str()) != expected["sha256"].as_str() {
         return Err(switchify_prediction::Error::Invalid(
-            "pinned corpus checksum mismatch; run scripts/fetch_corpus.py".into(),
+            "pinned corpus checksum mismatch; run scripts/fetch_corpus.py and the prepare command"
+                .into(),
         ));
     }
     Ok((text, manifest.to_string()))
@@ -89,11 +115,27 @@ fn print(value: impl serde::Serialize) -> Result<()> {
 }
 fn run() -> Result<()> {
     match Cli::parse().command {
+        Command::Prepare { data, output } => print(switchify_prediction::corpus::prepare(
+            &data,
+            &output,
+            include_str!("../source-manifest.json"),
+            include_str!("../quality-policy.json"),
+        )?),
+        Command::Score {
+            baseline,
+            input,
+            hardware,
+        } => print(evaluation::score_database(
+            &baseline,
+            &fs::read_to_string(input)?,
+            hardware
+                .unwrap_or_else(|| format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH)),
+        )?),
         Command::Build {
             output,
             input: path,
         } => {
-            let (text, provenance) = input(path)?;
+            let (text, provenance) = input(path, true)?;
             print(build(&output, &text, &provenance)?)
         }
         Command::Predict {
@@ -138,7 +180,7 @@ fn run() -> Result<()> {
             input: path,
             hardware,
         } => {
-            let (text, _) = input(path)?;
+            let (text, _) = input(path, false)?;
             print(evaluation::evaluate(
                 &text,
                 hardware.unwrap_or_else(|| {
