@@ -77,6 +77,11 @@ def main():
         report['test'][suite] = {}
         for model, path in models.items():
             report['test'][suite][model] = json_run(exe, 'score', '--baseline', path, '--input', prepared / f'{suite}-test.txt', '--hardware', hardware)
+    if os.name != 'nt':
+        import resource
+        rss = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+        report['peak_child_process_rss_bytes'] = rss if platform.system() == 'Darwin' else rss * 1024
+        report['memory_measurement'] = 'Maximum child-process RSS across preparation, database builds, and scoring; not predictor-only memory.'
     (out / 'quality-report.json').write_text(json.dumps(report, indent=2) + '\n')
     print('Frozen test evaluation complete; no tuning uses these results.', flush=True)
 

@@ -128,3 +128,43 @@ fn external_scoring_reports_rank_sensitive_savings_and_empty_data_error() {
     assert!((report.selection_proxy.savings_fraction - 0.7).abs() < 1e-10);
     assert!(evaluation::score_database(&db, "123!", "test".into()).is_err());
 }
+
+#[test]
+fn pinned_preparation_and_default_build_reject_changed_inputs() {
+    let dir = tempfile::tempdir().unwrap();
+    let (manifest, policy) = fixture(dir.path());
+    let mut manifest: Value = serde_json::from_str(&manifest).unwrap();
+    manifest["prepared"] = json!({"policy_sha256":"wrong"});
+    assert!(
+        corpus::prepare(
+            dir.path(),
+            &dir.path().join("out"),
+            &manifest.to_string(),
+            &policy
+        )
+        .is_err()
+    );
+    manifest["prepared"] = json!({"policy_sha256":digest(policy.as_bytes()),"files":{}});
+    assert!(
+        corpus::prepare(
+            dir.path(),
+            &dir.path().join("out"),
+            &manifest.to_string(),
+            &policy
+        )
+        .is_err()
+    );
+    fs::create_dir_all(dir.path().join("data/prepared")).unwrap();
+    fs::write(
+        dir.path().join("data/prepared/candidate.txt"),
+        "tampered training input",
+    )
+    .unwrap();
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_switchify-prediction"))
+        .current_dir(dir.path())
+        .args(["build", "--output", "bad.sqlite"])
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(!dir.path().join("bad.sqlite").exists());
+}

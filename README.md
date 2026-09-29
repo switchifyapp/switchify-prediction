@@ -12,6 +12,7 @@ the public corpus and producing artifacts. Run commands from this repository.
 ```sh
 python3 scripts/fetch_corpus.py
 cargo build --release --locked
+target/release/switchify-prediction prepare
 mkdir -p artifacts
 target/release/switchify-prediction build --output artifacts/english.sqlite
 target/release/switchify-prediction predict --baseline artifacts/english.sqlite \
@@ -22,7 +23,9 @@ target/release/switchify-prediction validate --database artifacts/english.sqlite
 On Windows use `python` and `target/release/switchify-prediction.exe`; create the
 output directory with PowerShell's `New-Item -ItemType Directory -Force artifacts`.
 After fetching, builds, predictions and learning require no network connection.
-The default build verifies `data/en.txt` against the pinned source manifest.
+The default build verifies `data/prepared/candidate.txt` against the pinned source
+manifest. `prepare` verifies both public sources and derives the frozen training,
+development, and test partitions using the predictor’s own tokenizer.
 `build --input training.txt --output custom.sqlite` builds from explicitly supplied
 UTF-8 text instead. Existing outputs are never replaced by the `build` command.
 
@@ -79,7 +82,7 @@ fn example() -> Result<()> {
 }
 ```
 
-`build`, `validate`, `evaluation::evaluate`, `Predictor::import`, and
+`build`, `validate`, `corpus::prepare`, `evaluation::score_database`, `Predictor::import`, and
 `Predictor::reset_personal` cover the remaining operations. Fallible operations
 return typed `Error` values. Prediction operates on an already loaded model.
 SQLite schema v1 stores metadata, a vocabulary, n-gram counts keyed by JSON context
@@ -109,24 +112,57 @@ files, never real input adapters. They cover learning persistence and rollback,
 duplicate imports, deterministic builds, normalization, sentence boundaries,
 backoff, thresholds, bad databases, and the CLI.
 
-Evaluation deduplicates normalized sentences, sorts them by SHA-256, and holds out
-the first `ceil(N/10)` sentences. Held-out sentences never enter training. For each
-held-out word and prefix length 0–4, it reports top-1/top-5 accuracy, vocabulary
-coverage, and unigram-only accuracy. Words already fully typed at that prefix
-length are excluded; results therefore have different denominators. It measures
-all warm contextual queries, including next-word queries, and reports p50/p95,
-cold predictor load time, evaluation database size, estimated model payload bytes,
-and hardware. The artifact script also records child-process peak RSS on Unix;
-that includes evaluation and corpus-building overhead, not just model memory.
-The target is warm p95 below **20 ms**, reported rather than enforced in shared CI.
+The current baseline combines **3× WorldAlphabets training sentences** with **1×
+unique Taskmaster-1 USER training sentences**. Taskmaster contributes human-written
+requests covering six task domains. Its assistant turns are excluded. The ranking
+algorithm is unchanged; personal learning remains separate and off during evaluation.
 
-The artifact's `english.sqlite` uses the **full corpus**. Its accompanying
-`evaluation.json` describes a **separate held-out evaluation model**. The artifact
-script regenerates only `artifacts/english.sqlite`; use other paths for custom data.
-The corpus is a small general sentence collection, not a personalized conversation
-model. Accuracy here is not an estimate for every user or evidence of superiority
-over an existing neural predictor. Other languages need explicit tokenization and
-evaluation work before being supported.
+The reproducible quality pipeline is:
+
+```sh
+python3 scripts/quality.py --development-only
+python3 scripts/artifacts.py
+```
+
+`quality-policy.json` freezes the mixture and acceptance criteria. The development
+comparison must gain at least five percentage points of conversational top-five
+accuracy after two characters, lose no more than two points on general English,
+and improve or match the conversation selection-saving proxy. Timing is reported
+against the 20 ms p95 target, not used as a flaky CI gate. Only a passing development
+candidate proceeds to the separate test evaluation and publication.
+
+WorldAlphabets uses normalized sentence deduplication and SHA-256 ordering, with
+80/10/10 training/development/test partitions (rounded held-out sizes). Its test
+partition is the same known regression set used in v1. Taskmaster uses its **official
+conversation-level train/dev/test split**. Exact normalized sentences shared with
+held-out general data are removed from Taskmaster training. Conversational dev/test
+excludes all general data and Taskmaster training matches; test also excludes all
+Taskmaster dev matches. Each conversational evaluation set samples up to 100
+sentences per domain by hash. Source and derived partition checksums are pinned.
+
+Reports compare a WorldAlphabets-only baseline and the candidate on **identical
+queries**, without personal learning. Top-1/top-5 accuracy and vocabulary coverage
+are reported at prefix lengths 0–4; fully typed words are excluded. The selection
+proxy counts each typed grapheme as one selection and accepting a completion as
+its rank (1–5), choosing the cheapest completion after at least two characters.
+It excludes scan navigation, timing, spaces and cognitive effort, and assumes
+perfect choices: **it is not measured AAC switch savings**.
+
+The downloadable database has exactly the candidate’s evaluated counts. Unlike
+v1’s full-corpus artifact, **it excludes held-out development and test sentences**,
+preserving these sets for regression checks. `quality-report.json` contains both
+development and test comparisons; `development.json` records the acceptance
+result. `partitions.json` records sizes, hashes and preparation rules. `score
+--baseline PATH --input FILE` evaluates any explicit external set without learning.
+The older `evaluate` command remains available for the original WorldAlphabets
+sentence-split experiment; it is not the conversational quality benchmark.
+
+See [the frozen protocol](docs/quality-protocol.md) and [the measured results](docs/quality-results.md).
+Taskmaster is simulated task dialogue, not a representative AAC corpus. Exact
+sentence overlap is removed, but near-duplicates and shared task templates can
+remain. Domain bias, sparse everyday contexts, spelling errors, numbers, and
+non-English writing remain limitations. No ranking parameters were tuned on the
+conversational test results.
 
 ## GitHub downloads
 
@@ -134,11 +170,11 @@ Open [Actions](https://github.com/switchifyapp/switchify-prediction/actions), ch
 a successful **CI** run for the desired commit, and download
 **english-prediction-database** from its artifacts. GitHub login is required for
 artifact downloads. Retention is 90 days; a manual workflow run can rebuild them.
-The archive includes `english.sqlite`, `SHA256SUMS`, validation and evaluation JSON,
-source provenance, corpus attribution and the software license. Verify the files
+The archive includes `english.sqlite`, `SHA256SUMS`, validation and quality reports,
+source and partition provenance, corpus attribution and the software license. Verify the files
 with `shasum -a 256 -c SHA256SUMS` (macOS) or `sha256sum -c SHA256SUMS` (Linux).
 
-New software is MIT licensed. Corpus rights are separate: see [ATTRIBUTION.md](ATTRIBUTION.md)
+New software is MIT licensed. The database includes CC BY 4.0-derived Taskmaster counts. Corpus rights are separate: see [ATTRIBUTION.md](ATTRIBUTION.md)
 and [source-manifest.json](source-manifest.json). The upstream English manifest
 identifies a Tatoeba CC0 subset but marks it `verify: false`; its attribution and
 license note are preserved rather than treating the corpus as independently audited.

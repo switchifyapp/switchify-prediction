@@ -234,6 +234,17 @@ pub fn prepare(
             },
         );
     }
+    if let Some(expected_files) = manifest["prepared"]["files"].as_object() {
+        for (name, info) in &files {
+            if expected_files.get(name).and_then(|v| v["sha256"].as_str())
+                != Some(info.sha256.as_str())
+            {
+                return Err(Error::Invalid(
+                    "prepared partition checksum mismatch".into(),
+                ));
+            }
+        }
+    }
     let result=Prepared{
         protocol:"quality-v1: WorldAlphabets hash-ranked 80/10/10 (v1 test retained); Taskmaster official conversation splits, USER only, unique normalized sentences; exclude all general dev/test sentences from task training; conversational dev/test excludes all WorldAlphabets and task training sentences; test also excludes all task dev sentences; sample by hash up to 100 sentences per domain; published candidate excludes held-out partitions".into(),
         policy_sha256:digest(policy_text.as_bytes()),source_manifest_sha256:digest(manifest_text.as_bytes()),taskmaster_dialogues:group_counts,files,
