@@ -286,3 +286,44 @@ fn wrong_personal_kind_and_invalid_utf8_are_rejected_without_changes() {
     assert!(p.import(&input).is_err());
     assert_eq!(checksum, validate(&personal).unwrap().logical_sha256);
 }
+
+#[test]
+fn incomplete_schema_and_inconsistent_models_are_rejected() {
+    let mutations = [
+        "DROP TABLE vocabulary",
+        "DROP TABLE imports",
+        "DELETE FROM metadata WHERE key='provenance'",
+        "DELETE FROM counts WHERE context='[]'",
+        "DELETE FROM counts",
+        "DELETE FROM vocabulary WHERE word='water'",
+        "INSERT INTO vocabulary VALUES ('ghost')",
+        "INSERT INTO counts VALUES ('[\"ghost\"]','water',1)",
+        "UPDATE counts SET count=100 WHERE context='[\"drink\"]' AND word='water'",
+        "UPDATE counts SET context='[ ]' WHERE context='[]'",
+        "INSERT INTO imports VALUES ('not-a-sha256')",
+    ];
+    for mutation in mutations {
+        let (_tmp, path) = fixture();
+        rusqlite::Connection::open(&path)
+            .unwrap()
+            .execute_batch(&format!("PRAGMA foreign_keys=OFF; {mutation}"))
+            .unwrap();
+        assert!(validate(&path).is_err(), "validate accepted {mutation}");
+        assert!(
+            Predictor::open(&path, None).is_err(),
+            "open accepted {mutation}"
+        );
+    }
+}
+
+#[test]
+fn empty_personal_database_is_valid_but_missing_its_schema_is_not() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    drop(Predictor::open(&base, Some(&personal)).unwrap());
+    assert_eq!(validate(&personal).unwrap().vocabulary, 0);
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch("DROP TABLE imports").unwrap();
+    assert!(validate(&personal).is_err());
+    assert!(Predictor::open(&base, Some(&personal)).is_err());
+}

@@ -2,7 +2,11 @@
 use rusqlite::{Connection, OpenFlags, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+};
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -102,8 +106,18 @@ impl Counts {
             ))
         })? {
             let (context, word, count) = row?;
-            let context: Vec<String> = serde_json::from_str(&context)?;
-            if context.len() > 2 || count <= 0 || count > i64::MAX / 10 {
+            let encoded = context;
+            let context: Vec<String> = serde_json::from_str(&encoded)?;
+            let valid_word = |w: &str| {
+                !w.is_empty() && normalize(w) == w && sentences(w) == vec![vec![w.to_string()]]
+            };
+            if context.len() > 2
+                || count <= 0
+                || count > i64::MAX / 10
+                || encoded != serde_json::to_string(&context)?
+                || !valid_word(&word)
+                || context.iter().any(|w| !valid_word(w))
+            {
                 return Err(Error::Invalid("invalid n-gram".into()));
             }
             result.0.entry(context).or_default().insert(word, count);
@@ -156,6 +170,37 @@ fn check(db: &Connection) -> Result<String> {
     if language != "en" {
         return Err(Error::Invalid("unsupported language".into()));
     }
+    for (table, expected) in [
+        ("metadata", vec![("key", "TEXT", 1), ("value", "TEXT", 0)]),
+        ("vocabulary", vec![("word", "TEXT", 1)]),
+        (
+            "counts",
+            vec![
+                ("context", "TEXT", 1),
+                ("word", "TEXT", 2),
+                ("count", "INTEGER", 0),
+            ],
+        ),
+        ("imports", vec![("hash", "TEXT", 1)]),
+    ] {
+        let mut stmt = db.prepare(&format!("PRAGMA table_info({table})"))?;
+        let actual: Vec<(String, String, i32)> = stmt
+            .query_map([], |r| Ok((r.get(1)?, r.get(2)?, r.get(5)?)))?
+            .collect::<std::result::Result<_, _>>()?;
+        if actual
+            .iter()
+            .map(|(name, ty, pk)| (name.as_str(), ty.as_str(), *pk))
+            .collect::<Vec<_>>()
+            != expected
+        {
+            return Err(Error::Invalid("incompatible database tables".into()));
+        }
+    }
+    let _: String = db.query_row(
+        "SELECT value FROM metadata WHERE key='provenance'",
+        [],
+        |r| r.get(0),
+    )?;
     let integrity: String = db.query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
     if integrity != "ok" {
         return Err(Error::Invalid("integrity check failed".into()));
@@ -165,6 +210,45 @@ fn check(db: &Connection) -> Result<String> {
             r.get(0)
         })?,
     )
+}
+/// Validate application relationships in addition to SQLite's physical integrity.
+fn load_checked(db: &Connection, kind: &str) -> Result<Counts> {
+    let counts = Counts::load(db)?;
+    let empty = BTreeMap::new();
+    let unigrams = counts.0.get(&Vec::new()).unwrap_or(&empty);
+    if kind == "baseline" && unigrams.is_empty() {
+        return Err(Error::Invalid("baseline has no unigrams".into()));
+    }
+    let mut stmt = db.prepare("SELECT word FROM vocabulary ORDER BY word")?;
+    let vocabulary: BTreeSet<String> = stmt
+        .query_map([], |r| r.get(0))?
+        .collect::<std::result::Result<_, _>>()?;
+    if vocabulary != unigrams.keys().cloned().collect() {
+        return Err(Error::Invalid("vocabulary does not match unigrams".into()));
+    }
+    for (context, words) in &counts.0 {
+        if context.iter().any(|word| !unigrams.contains_key(word))
+            || words
+                .iter()
+                .any(|(word, count)| unigrams.get(word).is_none_or(|total| count > total))
+        {
+            return Err(Error::Invalid(
+                "n-gram references inconsistent with unigrams".into(),
+            ));
+        }
+    }
+    let mut stmt = db.prepare("SELECT hash FROM imports")?;
+    for hash in stmt.query_map([], |r| r.get::<_, String>(0))? {
+        let hash = hash?;
+        if hash.len() != 64
+            || !hash
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err(Error::Invalid("invalid import fingerprint".into()));
+        }
+    }
+    Ok(counts)
 }
 #[derive(Serialize)]
 pub struct Validation {
@@ -181,7 +265,7 @@ pub fn validate(path: &Path) -> Result<Validation> {
     if kind != "baseline" && kind != "personal" {
         return Err(Error::Invalid("unknown database kind".into()));
     }
-    let counts = Counts::load(&db)?;
+    let counts = load_checked(&db, &kind)?;
     let mut logical = String::new();
     for (context, words) in &counts.0 {
         for (word, count) in words {
@@ -253,7 +337,7 @@ impl Predictor {
         if check(&db)? != "baseline" {
             return Err(Error::Invalid("expected baseline database".into()));
         }
-        let counts = Counts::load(&db)?;
+        let counts = load_checked(&db, "baseline")?;
         let personal = if let Some(path) = personal {
             if path.exists() && fs::canonicalize(path)? == fs::canonicalize(baseline)? {
                 return Err(Error::Invalid(
@@ -293,7 +377,7 @@ impl Predictor {
     fn reload(&mut self) -> Result<()> {
         let mut combined = self.baseline.clone();
         if let Some(db) = &self.personal {
-            combined.merge(&Counts::load(db)?, 5);
+            combined.merge(&load_checked(db, "personal")?, 5);
         }
         self.combined = combined;
         Ok(())
