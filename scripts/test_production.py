@@ -99,7 +99,7 @@ class CratePackagePrivacy(unittest.TestCase):
                        'LICENSE', 'README.md', 'production-model.json', 'quality-policy.json',
                        'source-manifest.json', 'src/corpus.rs', 'src/evaluation.rs', 'src/lib.rs',
                        'src/main.rs', 'src/production.rs'}
-            self.assertEqual(set(listed), allowed)
+            self.assertEqual({name.replace('\\', '/') for name in listed}, allowed)
 
 
 if __name__ == '__main__':
