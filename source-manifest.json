@@ -1,0 +1,37 @@
+{
+  "repository": "https://github.com/AACTools/WorldAlphabets",
+  "revision": "dfec80e9d5641b2ad080f0780a72fc108333d164",
+  "corpus": {
+    "url": "https://raw.githubusercontent.com/AACTools/WorldAlphabets/dfec80e9d5641b2ad080f0780a72fc108333d164/data/corpora/en.txt",
+    "sha256": "3f9c1b30d0a104718b7ab58a80fc258cfede5804424da823909bc1c352507c8d"
+  },
+  "upstream_manifest": {
+    "url": "https://raw.githubusercontent.com/AACTools/WorldAlphabets/dfec80e9d5641b2ad080f0780a72fc108333d164/data/corpora/SOURCES.json",
+    "sha256": "2d10226c8da5696485d10f5131b844d47daa7e27afa690111349cd03da317f8e"
+  },
+  "attribution": {
+    "lang": "en",
+    "generator": "build_text_corpora.py",
+    "mode": "tatoeba-sentences-cc0",
+    "source": "Tatoeba per-language exports",
+    "attribution": "https://tatoeba.org (sentences export)",
+    "sentences_available": 41503,
+    "generated": "2026-08-29T07:52:56.799770+00:00",
+    "license_note": "Tatoeba sentences are CC-BY 2.0 FR (attribution: https://tatoeba.org); the CC0 subset is used where the language has substantive coverage. Retain this attribution when redistributing.",
+    "verify": false
+  },
+  "build": {
+    "language": "en",
+    "order": 3,
+    "normalization": "NFC lowercase; curly apostrophe to ASCII",
+    "weights": [
+      0.1,
+      0.3,
+      0.6
+    ],
+    "personal_weight": 5,
+    "min_chars": 2,
+    "limit": 5,
+    "schema_version": 1
+  }
+}
