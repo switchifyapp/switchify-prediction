@@ -54,3 +54,36 @@ jobs:
             artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 90
+  aac-experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked
+      - run: python scripts/aac_experiment.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aac-oanc-experiment
+          path: |
+            artifacts/aac-experiment/baseline.sqlite
+            artifacts/aac-experiment/candidate.sqlite
+            artifacts/aac-experiment/report.json
+            artifacts/aac-experiment/partitions.json
+            artifacts/aac-experiment/aac-source-manifest.json
+            artifacts/aac-experiment/aac-quality-policy.json
+            artifacts/aac-experiment/source-manifest.json
+            artifacts/aac-experiment/ATTRIBUTION.md
+            artifacts/aac-experiment/LICENSE
+            artifacts/aac-experiment/README.txt
+            artifacts/aac-experiment/SHA256SUMS
+            artifacts/aac-experiment/corpus-notices/aac-notice.html
+            artifacts/aac-experiment/corpus-notices/aac-readme.txt
+            artifacts/aac-experiment/corpus-notices/oanc-notice.html
+            artifacts/aac-experiment/corpus-notices/oanc-download.html
+            artifacts/aac-experiment/corpus-notices/oanc-legacy-license.txt
+          if-no-files-found: error
+          retention-days: 90

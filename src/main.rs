@@ -14,6 +14,13 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Normalize a UTF-8 corpus using exactly the predictor's sentence tokenizer.
+    Normalize {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Prepare checksum-verified training and frozen development/test partitions.
     Prepare {
         #[arg(long, default_value = "data")]
@@ -115,6 +122,16 @@ fn print(value: impl serde::Serialize) -> Result<()> {
 }
 fn run() -> Result<()> {
     match Cli::parse().command {
+        Command::Normalize { input, output } => {
+            let text = fs::read_to_string(input)?;
+            let normalized = switchify_prediction::sentences(&text)
+                .into_iter()
+                .map(|words| words.join(" "))
+                .collect::<Vec<_>>()
+                .join("\n");
+            fs::write(output, normalized + "\n")?;
+            Ok(())
+        }
         Command::Prepare { data, output } => print(switchify_prediction::corpus::prepare(
             &data,
             &output,

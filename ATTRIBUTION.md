@@ -38,3 +38,30 @@ The pinned upstream notice, source hashes and partition hashes are recorded in
 `source-manifest.json`. The resulting database includes material derived from this
 CC BY 4.0 source; retain this attribution when redistributing it. Our MIT license
 covers the code, not a relicensing of the source data.
+
+# Experimental AAC/OANC model (separate from the default baseline)
+
+The `aac-oanc-experiment` artifact additionally derives counts from:
+
+- Keith Vertanen and Per Ola Kristensson (2011), *The Imagination of Crowds:
+  Conversational AAC Language Modeling using Crowdsourcing and Large Data
+  Sources*, EMNLP, pp. 700–711. [Source](https://aactext.org/imagine/),
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  Only the official `sent_train_aac.txt` training file contributes counts;
+  development/test files are used for evaluation and overlap exclusion.
+- Nancy Ide and Keith Suderman (2007), *The Open American National Corpus
+  (OANC)*. [Source and current terms](https://anc.org/data/oanc/).
+  The spoken GrAF subset comprises Charlotte narratives/conversations and
+  Switchboard transcripts. The historical OANC notice credits Switchboard:
+  Copyright (c) 1997–2002 Trustees of the University of Pennsylvania.
+  Full historical notices and the current publisher grant are retained in
+  `corpus-notices`; see `docs/aac-experiment.md` for the distinction.
+
+Modified by Switchify prediction contributors, 2026-09-29: select spoken
+utterance spans, normalize case and Unicode, split sentences, deduplicate,
+remove held-out overlaps, deterministically sample, weight training counts and
+extract word n-grams. These are statistical derivatives, not original source
+transcripts. Original URLs and exact hashes are in `aac-source-manifest.json`.
+No author or institution endorses Switchify. Retain this attribution, the
+source manifests and accompanying notices when redistributing the experimental
+model. The MIT code licence does not relicense these sources.
