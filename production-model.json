@@ -1,0 +1,270 @@
+{
+  "model_id": "en-aac-oanc-v1",
+  "model_version": 1,
+  "schema_version": 1,
+  "language": "en",
+  "training_path": "data/aac-oanc/prepared/candidate.txt",
+  "training_sha256": "ff724de5ab3b6e609ed77b699c51287fc82f79d026fdecfa4892939abfbb2834",
+  "logical_sha256": "e7d83562681951d4b1a1c12a598c3f9934b211bc697d210cb787672e18c7ec64",
+  "vocabulary": 21674,
+  "ngrams": 539151,
+  "parameters": {
+    "interpolation": [
+      0.1,
+      0.3,
+      0.6
+    ],
+    "personal_weight": 5,
+    "default_limit": 5,
+    "default_min_graphemes": 2
+  },
+  "partitions": {
+    "general-dev": {
+      "sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+      "sentences": 804,
+      "unique_sentences": 804
+    },
+    "general-test": {
+      "sha256": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292",
+      "sentences": 804,
+      "unique_sentences": 804
+    },
+    "conversation-dev": {
+      "sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+      "sentences": 599,
+      "unique_sentences": 599
+    },
+    "conversation-test": {
+      "sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3",
+      "sentences": 599,
+      "unique_sentences": 599
+    },
+    "aac-dev": {
+      "sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+      "sentences": 451,
+      "unique_sentences": 451
+    },
+    "aac-test": {
+      "sha256": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11",
+      "sentences": 424,
+      "unique_sentences": 424
+    },
+    "baseline": {
+      "sha256": "36381c22a8c5ca6da2dc03bd89386f00d6a587d1b712c5d42db427a703c3f006",
+      "sentences": 72249,
+      "unique_sentences": 59352
+    },
+    "candidate": {
+      "sha256": "ff724de5ab3b6e609ed77b699c51287fc82f79d026fdecfa4892939abfbb2834",
+      "sentences": 135239,
+      "unique_sentences": 83504
+    }
+  },
+  "source_files": {
+    "source-manifest.json": "5421600b9be1063599e8adc07ee14a4ff4bdbf91a07b6a9d4fcfc793e2aafd7d",
+    "aac-source-manifest.json": "4da7fef8208e9829881b8ae656d941a7db9bf22aab49a4a8e3d029576b847879",
+    "quality-policy.json": "8a360982f6e6008027788a17dba009e25351aca0ee522c942a853eb3ad74d472",
+    "aac-quality-policy.json": "fb3c02e3bafd2e75ad318522d2c53bffbe78b66620aa1bdd4bb973be4abfb0fc"
+  },
+  "sources": {
+    "source-manifest.json": {
+      "repository": "https://github.com/AACTools/WorldAlphabets",
+      "revision": "dfec80e9d5641b2ad080f0780a72fc108333d164",
+      "corpus": {
+        "url": "https://raw.githubusercontent.com/AACTools/WorldAlphabets/dfec80e9d5641b2ad080f0780a72fc108333d164/data/corpora/en.txt",
+        "sha256": "3f9c1b30d0a104718b7ab58a80fc258cfede5804424da823909bc1c352507c8d"
+      },
+      "upstream_manifest": {
+        "url": "https://raw.githubusercontent.com/AACTools/WorldAlphabets/dfec80e9d5641b2ad080f0780a72fc108333d164/data/corpora/SOURCES.json",
+        "sha256": "2d10226c8da5696485d10f5131b844d47daa7e27afa690111349cd03da317f8e"
+      },
+      "attribution": {
+        "lang": "en",
+        "generator": "build_text_corpora.py",
+        "mode": "tatoeba-sentences-cc0",
+        "source": "Tatoeba per-language exports",
+        "attribution": "https://tatoeba.org (sentences export)",
+        "sentences_available": 41503,
+        "generated": "2026-08-29T07:52:56.799770+00:00",
+        "license_note": "Tatoeba sentences are CC-BY 2.0 FR (attribution: https://tatoeba.org); the CC0 subset is used where the language has substantive coverage. Retain this attribution when redistributing.",
+        "verify": false
+      },
+      "build": {
+        "language": "en",
+        "order": 3,
+        "normalization": "NFC lowercase; curly apostrophe to ASCII",
+        "weights": [
+          0.1,
+          0.3,
+          0.6
+        ],
+        "personal_weight": 5,
+        "min_chars": 2,
+        "limit": 5,
+        "schema_version": 1
+      },
+      "taskmaster": {
+        "repository": "https://github.com/google-research-datasets/Taskmaster",
+        "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
+        "files": {
+          "self-dialogs.json": {
+            "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/self-dialogs.json",
+            "sha256": "1e590ed0ccee279e40c2fb9e083d3b9417477c6bfe35ce5b2277167698dd858d"
+          },
+          "README.md": {
+            "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/README.md",
+            "sha256": "05e1bc05724716ca7905f567a2ec30d99c8d2f5f58e926c2ca7d9da116002446"
+          },
+          "train.csv": {
+            "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/train-dev-test/train.csv",
+            "sha256": "88e48f53524ed123dfc57733ccc23f80e176d1e057d7ea46a62a01ddce02626e"
+          },
+          "dev.csv": {
+            "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/train-dev-test/dev.csv",
+            "sha256": "d83a6f413f45e01b376d611aadf07fd0fc49f6cedffb4ffff7e7b1f8393c13bf"
+          },
+          "test.csv": {
+            "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/train-dev-test/test.csv",
+            "sha256": "1938698dc98b71c5256c05da092dff0d4f9eff224ec413b3c3eed57bc0bca928"
+          }
+        },
+        "license": "CC-BY-4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "authors": "Bill Byrne, Karthik Krishnamoorthi, Chinnadhurai Sankar, Arvind Neelakantan, Amit Dubey, Kyu-Young Kim and Andy Cedilnik (Google LLC)",
+        "paper": "https://aclanthology.org/D19-1459/",
+        "selection": "Human-written self-dialogs; USER utterances only; official conversation-level train/dev/test split."
+      },
+      "prepared": {
+        "policy_sha256": "8a360982f6e6008027788a17dba009e25351aca0ee522c942a853eb3ad74d472",
+        "files": {
+          "baseline.txt": {
+            "sha256": "b9896573e78ec2bf7b374e21ac177fde1640fa8623f3261cf291a1b2c3b43c7c",
+            "sentences": 6425
+          },
+          "candidate.txt": {
+            "sha256": "36381c22a8c5ca6da2dc03bd89386f00d6a587d1b712c5d42db427a703c3f006",
+            "sentences": 72249
+          },
+          "conversation-dev.txt": {
+            "sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+            "sentences": 599
+          },
+          "conversation-test.txt": {
+            "sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3",
+            "sentences": 599
+          },
+          "general-dev.txt": {
+            "sha256": "ca53dc7c65c3b9b9aa6612f3bc8a66bbc3e561cb75a52eca323d60e7392a57f0",
+            "sentences": 804
+          },
+          "general-test.txt": {
+            "sha256": "e988f4be74647031f253c74ca008d547ee0990f368f484e20a91407c68633323",
+            "sentences": 804
+          }
+        },
+        "published_training_file": "candidate.txt",
+        "note": "Held-out development and test sentences are excluded from the published baseline. General text is repeated three times; Taskmaster training sentences once."
+      }
+    },
+    "aac-source-manifest.json": {
+      "version": 1,
+      "retrieved": "2026-09-29",
+      "files": {
+        "aac-train.txt": {
+          "url": "https://aactext.org/imagine/aac_comm/sent_train_aac.txt",
+          "sha256": "ddc0ad61652cec5f4a8b76f1dd63f92fa9d5c1197e0a65f7a13d71873aed91bd"
+        },
+        "aac-dev.txt": {
+          "url": "https://aactext.org/imagine/aac_comm/sent_dev_aac.txt",
+          "sha256": "ea15844416675800787f13767b3ab94d982a656094ee1865692af7947e8ad524"
+        },
+        "aac-test.txt": {
+          "url": "https://aactext.org/imagine/aac_comm/sent_test_aac.txt",
+          "sha256": "e42988d0a8345bc05499ea49cd79a0bb2518f9670cf6431e51ad58e08114091b"
+        },
+        "aac-notice.html": {
+          "url": "https://aactext.org/imagine/",
+          "sha256": "d803db680180170cbdb8f6dafd8202ba29198ce9399f7f16b9ae802406e958d0"
+        },
+        "aac-readme.txt": {
+          "url": "https://aactext.org/imagine/aac_comm/readme.txt",
+          "sha256": "556d1e4e136cf2f6b16296880df86301c260b669ea2eb4566ca164cdadc0f850"
+        },
+        "oanc-notice.html": {
+          "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/data/oanc/index.html",
+          "sha256": "d8d0e58baa168e99451586e4de0c211f801cb0a43238593a51426d98d9dea605"
+        },
+        "oanc-download.html": {
+          "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/data/oanc/download/index.html",
+          "sha256": "1a0e43a2434517dc58d8806b955b72ba3838ea47a70a77e7c767bdb38d185847"
+        },
+        "oanc-legacy-license.txt": {
+          "url": "https://raw.githubusercontent.com/nancyide/anc-website/04d19109d37cce6db692452c6905c7c19c482163/site/OANC/license.txt",
+          "sha256": "b0dcd84d8980a7bbe5a9d82786b95376ef1c91bbd89c34969e34ef81cdc440a6"
+        },
+        "OANC_GrAF.zip": {
+          "url": "https://github.com/nancyide/anc-website/releases/download/datasets-2026-09-25/OANC_GrAF.zip",
+          "sha256": "5a26559a1becba41a527cb674fff4fb9c4fb70b276f60422c4f07a0ef23fd867"
+        }
+      },
+      "aac": {
+        "title": "The Imagination of Crowds: Conversational AAC Language Modeling using Crowdsourcing and Large Data Sources",
+        "authors": [
+          "Keith Vertanen",
+          "Per Ola Kristensson"
+        ],
+        "year": 2011,
+        "license": "CC-BY-4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "partitions": "Official train/dev/test split by workers. Only sent_*_aac.txt used. Legacy test files and pretrained models excluded."
+      },
+      "oanc": {
+        "title": "The Open American National Corpus (OANC)",
+        "authors": [
+          "Nancy Ide",
+          "Keith Suderman"
+        ],
+        "year": 2007,
+        "website_commit": "04d19109d37cce6db692452c6905c7c19c482163",
+        "terms": "Publisher states unrestricted usage and redistribution including commercial use. The current GrAF archive has no licence file; preserve both current publisher grant and historical OANC licence, including attribution and modification notices.",
+        "subset": "Only OANC-GrAF/data/spoken/**/*.txt with accompanying sentence/utterance boundaries. No written text."
+      }
+    },
+    "quality-policy.json": {
+      "version": 1,
+      "candidate_world_weight": 3,
+      "candidate_taskmaster_weight": 1,
+      "taskmaster_speaker": "USER",
+      "max_taskmaster_evaluation_sentences_per_domain": 100,
+      "selection": "one predeclared corpus mixture, unchanged prediction algorithm; evaluate development before test",
+      "acceptance": {
+        "conversation_top5_prefix2_gain_min": 0.05,
+        "general_top5_prefix2_loss_max": 0.02,
+        "conversation_selection_savings_gain_min": 0.0,
+        "warm_p95_target_ms": 20.0
+      }
+    },
+    "aac-quality-policy.json": {
+      "version": 1,
+      "selection": "One mixture fixed before any AAC scoring; no tuning from development or test results. Compare with quality-v1 conversational candidate. Report both partitions even on rejection; require both to pass before recommending promotion.",
+      "weights": {
+        "current": 1,
+        "aac": 10,
+        "oanc": 1
+      },
+      "oanc_max_sentences": 20000,
+      "oanc_min_words": 2,
+      "oanc_max_words": 30,
+      "acceptance": {
+        "aac_top5_prefix2_gain_min": 0.05,
+        "general_top5_prefix2_loss_max": 0.01,
+        "conversation_top5_prefix2_loss_max": 0.02,
+        "aac_selection_savings_gain_min": 0.0,
+        "warm_p95_target_ms": 20.0
+      }
+    }
+  },
+  "quality_protocol": "aac-oanc-v1",
+  "decision": "Promoted after both frozen development and test quality gates passed. Held-out sentences remain excluded. No test-based tuning.",
+  "licensing": "Corpus terms are separate from MIT code. Retain ATTRIBUTION.md and corpus-notices, including the OANC current publisher grant and differing historical licence."
+}

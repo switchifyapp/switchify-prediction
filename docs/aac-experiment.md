@@ -1,5 +1,9 @@
 # AAC and spoken-English corpus experiment
 
+This is the frozen selection protocol from issue #5. Issue #7 promotes its
+accepted counts to the production default; see [production guidance](production.md).
+Statements below about an unchanged default describe the original experiment.
+
 Issue #5 compares one predeclared corpus mixture against the existing
 WorldAlphabets + Taskmaster conversational candidate. No predictor algorithm
 changes are made. Personal data is never read.

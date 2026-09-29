@@ -4,7 +4,9 @@ use std::{
     path::Path,
     process::{Command, Stdio},
 };
-use switchify_prediction::{Options, Predictor, build, evaluation, normalize, sentences, validate};
+use switchify_prediction::{
+    Options, Predictor, build, digest, evaluation, normalize, sentences, validate,
+};
 
 fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
@@ -326,4 +328,100 @@ fn empty_personal_database_is_valid_but_missing_its_schema_is_not() {
     db.execute_batch("DROP TABLE imports").unwrap();
     assert!(validate(&personal).is_err());
     assert!(Predictor::open(&base, Some(&personal)).is_err());
+}
+
+#[test]
+fn validation_failure_rolls_back_disk_and_keeps_prediction_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().join("base.sqlite");
+    let personal = dir.path().join("personal.sqlite");
+    build(&base, "hello water", "fixture").unwrap();
+    let mut predictor = Predictor::open(&base, Some(&personal)).unwrap();
+    let before = predictor.predict("hello", "wa", Options::default());
+    let baseline_hash = digest(&fs::read(&base).unwrap());
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch("CREATE TRIGGER poison AFTER INSERT ON counts WHEN NEW.word='walnut' BEGIN INSERT OR IGNORE INTO vocabulary VALUES('orphan'); END;").unwrap();
+    assert!(predictor.learn("hello walnut").is_err());
+    assert_eq!(predictor.predict("hello", "wa", Options::default()), before);
+    assert_eq!(validate(&personal).unwrap().ngrams, 0);
+    db.execute_batch("DROP TRIGGER poison").unwrap();
+    predictor.learn("hello walnut").unwrap();
+    assert_eq!(
+        predictor.predict("hello", "wa", Options::default())[0].word,
+        "walnut"
+    );
+    assert_eq!(digest(&fs::read(&base).unwrap()), baseline_hash);
+}
+
+#[test]
+fn multiple_predictors_refresh_duplicate_imports_and_reset() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().join("base.sqlite");
+    let personal = dir.path().join("personal.sqlite");
+    let training = dir.path().join("fixture.txt");
+    build(&base, "hello water", "fixture").unwrap();
+    fs::write(&training, "hello walnut").unwrap();
+    let mut first = Predictor::open(&base, Some(&personal)).unwrap();
+    let mut second = Predictor::open(&base, Some(&personal)).unwrap();
+    assert!(first.import(&training).unwrap());
+    assert_eq!(
+        second.predict("hello", "wa", Options::default())[0].word,
+        "water"
+    );
+    assert!(!second.import(&training).unwrap());
+    assert_eq!(
+        second.predict("hello", "wa", Options::default())[0].word,
+        "walnut"
+    );
+    first.reset_personal().unwrap();
+    second.refresh_personal().unwrap();
+    assert_eq!(
+        second.predict("hello", "wa", Options::default())[0].word,
+        "water"
+    );
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute("INSERT INTO vocabulary VALUES('orphan')", [])
+        .unwrap();
+    assert!(second.refresh_personal().is_err());
+    assert_eq!(
+        second.predict("hello", "wa", Options::default())[0].word,
+        "water"
+    );
+}
+
+#[test]
+fn simultaneous_personal_creation_and_writes_preserve_all_segments() {
+    use std::sync::{Arc, Barrier};
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().join("base.sqlite");
+    let personal = dir.path().join("personal.sqlite");
+    build(&base, "hello water", "fixture").unwrap();
+    let baseline_hash = digest(&fs::read(&base).unwrap());
+    let barrier = Arc::new(Barrier::new(4));
+    let threads: Vec<_> = (0..4)
+        .map(|_| {
+            let barrier = barrier.clone();
+            let base = base.clone();
+            let personal = personal.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+                p.learn("hello walnut").unwrap();
+            })
+        })
+        .collect();
+    for thread in threads {
+        thread.join().unwrap();
+    }
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    let count: i64 = db
+        .query_row(
+            "SELECT count FROM counts WHERE context='[]' AND word='walnut'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(count, 4);
+    validate(&personal).unwrap();
+    assert_eq!(digest(&fs::read(&base).unwrap()), baseline_hash);
 }

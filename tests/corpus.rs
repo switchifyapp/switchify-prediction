@@ -154,9 +154,9 @@ fn pinned_preparation_and_default_build_reject_changed_inputs() {
         )
         .is_err()
     );
-    fs::create_dir_all(dir.path().join("data/prepared")).unwrap();
+    fs::create_dir_all(dir.path().join("data/aac-oanc/prepared")).unwrap();
     fs::write(
-        dir.path().join("data/prepared/candidate.txt"),
+        dir.path().join("data/aac-oanc/prepared/candidate.txt"),
         "tampered training input",
     )
     .unwrap();
@@ -166,5 +166,6 @@ fn pinned_preparation_and_default_build_reject_changed_inputs() {
         .output()
         .unwrap();
     assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("checksum mismatch"));
     assert!(!dir.path().join("bad.sqlite").exists());
 }

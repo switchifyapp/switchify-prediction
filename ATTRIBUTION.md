@@ -39,9 +39,9 @@ The pinned upstream notice, source hashes and partition hashes are recorded in
 CC BY 4.0 source; retain this attribution when redistributing it. Our MIT license
 covers the code, not a relicensing of the source data.
 
-# Experimental AAC/OANC model (separate from the default baseline)
+# Production AAC/OANC model
 
-The `aac-oanc-experiment` artifact additionally derives counts from:
+The default `en-aac-oanc-v1` production model (and its retained experiment) additionally derives counts from:
 
 - Keith Vertanen and Per Ola Kristensson (2011), *The Imagination of Crowds:
   Conversational AAC Language Modeling using Crowdsourcing and Large Data
@@ -63,5 +63,5 @@ remove held-out overlaps, deterministically sample, weight training counts and
 extract word n-grams. These are statistical derivatives, not original source
 transcripts. Original URLs and exact hashes are in `aac-source-manifest.json`.
 No author or institution endorses Switchify. Retain this attribution, the
-source manifests and accompanying notices when redistributing the experimental
+source manifests and accompanying notices when redistributing the production or experimental
 model. The MIT code licence does not relicense these sources.

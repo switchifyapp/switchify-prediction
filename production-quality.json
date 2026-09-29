@@ -1,0 +1,582 @@
+{
+  "dev": {
+    "aac": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.1405591727307545,
+            "top5": 0.3485254691689008,
+            "vocabulary_coverage": 0.9781692837993106
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.40753138075313805,
+            "top5": 0.6502092050209205,
+            "vocabulary_coverage": 0.9761506276150628
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.5254237288135594,
+            "top5": 0.7722457627118644,
+            "vocabulary_coverage": 0.9698093220338984
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.6617760617760617,
+            "top5": 0.8849420849420849,
+            "vocabulary_coverage": 0.9583011583011583
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7073170731707317,
+            "top5": 0.9024390243902439,
+            "vocabulary_coverage": 0.9296987087517934
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 9722,
+          "simulated_selections_with_prediction": 8222,
+          "savings_fraction": 0.15428924089693474
+        },
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.991574109536576
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4803347280334728,
+            "top5": 0.7305439330543934,
+            "vocabulary_coverage": 0.9907949790794979
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.6038135593220338,
+            "top5": 0.8416313559322034,
+            "vocabulary_coverage": 0.9883474576271186
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7351351351351352,
+            "top5": 0.9305019305019305,
+            "vocabulary_coverage": 0.9853281853281853
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7833572453371592,
+            "top5": 0.9540889526542324,
+            "vocabulary_coverage": 0.9727403156384505
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 9722,
+          "simulated_selections_with_prediction": 7932,
+          "savings_fraction": 0.18411849413700887
+        },
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d"
+      }
+    },
+    "general": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16094360692350643,
+            "top5": 0.29383026242322724,
+            "vocabulary_coverage": 0.9378838637632607
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.31977600943118184,
+            "top5": 0.5559976422045387,
+            "vocabulary_coverage": 0.9344238137341586
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.4290299572039943,
+            "top5": 0.6642296718972895,
+            "vocabulary_coverage": 0.9210057061340942
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5303880888454967,
+            "top5": 0.784964608249939,
+            "vocabulary_coverage": 0.8933365877471321
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5866569978245105,
+            "top5": 0.8158085569253082,
+            "vocabulary_coverage": 0.8509789702683104
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 31509,
+          "simulated_selections_with_prediction": 25894,
+          "savings_fraction": 0.17820305309594087
+        },
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16150195421552205,
+            "top5": 0.29885538805136797,
+            "vocabulary_coverage": 0.9530988274706867
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.32964927792514,
+            "top5": 0.5611553197760094,
+            "vocabulary_coverage": 0.9504862953138815
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.43901569186875894,
+            "top5": 0.6768901569186876,
+            "vocabulary_coverage": 0.9404422253922967
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5430803026604832,
+            "top5": 0.7944837686111789,
+            "vocabulary_coverage": 0.9196973395167195
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5939086294416244,
+            "top5": 0.8368382886149384,
+            "vocabulary_coverage": 0.8846990572878898
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 31509,
+          "simulated_selections_with_prediction": 25704,
+          "savings_fraction": 0.1842330762639246
+        },
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e"
+      }
+    },
+    "conversation": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.23862953315968743,
+            "top5": 0.47665798437186935,
+            "vocabulary_coverage": 0.9869765578040472
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.509753483386924,
+            "top5": 0.7659163987138263,
+            "vocabulary_coverage": 0.9860664523043944
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6658536585365854,
+            "top5": 0.8661246612466125,
+            "vocabulary_coverage": 0.9826558265582656
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7802607076350093,
+            "top5": 0.9333333333333333,
+            "vocabulary_coverage": 0.9769087523277468
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8109452736318408,
+            "top5": 0.9514925373134329,
+            "vocabulary_coverage": 0.9651741293532339
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 19903,
+          "simulated_selections_with_prediction": 15177,
+          "savings_fraction": 0.2374516404562126
+        },
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.24924864756561813,
+            "top5": 0.4604287717892206,
+            "vocabulary_coverage": 0.9885794429973953
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.49732047159699894,
+            "top5": 0.7541264737406217,
+            "vocabulary_coverage": 0.9877813504823151
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6585365853658537,
+            "top5": 0.8615176151761518,
+            "vocabulary_coverage": 0.9848238482384823
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7694599627560521,
+            "top5": 0.939292364990689,
+            "vocabulary_coverage": 0.9798882681564246
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8072139303482587,
+            "top5": 0.9533582089552238,
+            "vocabulary_coverage": 0.9689054726368159
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 19903,
+          "simulated_selections_with_prediction": 15194,
+          "savings_fraction": 0.23659749786464357
+        },
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac"
+      }
+    }
+  },
+  "test": {
+    "aac": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2239,
+            "top1": 0.13577489950870925,
+            "top5": 0.3309513175524788,
+            "vocabulary_coverage": 0.9749888343010272
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2074,
+            "top1": 0.41128254580520734,
+            "top5": 0.656702025072324,
+            "vocabulary_coverage": 0.9729990356798457
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1672,
+            "top1": 0.5508373205741627,
+            "top5": 0.7811004784688995,
+            "vocabulary_coverage": 0.9671052631578947
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1124,
+            "top1": 0.6699288256227758,
+            "top5": 0.8754448398576512,
+            "vocabulary_coverage": 0.9537366548042705
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 577,
+            "top1": 0.6897746967071057,
+            "top5": 0.8804159445407279,
+            "vocabulary_coverage": 0.9202772963604853
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 8340,
+          "simulated_selections_with_prediction": 7080,
+          "savings_fraction": 0.15107913669064743
+        },
+        "evaluated_sentences": 424,
+        "evaluation_sha256": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2239,
+            "top1": 0.2219740955783832,
+            "top5": 0.41089772219740955,
+            "vocabulary_coverage": 0.9910674408217954
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2074,
+            "top1": 0.4831243972999036,
+            "top5": 0.7343297974927676,
+            "vocabulary_coverage": 0.9903567984570878
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1672,
+            "top1": 0.6339712918660287,
+            "top5": 0.8516746411483254,
+            "vocabulary_coverage": 0.9886363636363636
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1124,
+            "top1": 0.7508896797153025,
+            "top5": 0.9279359430604982,
+            "vocabulary_coverage": 0.9830960854092526
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 577,
+            "top1": 0.7746967071057193,
+            "top5": 0.9428076256499134,
+            "vocabulary_coverage": 0.9722703639514731
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 8340,
+          "simulated_selections_with_prediction": 6844,
+          "savings_fraction": 0.17937649880095918
+        },
+        "evaluated_sentences": 424,
+        "evaluation_sha256": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11"
+      }
+    },
+    "general": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 6859,
+            "top1": 0.1510424260096224,
+            "top5": 0.28386062108179033,
+            "vocabulary_coverage": 0.9336637993876659
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6542,
+            "top1": 0.31198410272088045,
+            "top5": 0.5490675634362581,
+            "vocabulary_coverage": 0.930449403852033
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5411,
+            "top1": 0.4189613749768989,
+            "top5": 0.6558861578266494,
+            "vocabulary_coverage": 0.9162816484938089
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 3898,
+            "top1": 0.5187275525910724,
+            "top5": 0.7827090815802976,
+            "vocabulary_coverage": 0.8868650590046178
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2679,
+            "top1": 0.5755879059350504,
+            "top5": 0.814856289660321,
+            "vocabulary_coverage": 0.8443449048152296
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 30558,
+          "simulated_selections_with_prediction": 25094,
+          "savings_fraction": 0.17880751358073177
+        },
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 6859,
+            "top1": 0.1494386936871264,
+            "top5": 0.2853185595567867,
+            "vocabulary_coverage": 0.9470768333576323
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6542,
+            "top1": 0.32130846835830024,
+            "top5": 0.5498318557016203,
+            "vocabulary_coverage": 0.9445123815346989
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5411,
+            "top1": 0.4304195158011458,
+            "top5": 0.6640177416374052,
+            "vocabulary_coverage": 0.9332840510072076
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 3898,
+            "top1": 0.5282195997947665,
+            "top5": 0.7914315033350436,
+            "vocabulary_coverage": 0.9099538224730631
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2679,
+            "top1": 0.5841731989548339,
+            "top5": 0.8324001493094438,
+            "vocabulary_coverage": 0.8756998880179171
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 30558,
+          "simulated_selections_with_prediction": 24951,
+          "savings_fraction": 0.18348713921068138
+        },
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292"
+      }
+    },
+    "conversation": {
+      "baseline": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4689,
+            "top1": 0.24440179142674345,
+            "top5": 0.46299850714438046,
+            "vocabulary_coverage": 0.9848581787161441
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4369,
+            "top1": 0.5062943465323873,
+            "top5": 0.761043717097734,
+            "vocabulary_coverage": 0.9837491416800183
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3437,
+            "top1": 0.6546406750072737,
+            "top5": 0.8655804480651731,
+            "vocabulary_coverage": 0.9793424498108816
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2486,
+            "top1": 0.7695092518101367,
+            "top5": 0.9384553499597748,
+            "vocabulary_coverage": 0.9730490748189863
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1492,
+            "top1": 0.8156836461126006,
+            "top5": 0.9477211796246648,
+            "vocabulary_coverage": 0.9611260053619303
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 18455,
+          "simulated_selections_with_prediction": 14190,
+          "savings_fraction": 0.23110268219994579
+        },
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3"
+      },
+      "candidate": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4689,
+            "top1": 0.25037321390488376,
+            "top5": 0.4523352527191299,
+            "vocabulary_coverage": 0.9872040946896993
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4369,
+            "top1": 0.49576562142366676,
+            "top5": 0.7523460746166171,
+            "vocabulary_coverage": 0.9862668802929733
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3437,
+            "top1": 0.6424207157404713,
+            "top5": 0.8623799825429154,
+            "vocabulary_coverage": 0.9825429153331393
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2486,
+            "top1": 0.7642799678197908,
+            "top5": 0.9392598551890587,
+            "vocabulary_coverage": 0.9774738535800482
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1492,
+            "top1": 0.8109919571045576,
+            "top5": 0.9537533512064343,
+            "vocabulary_coverage": 0.9664879356568364
+          }
+        ],
+        "selection_proxy": {
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "characters_without_prediction": 18455,
+          "simulated_selections_with_prediction": 14196,
+          "savings_fraction": 0.23077756705499863
+        },
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3"
+      }
+    }
+  }
+}
