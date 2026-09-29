@@ -1,0 +1,6 @@
+/target/
+/data/
+/artifacts/
+*.sqlite*
+training.txt
+/personal/
