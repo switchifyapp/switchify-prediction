@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail, ensure};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::llama::{Cache, Llama, LlamaConfig};
+use candle_transformers::models::quantized_llama::ModelWeights;
 use clap::{Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -46,6 +47,23 @@ struct Args {
     /// Use 64 for the frozen experiment; smaller values are calibration only.
     #[arg(long, default_value_t = 64)]
     per_cell: usize,
+    /// Explicit locally converted GGUF; its digest is mandatory.
+    #[arg(long, requires = "gguf_sha256")]
+    gguf: Option<PathBuf>,
+    #[arg(long, requires = "gguf")]
+    gguf_sha256: Option<String>,
+    /// Measure a second request with the same context, retaining only one KV entry.
+    #[arg(long)]
+    cache_probe: bool,
+    /// Validate the F32 GGUF conversion against the original loader before scoring.
+    #[arg(long)]
+    validate_conversion: bool,
+    /// Export only the frozen synthetic workload for external decoder comparisons.
+    #[arg(long)]
+    export_queries: bool,
+    /// Evaluate candidate branches together, padding finished lanes only.
+    #[arg(long)]
+    batch_candidates: bool,
 }
 
 fn sha(path: &Path) -> Result<String> {
@@ -131,15 +149,89 @@ fn word_score<S: Clone>(
     Ok(score)
 }
 
+fn batch_word_scores<S: Clone>(
+    tokens: &[Vec<u32>],
+    first_logits: &[Vec<f32>],
+    cache: &S,
+    position: usize,
+    boundary_ids: &[usize],
+    mut forward: impl FnMut(&[u32], usize, &mut S) -> Result<Vec<Vec<f32>>>,
+) -> Result<Vec<f64>> {
+    ensure!(
+        !tokens.is_empty() && tokens.iter().all(|t| !t.is_empty()),
+        "Empty candidate tokenization"
+    );
+    ensure!(tokens.len() == first_logits.len(), "Invalid batch width");
+    let mut branch = cache.clone();
+    let mut logits = first_logits.to_vec();
+    let mut scores = vec![0.; tokens.len()];
+    for index in 0..tokens.iter().map(Vec::len).max().unwrap() {
+        let input: Vec<_> = tokens
+            .iter()
+            .map(|t| t.get(index).copied().unwrap_or(0))
+            .collect();
+        for (lane, t) in tokens.iter().enumerate() {
+            if index < t.len() {
+                scores[lane] += log_prob(&logits[lane], t[index] as usize);
+            }
+        }
+        logits = forward(&input, position + index, &mut branch)?;
+        ensure!(logits.len() == tokens.len(), "Invalid output batch width");
+        for (lane, t) in tokens.iter().enumerate() {
+            if index + 1 == t.len() {
+                scores[lane] += log_boundary(&logits[lane], boundary_ids);
+            }
+        }
+    }
+    ensure!(
+        scores.iter().all(|s| s.is_finite()),
+        "Non-finite batched score"
+    );
+    Ok(scores)
+}
+
+enum Engine {
+    Float(Llama),
+    Quantized,
+}
+
+#[derive(Clone)]
+enum State {
+    Float(Cache),
+    Quantized(ModelWeights),
+}
+
+#[derive(Clone)]
+struct Prepared {
+    ids: Vec<u32>,
+    lanes: usize,
+    state: State,
+    logits: Vec<Vec<f32>>,
+}
+
+fn refresh_context<T>(
+    entry: &mut Option<T>,
+    matches: impl FnOnce(&T) -> bool,
+    build: impl FnOnce() -> Result<T>,
+) -> Result<()> {
+    if !entry.as_ref().is_some_and(matches) {
+        *entry = None;
+        *entry = Some(build()?);
+    }
+    Ok(())
+}
+
 struct Neural {
-    model: Llama,
+    model: Engine,
     tokenizer: Tokenizer,
-    empty_cache: Cache,
+    empty_cache: State,
     boundary_ids: Vec<usize>,
+    prepared: Option<Prepared>,
+    batch_candidates: bool,
 }
 
 impl Neural {
-    fn load(path: &Path) -> Result<Self> {
+    fn load(path: &Path, gguf: Option<&Path>) -> Result<Self> {
         let tokenizer =
             Tokenizer::from_file(path.join("tokenizer.json")).map_err(anyhow::Error::msg)?;
         let cfg: LlamaConfig = serde_json::from_slice(&fs::read(path.join("config.json"))?)?;
@@ -148,11 +240,21 @@ impl Neural {
             config.bos_token_id == Some(0),
             "Expected pinned SmolLM2 BOS token"
         );
-        let empty_cache = Cache::new(true, DType::F32, &config, &Device::Cpu)?;
-        // Safe loader owns its bytes; no mmap lifetime or externally mutable mapping.
-        let weights = fs::read(path.join("model.safetensors"))?;
-        let vb = VarBuilder::from_buffered_safetensors(weights, DType::F32, &Device::Cpu)?;
-        let model = Llama::load(vb, &config)?;
+        let (model, empty_cache) = if let Some(path) = gguf {
+            let mut reader = fs::File::open(path)?;
+            let content = candle_core::quantized::gguf_file::Content::read(&mut reader)?;
+            let model = ModelWeights::from_gguf(content, &mut reader, &Device::Cpu)?;
+            (Engine::Quantized, State::Quantized(model))
+        } else {
+            let cache = Cache::new(true, DType::F32, &config, &Device::Cpu)?;
+            // Safe loader owns its bytes; no mmap lifetime or externally mutable mapping.
+            let weights = fs::read(path.join("model.safetensors"))?;
+            let vb = VarBuilder::from_buffered_safetensors(weights, DType::F32, &Device::Cpu)?;
+            (
+                Engine::Float(Llama::load(vb, &config)?),
+                State::Float(cache),
+            )
+        };
         let mut boundary_ids = vec![0]; // Pinned EOS.
         for id in 1..config.vocab_size {
             let decoded = tokenizer
@@ -167,19 +269,29 @@ impl Neural {
             tokenizer,
             empty_cache,
             boundary_ids,
+            prepared: None,
+            batch_candidates: false,
         })
     }
 
-    fn forward(&self, ids: &[u32], position: usize, cache: &mut Cache) -> Result<Vec<f32>> {
+    fn forward(&self, ids: &[u32], position: usize, cache: &mut State) -> Result<Vec<f32>> {
         let input = Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?;
         Ok(self
-            .model
-            .forward(&input, position, cache)?
+            .forward_tensor(&input, position, cache)?
             .squeeze(0)?
             .to_vec1()?)
     }
 
-    fn rank(&self, before: &str, candidates: &[String]) -> Result<Vec<String>> {
+    fn forward_tensor(&self, input: &Tensor, position: usize, cache: &mut State) -> Result<Tensor> {
+        let logits = match (&self.model, cache) {
+            (Engine::Float(model), State::Float(cache)) => model.forward(input, position, cache)?,
+            (Engine::Quantized, State::Quantized(model)) => model.forward(input, position)?,
+            _ => bail!("Mismatched inference state"),
+        };
+        Ok(logits)
+    }
+
+    fn rank(&mut self, before: &str, candidates: &[String]) -> Result<Vec<String>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
@@ -190,9 +302,35 @@ impl Neural {
         let ids = encoded.get_ids();
         let mut context = vec![0];
         context.extend_from_slice(&ids[ids.len().saturating_sub(CONTEXT_TOKENS - 1)..]);
-        let mut cache = self.empty_cache.clone();
-        let first_logits = self.forward(&context, 0, &mut cache)?;
+        let lanes = if self.batch_candidates {
+            candidates.len()
+        } else {
+            1
+        };
+        let mut prepared = self.prepared.take();
+        refresh_context(
+            &mut prepared,
+            |p| p.ids == context && p.lanes == lanes,
+            || {
+                let mut state = self.empty_cache.clone();
+                let input = Tensor::new(context.as_slice(), &Device::Cpu)?
+                    .unsqueeze(0)?
+                    .repeat((lanes, 1))?;
+                let logits = self.forward_tensor(&input, 0, &mut state)?.to_vec2()?;
+                Ok(Prepared {
+                    ids: context.clone(),
+                    lanes,
+                    state,
+                    logits,
+                })
+            },
+        )?;
+        self.prepared = prepared;
+        let prepared = self.prepared.as_ref().context("Missing context state")?;
+        let cache = &prepared.state;
+        let first_logits = &prepared.logits;
         let mut scored = Vec::new();
+        let mut all_tokens = Vec::new();
         for (rank, word) in candidates.iter().enumerate() {
             let text = if before.is_empty() {
                 word.clone()
@@ -204,22 +342,46 @@ impl Neural {
                 .encode(text, false)
                 .map_err(anyhow::Error::msg)?;
             let tokens = encoded.get_ids();
+            if self.batch_candidates {
+                all_tokens.push(tokens.to_vec());
+                continue;
+            }
             let score = word_score(
                 tokens,
-                &first_logits,
-                &cache,
+                &first_logits[0],
+                cache,
                 context.len(),
                 &self.boundary_ids,
                 |token, position, branch| self.forward(&[token], position, branch),
             )?;
             scored.push((score, rank, word.clone()));
         }
+        if self.batch_candidates {
+            let scores = batch_word_scores(
+                &all_tokens,
+                first_logits,
+                cache,
+                context.len(),
+                &self.boundary_ids,
+                |ids, position, state| {
+                    let input = Tensor::new(ids, &Device::Cpu)?.unsqueeze(1)?;
+                    Ok(self.forward_tensor(&input, position, state)?.to_vec2()?)
+                },
+            )?;
+            scored.extend(
+                scores
+                    .into_iter()
+                    .zip(candidates)
+                    .enumerate()
+                    .map(|(rank, (score, word))| (score, rank, word.clone())),
+            );
+        }
         scored.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
         Ok(scored.into_iter().take(5).map(|x| x.2).collect())
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 struct Query {
     domain: String,
     prefix_chars: usize,
@@ -311,6 +473,53 @@ struct Report {
     model_file_bytes: u64,
     baseline_payload_bytes: usize,
     cells: BTreeMap<String, BTreeMap<usize, Cell>>,
+    gguf_sha256: Option<String>,
+    cache_hit: Option<Timing>,
+    prediction_sha256: String,
+    batch_candidates: bool,
+}
+
+#[derive(Serialize)]
+struct Timing {
+    queries: usize,
+    median_ms: f64,
+    p95_ms: f64,
+    max_ms: f64,
+}
+
+fn validate_conversion(path: &Path, converted: &Neural) -> Result<()> {
+    let original = Neural::load(path, None)?;
+    for text in [
+        "",
+        "I would like to",
+        "Please send the documents tomorrow",
+        "Café résumé",
+    ] {
+        let encoded = original
+            .tokenizer
+            .encode(text, false)
+            .map_err(anyhow::Error::msg)?;
+        let mut ids = vec![0];
+        ids.extend_from_slice(encoded.get_ids());
+        let mut left = original.empty_cache.clone();
+        let mut right = converted.empty_cache.clone();
+        // Check prefill and a continuation, exercising positional rotation and KV caches.
+        for (tokens, position) in [(ids.as_slice(), 0), (&[42_u32][..], ids.len())] {
+            let a = original.forward(tokens, position, &mut left)?;
+            let b = converted.forward(tokens, position, &mut right)?;
+            let error = a
+                .iter()
+                .zip(&b)
+                .map(|(a, b)| (a - b).abs())
+                .fold(0_f32, f32::max);
+            ensure!(
+                error < 0.002,
+                "F32 conversion logit error {error} exceeds tolerance"
+            );
+        }
+    }
+    eprintln!("F32 conversion prefill and continuation parity passed");
+    Ok(())
 }
 
 fn percentile(times: &[f64], percent: usize) -> f64 {
@@ -338,15 +547,39 @@ fn main() -> Result<()> {
     if cases.is_empty() {
         bail!("Empty workload");
     }
+    if args.export_queries {
+        fs::write(&args.output, serde_json::to_vec_pretty(&cases)?)?;
+        return Ok(());
+    }
     verify_model(&args.model, &args.manifest)?;
+    if let Some(path) = &args.gguf {
+        ensure!(
+            Some(sha(path)?) == args.gguf_sha256,
+            "GGUF checksum mismatch"
+        );
+        ensure!(
+            matches!(args.mode, Mode::Neural),
+            "GGUF requires neural mode"
+        );
+    }
     let start = Instant::now();
     let baseline = Predictor::open(&args.baseline, None)?;
-    let neural = match args.mode {
+    let mut neural = match args.mode {
         Mode::Baseline => None,
-        Mode::Neural => Some(Neural::load(&args.model)?),
+        Mode::Neural => Some(Neural::load(&args.model, args.gguf.as_deref())?),
     };
     let cold_load_ms = start.elapsed().as_secs_f64() * 1000.;
-    let predict = |q: &Query| -> Result<(Vec<String>, Vec<String>)> {
+    if let Some(neural) = &mut neural {
+        neural.batch_candidates = args.batch_candidates;
+    }
+    if args.validate_conversion {
+        ensure!(args.gguf.is_some(), "Conversion validation requires GGUF");
+        validate_conversion(
+            &args.model,
+            neural.as_ref().context("Requires neural mode")?,
+        )?;
+    }
+    let mut predict = |q: &Query, clear: bool| -> Result<(Vec<String>, Vec<String>)> {
         let candidates: Vec<_> = baseline
             .predict(
                 &q.before,
@@ -360,8 +593,13 @@ fn main() -> Result<()> {
             .into_iter()
             .map(|s| s.word)
             .collect();
-        let words = match &neural {
-            Some(n) => n.rank(&q.before, &candidates)?,
+        let words = match &mut neural {
+            Some(n) => {
+                if clear {
+                    n.prepared = None;
+                }
+                n.rank(&q.before, &candidates)?
+            }
             None => candidates.iter().take(5).cloned().collect(),
         };
         ensure!(
@@ -371,13 +609,22 @@ fn main() -> Result<()> {
         Ok((words, candidates))
     };
     // Untimed prime. Each measured request starts with a fresh neural context cache.
-    predict(&cases[0])?;
+    predict(&cases[0], true)?;
     let mut times = Vec::new();
+    let mut hits = Vec::new();
+    let mut predictions = Sha256::new();
     let mut cells: BTreeMap<String, BTreeMap<usize, Cell>> = BTreeMap::new();
     for (index, q) in cases.iter().enumerate() {
         let start = Instant::now();
-        let (words, candidates) = predict(q)?;
+        let (words, candidates) = predict(q, true)?;
         times.push(start.elapsed().as_secs_f64() * 1000.);
+        predictions.update(serde_json::to_vec(&(&q.key, &words))?);
+        if args.cache_probe {
+            let start = Instant::now();
+            let (cached, _) = predict(q, false)?;
+            hits.push(start.elapsed().as_secs_f64() * 1000.);
+            ensure!(cached == words, "Cached inference changed results");
+        }
         let cell = cells
             .entry(q.domain.clone())
             .or_default()
@@ -392,6 +639,7 @@ fn main() -> Result<()> {
         }
     }
     times.sort_by(f64::total_cmp);
+    hits.sort_by(f64::total_cmp);
     let report = Report {
         mode: args.mode,
         fixture_sha256: sha(&args.fixtures)?,
@@ -406,9 +654,23 @@ fn main() -> Result<()> {
         warm_p95_ms: percentile(&times, 95),
         warm_max_ms: *times.last().unwrap(),
         failed_queries: 0,
-        model_file_bytes: fs::metadata(args.model.join("model.safetensors"))?.len(),
+        model_file_bytes: fs::metadata(
+            args.gguf
+                .clone()
+                .unwrap_or_else(|| args.model.join("model.safetensors")),
+        )?
+        .len(),
         baseline_payload_bytes: baseline.model_payload_bytes(),
         cells,
+        gguf_sha256: args.gguf_sha256,
+        cache_hit: (!hits.is_empty()).then(|| Timing {
+            queries: hits.len(),
+            median_ms: percentile(&hits, 50),
+            p95_ms: percentile(&hits, 95),
+            max_ms: *hits.last().unwrap(),
+        }),
+        prediction_sha256: format!("{:x}", predictions.finalize()),
+        batch_candidates: args.batch_candidates,
     };
     fs::write(&args.output, serde_json::to_vec_pretty(&report)?)?;
     Ok(())
@@ -417,6 +679,43 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn batched_scoring_ignores_padding_after_each_word_boundary() {
+        let cache = vec![99];
+        let scores = batch_word_scores(
+            &[vec![1], vec![1, 2]],
+            &[vec![0.; 4], vec![0.; 4]],
+            &cache,
+            1,
+            &[0, 3],
+            |ids, position, state| {
+                assert_eq!(state.len(), position);
+                if position == 1 {
+                    assert_eq!(ids, [1, 1]);
+                } else {
+                    assert_eq!(ids, [0, 2]);
+                }
+                state.push(0);
+                Ok(vec![vec![0.; 4]; 2])
+            },
+        )
+        .unwrap();
+        assert!((scores[0].exp() - 0.125).abs() < 1e-9);
+        assert!((scores[1].exp() - 0.03125).abs() < 1e-9);
+        assert_eq!(cache, [99]);
+    }
+    #[test]
+    fn context_changes_and_failed_rebuilds_discard_stale_state() {
+        let mut entry = Some((vec![0, 1], 7));
+        refresh_context(&mut entry, |p| p.0 == [0, 1], || bail!("must reuse")).unwrap();
+        assert_eq!(entry.as_ref().unwrap().1, 7);
+        refresh_context(&mut entry, |p| p.0 == [0, 2], || Ok((vec![0, 2], 9))).unwrap();
+        assert_eq!(entry.as_ref().unwrap().1, 9);
+        assert!(refresh_context(&mut entry, |p| p.0 == [0, 3], || bail!("fake error")).is_err());
+        assert!(entry.is_none());
+        refresh_context(&mut entry, |_| false, || Ok((vec![0], 1))).unwrap();
+        assert_eq!(entry.unwrap(), (vec![0], 1));
+    }
     #[test]
     fn whole_word_scoring_uses_every_token_and_isolates_branches() {
         let context = vec![99];

@@ -34,3 +34,22 @@ jobs:
       - run: cargo install cargo-audit --locked --version 0.22.0
       # Candle transitively uses this unmaintained macro crate; see the protocol.
       - run: cargo audit --file experiments/neural/Cargo.lock --deny warnings --ignore RUSTSEC-2024-0436
+  futo-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Prepare pinned native source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          curl.exe -fsSL --retry 3 https://codeload.github.com/futo-org/android-keyboard/zip/70a5d390c505a6bbcc4e14966e5628e43ca3f1fc -o artifacts/futo-source.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/prepare_futo_probe.py --archive artifacts/futo-source.zip --output artifacts/futo-probe
+      - name: Build isolated native probe
+        shell: pwsh
+        run: |
+          $sourcePath = (Resolve-Path artifacts/futo-probe/source).Path.Replace('\', '/')
+          $preparedPath = (Resolve-Path artifacts/futo-probe).Path.Replace('\', '/')
+          cmake -S experiments/futo -B artifacts/futo-build "-DFUTO_SOURCE=$sourcePath" "-DFUTO_PREPARED=$preparedPath"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build artifacts/futo-build --config Release --target futo-probe --parallel 2
