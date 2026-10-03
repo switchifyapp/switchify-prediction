@@ -1,0 +1,62 @@
+name: Neural companion
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: neural-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  neural:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    env:
+      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          workspaces: |
+            neural -> ../target/smol-portable
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: cargo fmt --manifest-path neural/Cargo.toml --all -- --check
+      - run: cargo clippy --manifest-path neural/Cargo.toml --workspace --all-targets --features test-support --locked -- -D warnings
+      - run: cargo test --manifest-path neural/Cargo.toml --workspace --features test-support --locked
+      - run: python -m unittest discover -s scripts -p "test_neural*.py"
+      - run: cargo build --manifest-path neural/Cargo.toml --workspace --release --locked --target-dir target/smol-portable
+      - name: Build explicit x64 ISA worker
+        if: runner.arch == 'X64'
+        shell: bash
+        run: |
+          RUSTFLAGS="${RUSTFLAGS} -C target-feature=+avx2,+fma,+f16c" cargo build --manifest-path neural/Cargo.toml -p switchify-smol-worker --features accelerated --release --locked --target-dir target/smol-avx2
+      - name: Package x64
+        if: runner.arch == 'X64'
+        run: python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release
+      - name: Package ARM64
+        if: runner.arch == 'ARM64'
+        run: python scripts/package_neural.py --portable target/smol-portable/release
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: neural-${{ matrix.os }}
+          path: artifacts/neural-cli/*
+          if-no-files-found: error
+  neural-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - run: cargo install cargo-audit --locked --version 0.22.0
+      # Scoped, documented maintenance-only exception. Root CI remains unchanged.
+      - run: cargo audit --file neural/Cargo.lock --deny warnings --ignore RUSTSEC-2024-0436

@@ -164,6 +164,34 @@ fn shutdown_interrupts_model_loading() {
     assert!(start.elapsed() < Duration::from_secs(1));
     assert_eq!(engine.status(), Status::Stopped);
 }
+
+#[test]
+fn learning_after_submission_does_not_change_captured_shortlist() {
+    let (_temp, mut predictor, mut engine) = fixture("delay");
+    until(|| engine.status() == Status::Ready);
+    let mut expected: Vec<_> = predictor
+        .predict(
+            "",
+            "",
+            Options {
+                limit: 8,
+                ..options()
+            },
+        )
+        .into_iter()
+        .map(|s| s.word)
+        .collect();
+    expected.reverse();
+    expected.truncate(5);
+    engine.submit(&predictor, "", "", options(), 1).unwrap();
+    predictor.learn("newword newword newword newword").unwrap();
+    let mut result = None;
+    until(|| {
+        result = engine.poll();
+        result.is_some()
+    });
+    assert_eq!(result.unwrap().words, expected);
+}
 #[test]
 fn context_and_bundle_validation() {
     assert_eq!(

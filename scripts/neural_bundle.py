@@ -5,15 +5,15 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def verify(path, pin):
-    if path.stat().st_size != pin['bytes'] or hashlib.file_digest(path.open('rb'), 'sha256').hexdigest() != pin['sha256']:
-        raise ValueError(f'Pinned file mismatch: {path.name}')
+    with path.open('rb') as file:
+        if path.stat().st_size != pin['bytes'] or hashlib.file_digest(file, 'sha256').hexdigest() != pin['sha256']:
+            raise ValueError(f'Pinned file mismatch: {path.name}')
 
 
 def assemble(source, gguf, output):
