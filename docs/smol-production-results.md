@@ -58,4 +58,4 @@ The remaining qualification work is the failed quality gate and actual model run
 
 Q8 kernels can produce different candidate orders between the portable and explicit ISA builds. The fixed order fixture records each Windows build separately and checks repeatability, session invalidation and reset. It does not assert bitwise parity across CPU kernels. Aggregate comparisons must therefore use the report for the selected worker, not assume identical outputs from the two builds.
 
-The local converter reproduced the compiled Q8 SHA-256 exactly with the new lockfile. Both source assets and the existing statistical database retained their recorded hashes. The final runtime measurements use implementation commit `047461e`; subsequent changes are test fixtures and documentation.
+The local converter reproduced the compiled Q8 SHA-256 exactly with the new lockfile. Both source assets and the existing statistical database retained their recorded hashes. The final runtime measurements use implementation commit `047461e`; subsequent changes are test fixtures, report formatting and documentation.

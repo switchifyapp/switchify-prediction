@@ -238,7 +238,7 @@ def evaluate(args):
               'interpretation':'Frozen regression comparison, unknown pretraining overlap; no automatic promotion.'}
     if args.accelerated_worker:
         report['accelerated_worker_sha256'] = sha(args.accelerated_worker)
-    args.output.write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
+    args.output.write_bytes((json.dumps(report, indent=2)+'\n').encode('utf-8'))
 
 
 def main():
