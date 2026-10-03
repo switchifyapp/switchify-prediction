@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Score the pinned native FUTO three-suggestion decoder on exported synthetic queries."""
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -36,7 +37,7 @@ def summarize(queries, lines):
     prime = lines[1].split('\t')
     if not math.isfinite(cold_load) or cold_load < 0 or len(prime) < 3 or prime[:2] != ['0', 'ok']:
         raise ValueError('Invalid load or warm-up result')
-    cells, latencies = {}, []
+    cells, latencies, predictions = {}, [], []
     filtered, unsupported = 0, 0
     # First query is an untimed prime, then each frozen query is measured once.
     for index, (q, line) in enumerate(zip(queries, lines[2:])):
@@ -60,6 +61,7 @@ def summarize(queries, lines):
                     filtered += 1
         if any(c < 'a' or c > 'z' for c in q['prefix']):
             unsupported += 1
+        predictions.append((q['key'] if 'key' in q else index, native, exact))
         cell = cells.setdefault(q['domain'], {}).setdefault(str(q['prefix_chars']),
             dict(queries=0, native_top1_hits=0, native_top3_hits=0,
                  exact_prefix_top1_hits=0, exact_prefix_top3_hits=0, empty_exact_results=0))
@@ -74,13 +76,15 @@ def summarize(queries, lines):
     return dict(query_count=len(queries), successful_inference_queries=len(queries) - unsupported, cold_load_ms=cold_load,
                 warm_median_ms=percentile(.5), warm_p95_ms=percentile(.95), warm_max_ms=latencies[-1],
                 filtered_non_prefix_suggestions=filtered, unsupported_prefix_queries=unsupported,
-                failed_queries=0, cells=cells)
+                failed_queries=0, cells=cells,
+                prediction_sha256=hashlib.sha256(json.dumps(predictions, ensure_ascii=False).encode()).hexdigest())
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('executable', 'model', 'queries', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--threads', type=int, choices=(1, 4), default=1)
     args = parser.parse_args()
     if sha(args.model) != MODEL_SHA:
         raise ValueError('FUTO model checksum mismatch')
@@ -99,7 +103,7 @@ def main():
                                for q in [queries[0]] + queries).encode())
     peak = None
     with (out / 'native.tsv').open('wb') as stdout, (out / 'native.log').open('wb') as stderr:
-        process = subprocess.Popen([str(args.executable.resolve()), str(args.model.resolve()), str(fixture)],
+        process = subprocess.Popen([str(args.executable.resolve()), str(args.model.resolve()), str(fixture), str(args.threads)],
                                    stdout=stdout, stderr=stderr)
         deadline = time.monotonic() + 1800
         while process.poll() is None:
@@ -118,7 +122,7 @@ def main():
     report.update(protocol='futo-native-v1', model_sha256=MODEL_SHA,
                   model_file_bytes=args.model.stat().st_size, executable_sha256=sha(args.executable),
                   queries_sha256=sha(args.queries), hardware=platform.platform(),
-                  peak_process_working_set_bytes=peak, threads=1, results_limit=3,
+                  peak_process_working_set_bytes=peak, threads=args.threads, results_limit=3,
                   promote=False, note='Native no-coordinate correction path, then exact-prefix filtering. No backfill. Not a five-slot reranker; not validated against an Android device.')
     (out / 'results.json').write_bytes((json.dumps(report, indent=2) + '\n').encode())
 

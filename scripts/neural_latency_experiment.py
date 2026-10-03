@@ -45,7 +45,7 @@ def main():
               'logical_cpus': os.cpu_count(), 'rayon_threads': 4,
               'executable_sha256': sha(binary), 'converter_sha256': sha(converter),
               'build_label': args.build_label,
-              'reports': {}, 'promote': False,
+              'reports': {}, 'failed_modes': {}, 'promote': False,
               'cache_workload': 'Each frozen query starts with no cached context and is then repeated once. Only context KV/logits are cached, never candidate scores. This is a best-case cache-hit probe, not a typing trace.',
               'memory_method': 'Windows peak process working set, including loading; unavailable on other platforms.'}
     modes = args.modes or (('f32-batched', 'q8-batched') if args.only_batched else ('baseline', 'f32', 'q8', 'f32-batched', 'q8-batched'))
@@ -59,11 +59,17 @@ def main():
         if mode.startswith('q8'):
             quantized = out / 'q8.gguf'
             command += ['--gguf', str(quantized), '--gguf-sha256', sha(quantized)]
-        peak = run(command, env)
+        try:
+            peak = run(command, env)
+        except Exception as error:
+            result['failed_modes'][mode] = type(error).__name__
+            (out / 'results.json').write_bytes((json.dumps(result, indent=2) + '\n').encode())
+            raise
         report = json.loads(dest.read_text(encoding='utf-8'))
         report['peak_process_working_set_bytes'] = peak
+        dest.write_bytes((json.dumps(report, indent=2) + '\n').encode())
         result['reports'][mode] = report
-    (out / 'results.json').write_bytes((json.dumps(result, indent=2) + '\n').encode())
+        (out / 'results.json').write_bytes((json.dumps(result, indent=2) + '\n').encode())
 
 
 if __name__ == '__main__':

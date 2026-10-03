@@ -24,7 +24,8 @@ model bytes, peak working set and failures. A 30-minute process timeout terminat
 a stuck native run. No keyboard/pointer input, learning or network inference.
 
 Mechanical local source changes remove JNI includes/entry points, replace one
-variable-length C++ array with `std::vector`, and guard empty-string trimming.
+variable-length C++ array with `std::vector`, and guard empty/whitespace trimming
+and unsigned character classification.
 Two bundled Abseil include paths are adjusted to the repository's layout.
 The harness retains the JNI wrapper's exact-match preference before sorting.
 All four decode calls are checked, and upstream empty/default error returns
@@ -34,6 +35,11 @@ change failure handling only, never successful rankings.
 No weights, sampling thresholds or ranking are tuned against the fixtures.
 The native state maintains its own context reuse across the fixed query order.
 These timings are separate from the explicit hit/miss Candle measurements.
+
+Also run a fixed four-thread comparison via `llama_set_n_threads`, matching the
+Candle thread budget. Use `--threads 4` with a new output directory. This changes
+execution parallelism only; compare ordered-output digests with the one-thread
+run. Neither threading choice changes the native three-result policy.
 
 Preparation and build:
 

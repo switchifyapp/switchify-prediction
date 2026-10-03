@@ -53,6 +53,13 @@ and record executable hashes. This is a hardware-specific experiment, not a
 portable shipping binary. FUTO's Windows harness likewise uses `/arch:AVX2`.
 No accuracy policy changes are allowed for this build comparison.
 
+The initial portable Q8 batched attempt failed on Candle's non-contiguous output
+slice when both batch and prefill lengths exceeded one. The adapter now prefills
+Q8 batched contexts one token at a time, keeping the public API's input/output
+layout valid. This preserves causal attention semantics but changes prefill cost;
+report it explicitly when comparing the subsequent host-native batched run.
+Completed per-mode results are saved even if a later mode fails.
+
 Pass `--binary-dir target/neural-native/release --build-label host-native
 --modes q8 q8-batched` to the runner for the separately built executable.
 

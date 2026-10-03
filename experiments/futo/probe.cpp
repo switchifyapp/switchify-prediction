@@ -7,11 +7,14 @@
 #include "decoder.inc"
 
 int probe_main(int argc, char **argv) {
-    if (argc != 3) return 2;
+    if (argc != 3 && argc != 4) return 2;
+    const int threads = argc == 4 ? std::stoi(argv[3]) : 1;
+    if (threads != 1 && threads != 4) return 2;
     llama_backend_init(false);
     auto start = std::chrono::steady_clock::now();
     LanguageModelState state;
     if (!state.Initialize(argv[1])) return 3;
+    llama_set_n_threads(state.model->context(), threads, threads);
     auto elapsed = [](auto start) {
         return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
     };

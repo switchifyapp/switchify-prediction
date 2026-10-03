@@ -45,6 +45,8 @@ def main():
     # Mechanical portability/safety fixes only, no ranking or sampling changes.
     text = text.replace('int seq_id_use_count[n_results];', 'std::vector<int> seq_id_use_count(n_results);')
     text = text.replace('auto start = s.begin();', 'if (s.empty()) return {};\n    auto start = s.begin();')
+    text = text.replace('auto end = s.end();', 'if (start == s.end()) return {};\n    auto end = s.end();')
+    text = text.replace('std::isspace(*start)', 'std::isspace(static_cast<unsigned char>(*start))').replace('std::isspace(*end)', 'std::isspace(static_cast<unsigned char>(*end))')
     # Upstream sometimes returns default/empty state on errors, and one decode
     # call is unchecked. A benchmark must not count those as successful queries.
     head, state = text.split('struct LanguageModelState {', 1)
