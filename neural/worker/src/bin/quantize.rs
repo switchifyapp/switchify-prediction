@@ -22,18 +22,10 @@ fn interleave_rope(tensor: Tensor, heads: usize) -> Result<Tensor> {
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    ensure!(
-        args.len() == 3,
-        "Usage: quantize MODEL_DIR OUTPUT.gguf f32|q8"
-    );
+    ensure!(args.len() == 2, "Usage: quantize MODEL_DIR OUTPUT.gguf");
     let root = PathBuf::from(&args[0]);
     let output = PathBuf::from(&args[1]);
     ensure!(!output.exists(), "Output already exists");
-    let dtype = match args[2].to_str() {
-        Some("f32") => GgmlDType::F32,
-        Some("q8") => GgmlDType::Q8_0,
-        _ => anyhow::bail!("Expected f32 or q8"),
-    };
     let cfg: LlamaConfig = serde_json::from_slice(&fs::read(root.join("config.json"))?)?;
     ensure!(
         cfg.hidden_size == 576
@@ -54,7 +46,7 @@ fn main() -> Result<()> {
             tensor = interleave_rope(tensor, heads)?;
         }
         let kind = if tensor.rank() == 2 {
-            dtype
+            GgmlDType::Q8_0
         } else {
             GgmlDType::F32
         };

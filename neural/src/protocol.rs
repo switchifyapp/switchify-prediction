@@ -33,7 +33,6 @@ pub enum Reply {
         cache_hit: bool,
     },
     Reset,
-    Failed,
 }
 
 fn invalid() -> io::Error {

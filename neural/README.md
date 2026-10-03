@@ -30,7 +30,7 @@ The runtime is offline and never downloads assets. `source-manifest.json` pins t
 Acquire the files in `source-manifest.json` into a local source directory. Run the local converter and bundle assembler:
 
 ```sh
-target/smol-portable/release/quantize SOURCE_DIR MODEL.gguf q8
+target/smol-portable/release/quantize SOURCE_DIR MODEL.gguf
 python scripts/neural_bundle.py --source SOURCE_DIR --gguf MODEL.gguf --output MODEL_BUNDLE
 target/smol-portable/release/switchify-prediction-neural validate --bundle MODEL_BUNDLE
 ```
