@@ -15,6 +15,16 @@ Measured on Windows x86-64 on 2026-10-03 using Rust 1.97.1, the released en-aac-
 
 All six partitions passed position-preservation and top-five non-regression checks at every prefix length from zero through four. This conservative policy cannot displace an existing newer suggestion. When all five slots are occupied, legacy data cannot help, even if it knows the intended word.
 
+## Longer prefixes
+
+The benefit is larger after four typed characters, when fewer newer words match and more slots become available. These are completion-only queries for words longer than four graphemes, so they should not be compared directly with the two-character query population.
+
+| Test partition | Newer top five at four characters | Combined top five at four characters | Gain |
+| --- | ---: | ---: | ---: |
+| aac | 94.28% | 95.67% | +1.39 percentage points |
+| general | 83.24% | 87.79% | +4.55 percentage points |
+| conversation | 95.38% | 96.18% | +0.80 percentage points |
+
 ## Words missing from the newer model
 
 At two typed characters, these are query occurrences, not unique words. The last column counts queries where combined mode appended at least one legacy suggestion, whether correct or not.
