@@ -14,6 +14,34 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Experimental ordered predictions; scores from different sources are not mixed.
+    ExperimentalPredict {
+        #[arg(long, value_parser = ["original", "newer", "combined"])]
+        mode: String,
+        #[arg(long)]
+        baseline: Option<PathBuf>,
+        #[arg(long)]
+        legacy: Option<PathBuf>,
+        #[arg(long, default_value = "")]
+        before: String,
+        #[arg(long, default_value = "")]
+        prefix: String,
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+        #[arg(long, default_value_t = 2)]
+        min_chars: usize,
+    },
+    /// Compare one experimental mode on an explicit frozen partition.
+    CompareLegacy {
+        #[arg(long, value_parser = ["original", "newer", "combined"])]
+        mode: String,
+        #[arg(long)]
+        baseline: PathBuf,
+        #[arg(long)]
+        legacy: PathBuf,
+        #[arg(long)]
+        input: PathBuf,
+    },
     /// Normalize a UTF-8 corpus using exactly the predictor's sentence tokenizer.
     Normalize {
         #[arg(long)]
@@ -117,6 +145,60 @@ fn print(value: impl serde::Serialize) -> Result<()> {
 }
 fn run() -> Result<()> {
     match Cli::parse().command {
+        Command::ExperimentalPredict {
+            mode,
+            baseline,
+            legacy,
+            before,
+            prefix,
+            limit,
+            min_chars,
+        } => {
+            use switchify_prediction::experimental::{
+                CombinedPredictor, LegacyPredictor, RankedWord, Source,
+            };
+            let required = |p: Option<PathBuf>, name: &str| {
+                p.ok_or_else(|| {
+                    switchify_prediction::Error::Invalid(format!("{name} path required"))
+                })
+            };
+            let options = Options {
+                limit,
+                min_chars,
+                unigram_only: false,
+            };
+            match mode.as_str() {
+                "original" => print(
+                    LegacyPredictor::open(&required(legacy, "legacy")?)?
+                        .predict(&before, &prefix, options),
+                ),
+                "newer" => print(
+                    Predictor::open(&required(baseline, "baseline")?, None)?
+                        .predict(&before, &prefix, options)
+                        .into_iter()
+                        .map(|s| RankedWord {
+                            word: s.word,
+                            source: Source::Newer,
+                        })
+                        .collect::<Vec<_>>(),
+                ),
+                _ => print(
+                    CombinedPredictor::open(
+                        &required(baseline, "baseline")?,
+                        &required(legacy, "legacy")?,
+                    )?
+                    .predict(&before, &prefix, options),
+                ),
+            }
+        }
+        Command::CompareLegacy {
+            mode,
+            baseline,
+            legacy,
+            input,
+        } => print(switchify_prediction::experimental::compare(
+            &mode, &baseline, &legacy, &input,
+        )?),
         Command::Normalize { input, output } => {
             let text = fs::read_to_string(input)?;
             let normalized = switchify_prediction::sentences(&text)

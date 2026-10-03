@@ -12,6 +12,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub mod corpus;
 pub mod evaluation;
+pub mod experimental;
 pub mod production;
 
 #[derive(Debug, thiserror::Error)]
