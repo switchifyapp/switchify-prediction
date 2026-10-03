@@ -46,7 +46,9 @@ publish corpus text or derived models in this experiment.
 
 Build the CLI with `cargo build --release --locked`. Prepare the pinned existing
 training partitions using `python scripts/aac_experiment.py --prepare-only`.
-Obtain the released en-aac-oanc-v1 database with SHA-256
+Extract `english.sqlite` from `switchify-english-en-aac-oanc-v1.zip` on the
+[v0.1.0 release](https://github.com/switchifyapp/switchify-prediction/releases/tag/v0.1.0).
+The database must have SHA-256
 `222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad`.
 Then run:
 
