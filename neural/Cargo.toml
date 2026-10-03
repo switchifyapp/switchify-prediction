@@ -1,0 +1,36 @@
+[package]
+name = "switchify-prediction-neural"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+license = "MIT"
+description = "Opt-in offline SmolLM2 refinement for Switchify Prediction"
+autotests = false
+
+[features]
+test-support = []
+
+[[bin]]
+name = "fake-worker"
+path = "tests/fake_worker.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "lifecycle"
+path = "tests/lifecycle.rs"
+required-features = ["test-support"]
+
+[workspace]
+members = ["worker"]
+resolver = "3"
+
+[dependencies]
+switchify-prediction = { path = ".." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"

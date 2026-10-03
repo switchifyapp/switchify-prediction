@@ -1,0 +1,3 @@
+# These are byte-pinned model notices, fixtures and compatibility manifests.
+neural/** text eol=lf
+docs/smol-*.json text eol=lf

@@ -1,0 +1,13 @@
+{
+  "production_qualified": false,
+  "model_id": "smollm2-135m-q8-v1",
+  "policy_frozen_commit": "1a44602",
+  "reasons": [
+    "Two early development cells exceed the one-percentage-point top-five regression limit",
+    "Portable Windows refinement misses the 150 ms p95 target",
+    "Actual model runtime performance has not been measured on Linux or macOS"
+  ],
+  "optimized_windows_latency_passed": true,
+  "desktop_integration": false,
+  "automatic_promotion": false
+}
