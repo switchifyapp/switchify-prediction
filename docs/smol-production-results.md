@@ -27,15 +27,26 @@ Reference machine: Windows 11, AMD Ryzen AI 9 HX 370, 24 logical CPUs, four infe
 
 | Optimized measurement | Median | p95 | Maximum |
 | --- | ---: | ---: | ---: |
-| Immediate predictor call | 0.57 ms | 7.50 ms | 9.95 ms |
-| Immediate including CLI transport | 0.82 ms | 7.82 ms | 17.92 ms |
-| Refinement including IPC | 91.56 ms | 123.78 ms | 210.27 ms |
-| Context miss, 1,368 samples | 92.28 ms | 125.76 ms | 210.27 ms |
-| Context hit, 391 samples | 67.62 ms | 115.73 ms | 152.74 ms |
+| Immediate predictor call | 0.49 ms | 7.95 ms | 10.41 ms |
+| Immediate including CLI transport | 0.77 ms | 8.31 ms | 16.01 ms |
+| Refinement including IPC | 91.58 ms | 122.44 ms | 242.17 ms |
+| Context miss, 1,368 samples | 92.35 ms | 122.95 ms | 242.17 ms |
+| Context hit, 391 samples | 66.04 ms | 106.13 ms | 125.22 ms |
 
-Cold startup to CLI ready was 3.29 seconds, including the statistical database and model verification/load. Peak sampled parent-plus-worker RSS was 638.8 MiB. RSS is summed every 10 ms; shared pages can be counted twice, and brief peaks can be missed. This measures the whole process tree, not just the controller. Weights occupy 143,041,952 bytes; tokenizer and notices are separate bundle files.
+Cold startup to CLI ready was 3.24 seconds, including the statistical database and model verification/load. Peak sampled parent-plus-worker RSS was 643.1 MiB. RSS is summed every 10 ms; shared pages can be counted twice, and brief peaks can be missed. This measures the whole process tree, not just the controller. Weights occupy 143,041,952 bytes; tokenizer and notices are separate bundle files.
 
 The initial portable run recorded a 335.50 ms refinement p95 and one inference timeout after 924 successful refinements. The worker stopped and statistical results remained available. That initial diagnostic did not qualify as the required 1,000 successful neural samples. The benchmark now explicitly requests retry after a measured failure, counts the failed query and reports reload time separately. A warm-up failure aborts clearly instead of silently benchmarking statistical fallback.
+
+The final portable run completed 1,760 queries with 1,757 successful refinements and 2 failed requests. Cold startup was 3.53 seconds and sampled process-tree peak RSS was 656.0 MiB. It meets the successful-sample minimum but misses the 150 ms refinement target.
+
+| Portable measurement | Samples | Median | p95 | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Immediate predictor call | 1760 | 0.60 ms | 7.89 ms | 21.49 ms |
+| Refinement including IPC | 1757 | 213.82 ms | 327.69 ms | 428.96 ms |
+| Context miss | 1366 | 239.49 ms | 332.71 ms | 428.96 ms |
+| Context hit | 391 | 152.55 ms | 217.16 ms | 302.02 ms |
+
+Machine-readable evidence: [optimized](smol-avx2-results.json) and [portable](smol-portable-results.json). End-to-end timings include immediate prediction, dispatch and result polling in addition to the separately enforced 500 ms worker deadline. These measurements ran in a normal desktop session, without real-time scheduling isolation.
 
 ## Reproduction and limits
 
@@ -44,3 +55,7 @@ Run the command in [the companion README](../neural/README.md) once with only `-
 Windows x64 has actual model runtime measurements. Linux x64 and both macOS architectures have CI compilation, lifecycle tests and packaging, not measured model performance. Do not infer macOS latency from Windows results. No keyboard or pointer input was injected. Tests use synthetic text, fake processes and an explicit local-model parity test.
 
 The remaining qualification work is the failed quality gate and actual model runtime/performance validation on the other target platforms. The portable worker also misses the reference latency target. Passing software checks does not override these limits.
+
+Q8 kernels can produce different candidate orders between the portable and explicit ISA builds. The fixed order fixture records each Windows build separately and checks repeatability, session invalidation and reset. It does not assert bitwise parity across CPU kernels. Aggregate comparisons must therefore use the report for the selected worker, not assume identical outputs from the two builds.
+
+The local converter reproduced the compiled Q8 SHA-256 exactly with the new lockfile. Both source assets and the existing statistical database retained their recorded hashes. The final runtime measurements use implementation commit `047461e`; subsequent changes are test fixtures and documentation.

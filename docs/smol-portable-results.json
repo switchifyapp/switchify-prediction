@@ -3,50 +3,53 @@
   "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
   "logical_cpus": 24,
   "capabilities": {
-    "accelerated": true,
+    "accelerated": false,
     "context_tokens": 64,
     "deadline_ms": 500,
     "shortlist": 8,
     "threads": 4
   },
-  "cold_load_ms": 3235.6024000036996,
-  "process_tree_peak_rss_bytes": 674332672,
+  "cold_load_ms": 3529.6957999962615,
+  "process_tree_peak_rss_bytes": 687869952,
   "memory_method": "10ms sum of parent and descendants RSS; shared pages may count twice",
   "queries": 1760,
-  "failures": 0,
+  "failures": 2,
   "timings": {
     "immediate": {
       "samples": 1760,
-      "median_ms": 0.48700000000000004,
-      "p95_ms": 7.95,
-      "max_ms": 10.4084
+      "median_ms": 0.6013999999999999,
+      "p95_ms": 7.892899999999999,
+      "max_ms": 21.4904
     },
     "immediate_with_ipc": {
       "samples": 1760,
-      "median_ms": 0.7729999924777076,
-      "p95_ms": 8.307900003273971,
-      "max_ms": 16.008799997507595
+      "median_ms": 0.8744999940972775,
+      "p95_ms": 8.31330000073649,
+      "max_ms": 34.94259998842608
     },
     "refinement_with_ipc": {
-      "samples": 1759,
-      "median_ms": 91.58360000583343,
-      "p95_ms": 122.44340000324883,
-      "max_ms": 242.16829999932088
+      "samples": 1757,
+      "median_ms": 213.817800002289,
+      "p95_ms": 327.69039999402594,
+      "max_ms": 428.9647999976296
     },
     "context_miss": {
-      "samples": 1368,
-      "median_ms": 92.3454000003403,
-      "p95_ms": 122.94800000381656,
-      "max_ms": 242.16829999932088
+      "samples": 1366,
+      "median_ms": 239.4914000033168,
+      "p95_ms": 332.7148000098532,
+      "max_ms": 428.9647999976296
     },
     "context_hit": {
       "samples": 391,
-      "median_ms": 66.0391000128584,
-      "p95_ms": 106.13019998709206,
-      "max_ms": 125.21689999266528
+      "median_ms": 152.550999991945,
+      "p95_ms": 217.16149999701884,
+      "max_ms": 302.0225000072969
     }
   },
-  "explicit_retry_load_ms": [],
+  "explicit_retry_load_ms": [
+    368.2270999997854,
+    426.7621000035433
+  ],
   "model_file_bytes": 143041952,
   "baseline_file_bytes": 29802496,
   "cells": {
@@ -70,7 +73,7 @@
       "queries": 64,
       "baseline_top1": 10,
       "baseline_top5": 19,
-      "refined_top1": 21,
+      "refined_top1": 22,
       "refined_top5": 23,
       "failures": 0
     },
@@ -78,9 +81,9 @@
       "queries": 64,
       "baseline_top1": 12,
       "baseline_top5": 34,
-      "refined_top1": 38,
+      "refined_top1": 37,
       "refined_top5": 41,
-      "failures": 0
+      "failures": 1
     },
     "regression/documents/4": {
       "queries": 64,
@@ -94,7 +97,7 @@
       "queries": 64,
       "baseline_top1": 3,
       "baseline_top5": 12,
-      "refined_top1": 10,
+      "refined_top1": 11,
       "refined_top5": 18,
       "failures": 0
     },
@@ -102,7 +105,7 @@
       "queries": 64,
       "baseline_top1": 16,
       "baseline_top5": 29,
-      "refined_top1": 24,
+      "refined_top1": 25,
       "refined_top5": 30,
       "failures": 0
     },
@@ -135,7 +138,7 @@
       "baseline_top1": 10,
       "baseline_top5": 13,
       "refined_top1": 12,
-      "refined_top5": 18,
+      "refined_top5": 17,
       "failures": 0
     },
     "regression/messages/1": {
@@ -150,7 +153,7 @@
       "queries": 64,
       "baseline_top1": 32,
       "baseline_top5": 55,
-      "refined_top1": 41,
+      "refined_top1": 40,
       "refined_top5": 56,
       "failures": 0
     },
@@ -166,9 +169,9 @@
       "queries": 64,
       "baseline_top1": 42,
       "baseline_top5": 62,
-      "refined_top1": 50,
+      "refined_top1": 48,
       "refined_top5": 63,
-      "failures": 0
+      "failures": 1
     },
     "regression/search/0": {
       "queries": 64,
@@ -431,7 +434,7 @@
       "baseline_top1": 3,
       "baseline_top5": 8,
       "refined_top1": 4,
-      "refined_top5": 9,
+      "refined_top5": 8,
       "failures": 0
     },
     "test/email/3": {
@@ -531,7 +534,7 @@
       "failures": 0
     }
   },
-  "prediction_sha256": "a1521815e0742be25878e609da9a930a0a3e3a2ce504bbe81daab0854b159b70",
+  "prediction_sha256": "3deef3a6c68355c0326b610fe19acf7005028c6a143fce782d225c7754c59df1",
   "inputs": {
     "neural\\evaluation-protocol.json": "2a2f93a39de9a8a9ab7d18350aef51539b05600781ea972a666ea626b97023ca",
     "neural\\fixtures\\regression.json": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
@@ -548,10 +551,9 @@
       "development/messages/0"
     ],
     "immediate_latency": true,
-    "refinement_latency": true,
+    "refinement_latency": false,
     "minimum_successful_samples": true,
-    "no_failures": true
+    "no_failures": false
   },
-  "interpretation": "Frozen regression comparison, unknown pretraining overlap; no automatic promotion.",
-  "accelerated_worker_sha256": "c501222092380219354153eebd9d58211cb94e17e316fd2a9662f18cdcd65afe"
+  "interpretation": "Frozen regression comparison, unknown pretraining overlap; no automatic promotion."
 }
