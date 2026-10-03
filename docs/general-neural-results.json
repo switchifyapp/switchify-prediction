@@ -1,0 +1,325 @@
+{
+  "protocol": "general-neural-v1",
+  "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+  "rayon_threads": 4,
+  "dtype": "F32",
+  "device": "CPU",
+  "executable_sha256": "67cc3ad32dd7abd22c699b8bd1973c6110cc084b2bf3cf16d4da3d393c8c72b2",
+  "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+  "reports": {
+    "baseline": {
+      "mode": "Baseline",
+      "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+      "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+      "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+      "per_cell": 64,
+      "shortlist": 8,
+      "context_tokens": 64,
+      "cold_load_ms": 2543.1276000000003,
+      "query_count": 1280,
+      "warm_median_ms": 0.0792,
+      "warm_p95_ms": 6.0288,
+      "warm_max_ms": 8.2803,
+      "failed_queries": 0,
+      "model_file_bytes": 269060552,
+      "baseline_payload_bytes": 16821218,
+      "cells": {
+        "documents": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 2,
+            "top5_hits": 6,
+            "shortlist_hits": 10
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 7,
+            "top5_hits": 9,
+            "shortlist_hits": 10
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 10,
+            "top5_hits": 19,
+            "shortlist_hits": 23
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 12,
+            "top5_hits": 34,
+            "shortlist_hits": 41
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 22,
+            "top5_hits": 46,
+            "shortlist_hits": 53
+          }
+        },
+        "email": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 3,
+            "top5_hits": 12,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 16,
+            "top5_hits": 29,
+            "shortlist_hits": 31
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 27,
+            "top5_hits": 42,
+            "shortlist_hits": 44
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 26,
+            "top5_hits": 42,
+            "shortlist_hits": 47
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 26,
+            "top5_hits": 47,
+            "shortlist_hits": 52
+          }
+        },
+        "messages": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 10,
+            "top5_hits": 13,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 23,
+            "top5_hits": 34,
+            "shortlist_hits": 41
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 32,
+            "top5_hits": 55,
+            "shortlist_hits": 57
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 38,
+            "top5_hits": 59,
+            "shortlist_hits": 59
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 42,
+            "top5_hits": 62,
+            "shortlist_hits": 63
+          }
+        },
+        "search": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 2,
+            "top5_hits": 5,
+            "shortlist_hits": 7
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 6,
+            "top5_hits": 10,
+            "shortlist_hits": 12
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 10,
+            "top5_hits": 19,
+            "shortlist_hits": 22
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 15,
+            "top5_hits": 36,
+            "shortlist_hits": 42
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 24,
+            "top5_hits": 49,
+            "shortlist_hits": 53
+          }
+        }
+      },
+      "peak_process_working_set_bytes": 389099520
+    },
+    "neural": {
+      "mode": "Neural",
+      "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+      "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+      "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+      "per_cell": 64,
+      "shortlist": 8,
+      "context_tokens": 64,
+      "cold_load_ms": 2818.6385,
+      "query_count": 1280,
+      "warm_median_ms": 165.7749,
+      "warm_p95_ms": 229.35410000000002,
+      "warm_max_ms": 396.5521,
+      "failed_queries": 0,
+      "model_file_bytes": 269060552,
+      "baseline_payload_bytes": 16821218,
+      "cells": {
+        "documents": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 6,
+            "top5_hits": 10,
+            "shortlist_hits": 10
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 9,
+            "top5_hits": 10,
+            "shortlist_hits": 10
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 21,
+            "top5_hits": 23,
+            "shortlist_hits": 23
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 38,
+            "top5_hits": 41,
+            "shortlist_hits": 41
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 47,
+            "top5_hits": 53,
+            "shortlist_hits": 53
+          }
+        },
+        "email": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 11,
+            "top5_hits": 18,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 24,
+            "top5_hits": 30,
+            "shortlist_hits": 31
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 32,
+            "top5_hits": 44,
+            "shortlist_hits": 44
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 37,
+            "top5_hits": 47,
+            "shortlist_hits": 47
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 43,
+            "top5_hits": 52,
+            "shortlist_hits": 52
+          }
+        },
+        "messages": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 13,
+            "top5_hits": 18,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 25,
+            "top5_hits": 38,
+            "shortlist_hits": 41
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 42,
+            "top5_hits": 56,
+            "shortlist_hits": 57
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 50,
+            "top5_hits": 59,
+            "shortlist_hits": 59
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 49,
+            "top5_hits": 63,
+            "shortlist_hits": 63
+          }
+        },
+        "search": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 5,
+            "top5_hits": 7,
+            "shortlist_hits": 7
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 11,
+            "top5_hits": 12,
+            "shortlist_hits": 12
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 18,
+            "top5_hits": 22,
+            "shortlist_hits": 22
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 32,
+            "top5_hits": 41,
+            "shortlist_hits": 42
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 35,
+            "top5_hits": 53,
+            "shortlist_hits": 53
+          }
+        }
+      },
+      "peak_process_working_set_bytes": 1087586304
+    }
+  },
+  "memory_method": "Windows peak working set sampled from OS high-water counter; unavailable on other platforms. Includes loading and scoring, not model payload alone.",
+  "decision": {
+    "mean_early_top5_gain": 0.045572916666666664,
+    "worst_early_cell_gain": 0.015625,
+    "accuracy_passed": true,
+    "latency_passed": false,
+    "promote": false
+  },
+  "cpu": "AMD Ryzen AI 9 HX 370 w/ Radeon 890M",
+  "date": "2026-10-03",
+  "experiment_source_commit": "f9f42dc26076e6d18173d8dc390d2729e29379c7",
+  "limitations": [
+    "Synthetic diagnostic fixtures, not representative user text or evidence of unseen-user accuracy.",
+    "A bounded top-eight reranker, not unrestricted neural prediction.",
+    "Unquantized CPU F32 without cross-query KV caching; no inference network access.",
+    "Windows measured; macOS performance not measured.",
+    "Peak process working set includes validation, loading and scoring, not just model payload."
+  ]
+}

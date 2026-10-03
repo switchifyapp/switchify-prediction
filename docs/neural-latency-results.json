@@ -1,0 +1,1373 @@
+{
+  "protocol": "neural-latency-followup-v1",
+  "date": "2026-10-03",
+  "hardware": "Windows 11, AMD Ryzen AI 9 HX 370, 24 logical CPUs",
+  "scope": "Synthetic general-purpose fixtures; no personal learning or production changes.",
+  "portable_sequential": {
+    "protocol": "neural-latency-v1",
+    "hardware": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 24,
+    "rayon_threads": 4,
+    "executable_sha256": "ed625a3a2c48b6a9caeabca303a9f0a62f2a3ac7b7d3d5ff553542812d083275",
+    "converter_sha256": "54540399ec91b5c3e53abbade20a141e0cb6e72415c519229d9643218a49fcea",
+    "reports": {
+      "baseline": {
+        "mode": "Baseline",
+        "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+        "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+        "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+        "per_cell": 64,
+        "shortlist": 8,
+        "context_tokens": 64,
+        "cold_load_ms": 2595.6348,
+        "query_count": 1280,
+        "warm_median_ms": 0.0829,
+        "warm_p95_ms": 6.1265,
+        "warm_max_ms": 8.575,
+        "failed_queries": 0,
+        "model_file_bytes": 269060552,
+        "baseline_payload_bytes": 16821218,
+        "cells": {
+          "documents": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 2,
+              "top5_hits": 6,
+              "shortlist_hits": 10
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 7,
+              "top5_hits": 9,
+              "shortlist_hits": 10
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 10,
+              "top5_hits": 19,
+              "shortlist_hits": 23
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 12,
+              "top5_hits": 34,
+              "shortlist_hits": 41
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 22,
+              "top5_hits": 46,
+              "shortlist_hits": 53
+            }
+          },
+          "email": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 3,
+              "top5_hits": 12,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 16,
+              "top5_hits": 29,
+              "shortlist_hits": 31
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 27,
+              "top5_hits": 42,
+              "shortlist_hits": 44
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 26,
+              "top5_hits": 42,
+              "shortlist_hits": 47
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 26,
+              "top5_hits": 47,
+              "shortlist_hits": 52
+            }
+          },
+          "messages": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 10,
+              "top5_hits": 13,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 23,
+              "top5_hits": 34,
+              "shortlist_hits": 41
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 55,
+              "shortlist_hits": 57
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 59,
+              "shortlist_hits": 59
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 42,
+              "top5_hits": 62,
+              "shortlist_hits": 63
+            }
+          },
+          "search": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 2,
+              "top5_hits": 5,
+              "shortlist_hits": 7
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 6,
+              "top5_hits": 10,
+              "shortlist_hits": 12
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 10,
+              "top5_hits": 19,
+              "shortlist_hits": 22
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 15,
+              "top5_hits": 36,
+              "shortlist_hits": 42
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 24,
+              "top5_hits": 49,
+              "shortlist_hits": 53
+            }
+          }
+        },
+        "gguf_sha256": null,
+        "cache_hit": null,
+        "prediction_sha256": "359afe87eecb2eef3eef45adac2d2618f774834f06d65b9cae36eed38740df0e",
+        "peak_process_working_set_bytes": 389189632
+      },
+      "f32": {
+        "mode": "Neural",
+        "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+        "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+        "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+        "per_cell": 64,
+        "shortlist": 8,
+        "context_tokens": 64,
+        "cold_load_ms": 2803.5672,
+        "query_count": 1280,
+        "warm_median_ms": 165.99050000000003,
+        "warm_p95_ms": 226.72410000000002,
+        "warm_max_ms": 398.2863,
+        "failed_queries": 0,
+        "model_file_bytes": 269060552,
+        "baseline_payload_bytes": 16821218,
+        "cells": {
+          "documents": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 6,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 9,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 21,
+              "top5_hits": 23,
+              "shortlist_hits": 23
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 41,
+              "shortlist_hits": 41
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 47,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          },
+          "email": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 24,
+              "top5_hits": 30,
+              "shortlist_hits": 31
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 44,
+              "shortlist_hits": 44
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 37,
+              "top5_hits": 47,
+              "shortlist_hits": 47
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 43,
+              "top5_hits": 52,
+              "shortlist_hits": 52
+            }
+          },
+          "messages": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 13,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 25,
+              "top5_hits": 38,
+              "shortlist_hits": 41
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 42,
+              "top5_hits": 56,
+              "shortlist_hits": 57
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 59,
+              "shortlist_hits": 59
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 49,
+              "top5_hits": 63,
+              "shortlist_hits": 63
+            }
+          },
+          "search": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 5,
+              "top5_hits": 7,
+              "shortlist_hits": 7
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 12,
+              "shortlist_hits": 12
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 18,
+              "top5_hits": 22,
+              "shortlist_hits": 22
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 41,
+              "shortlist_hits": 42
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 35,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          }
+        },
+        "gguf_sha256": null,
+        "cache_hit": {
+          "queries": 1280,
+          "median_ms": 128.81699999999998,
+          "p95_ms": 187.2048,
+          "max_ms": 381.0199
+        },
+        "prediction_sha256": "cf2bcb6d9847e9baeaa63c80cc89134d6c8db9f8dd5a540b6850edc04e8e25bc",
+        "peak_process_working_set_bytes": 1087184896
+      },
+      "q8": {
+        "mode": "Neural",
+        "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+        "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+        "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+        "per_cell": 64,
+        "shortlist": 8,
+        "context_tokens": 64,
+        "cold_load_ms": 2716.641,
+        "query_count": 1280,
+        "warm_median_ms": 223.93689999999998,
+        "warm_p95_ms": 319.8611,
+        "warm_max_ms": 539.563,
+        "failed_queries": 0,
+        "model_file_bytes": 143041952,
+        "baseline_payload_bytes": 16821218,
+        "cells": {
+          "documents": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 7,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 9,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 22,
+              "top5_hits": 23,
+              "shortlist_hits": 23
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 41,
+              "shortlist_hits": 41
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 47,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          },
+          "email": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 25,
+              "top5_hits": 30,
+              "shortlist_hits": 31
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 34,
+              "top5_hits": 44,
+              "shortlist_hits": 44
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 47,
+              "shortlist_hits": 47
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 43,
+              "top5_hits": 52,
+              "shortlist_hits": 52
+            }
+          },
+          "messages": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 12,
+              "top5_hits": 17,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 26,
+              "top5_hits": 38,
+              "shortlist_hits": 41
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 40,
+              "top5_hits": 56,
+              "shortlist_hits": 57
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 59,
+              "shortlist_hits": 59
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 49,
+              "top5_hits": 63,
+              "shortlist_hits": 63
+            }
+          },
+          "search": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 5,
+              "top5_hits": 7,
+              "shortlist_hits": 7
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 12,
+              "shortlist_hits": 12
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 19,
+              "top5_hits": 22,
+              "shortlist_hits": 22
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 41,
+              "shortlist_hits": 42
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 35,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          }
+        },
+        "gguf_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+        "cache_hit": {
+          "queries": 1280,
+          "median_ms": 136.65079999999998,
+          "p95_ms": 204.8758,
+          "max_ms": 443.2224
+        },
+        "prediction_sha256": "45631431c0a88eacc374195b0a99127f0aaa93f202f81a34ffe2b308d1db9056",
+        "peak_process_working_set_bytes": 538890240
+      }
+    },
+    "promote": false,
+    "cache_workload": "Each frozen query starts with no cached context and is then repeated once. Only context KV/logits are cached, never candidate scores. This is a best-case cache-hit probe, not a typing trace.",
+    "memory_method": "Windows peak process working set, including loading; unavailable on other platforms."
+  },
+  "portable_batched": {
+    "source_commit": "381ec0945a52f2e712ac26a0a69eb91b3e93989d",
+    "f32": {
+      "mode": "Neural",
+      "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+      "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+      "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+      "per_cell": 64,
+      "shortlist": 8,
+      "context_tokens": 64,
+      "cold_load_ms": 2844.7086,
+      "query_count": 1280,
+      "warm_median_ms": 146.9601,
+      "warm_p95_ms": 225.8362,
+      "warm_max_ms": 304.25419999999997,
+      "failed_queries": 0,
+      "model_file_bytes": 269060552,
+      "baseline_payload_bytes": 16821218,
+      "cells": {
+        "documents": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 6,
+            "top5_hits": 10,
+            "shortlist_hits": 10
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 9,
+            "top5_hits": 10,
+            "shortlist_hits": 10
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 21,
+            "top5_hits": 23,
+            "shortlist_hits": 23
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 38,
+            "top5_hits": 41,
+            "shortlist_hits": 41
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 47,
+            "top5_hits": 53,
+            "shortlist_hits": 53
+          }
+        },
+        "email": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 11,
+            "top5_hits": 18,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 24,
+            "top5_hits": 30,
+            "shortlist_hits": 31
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 32,
+            "top5_hits": 44,
+            "shortlist_hits": 44
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 37,
+            "top5_hits": 47,
+            "shortlist_hits": 47
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 43,
+            "top5_hits": 52,
+            "shortlist_hits": 52
+          }
+        },
+        "messages": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 13,
+            "top5_hits": 18,
+            "shortlist_hits": 19
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 25,
+            "top5_hits": 38,
+            "shortlist_hits": 41
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 42,
+            "top5_hits": 56,
+            "shortlist_hits": 57
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 50,
+            "top5_hits": 59,
+            "shortlist_hits": 59
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 49,
+            "top5_hits": 63,
+            "shortlist_hits": 63
+          }
+        },
+        "search": {
+          "0": {
+            "queries": 64,
+            "top1_hits": 5,
+            "top5_hits": 7,
+            "shortlist_hits": 7
+          },
+          "1": {
+            "queries": 64,
+            "top1_hits": 11,
+            "top5_hits": 12,
+            "shortlist_hits": 12
+          },
+          "2": {
+            "queries": 64,
+            "top1_hits": 18,
+            "top5_hits": 22,
+            "shortlist_hits": 22
+          },
+          "3": {
+            "queries": 64,
+            "top1_hits": 32,
+            "top5_hits": 41,
+            "shortlist_hits": 42
+          },
+          "4": {
+            "queries": 64,
+            "top1_hits": 35,
+            "top5_hits": 53,
+            "shortlist_hits": 53
+          }
+        }
+      },
+      "gguf_sha256": null,
+      "cache_hit": {
+        "queries": 1280,
+        "median_ms": 59.4241,
+        "p95_ms": 132.7823,
+        "max_ms": 213.2565
+      },
+      "prediction_sha256": "cf2bcb6d9847e9baeaa63c80cc89134d6c8db9f8dd5a540b6850edc04e8e25bc",
+      "batch_candidates": true
+    },
+    "peak_process_working_set_bytes": null,
+    "executable_sha256": null,
+    "limitation": "The later Q8 batch failed before the original runner saved its aggregate memory/executable metadata. The completed F32 per-mode timing and accuracy file survived.",
+    "failed_modes": {
+      "q8-batched": "Candle 0.11 non-contiguous output slice for batch>1 and prefill>1. Fixed through token-wise prefill for the later host-native run."
+    }
+  },
+  "host_native": {
+    "protocol": "neural-latency-v1",
+    "hardware": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 24,
+    "rayon_threads": 4,
+    "executable_sha256": "06cb46125a0b73726fdf5df6d7c5b2e56cfb3c864f296d9283e392eedb4820e3",
+    "converter_sha256": "020c6be914c0d8be5086b4f8f1002863f5899ad298502f54a0319e3b68f2d365",
+    "build_label": "host-native",
+    "reports": {
+      "q8": {
+        "mode": "Neural",
+        "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+        "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+        "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+        "per_cell": 64,
+        "shortlist": 8,
+        "context_tokens": 64,
+        "cold_load_ms": 2710.7670000000003,
+        "query_count": 1280,
+        "warm_median_ms": 74.3587,
+        "warm_p95_ms": 101.78320000000001,
+        "warm_max_ms": 176.13690000000003,
+        "failed_queries": 0,
+        "model_file_bytes": 143041952,
+        "baseline_payload_bytes": 16821218,
+        "cells": {
+          "documents": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 7,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 9,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 21,
+              "top5_hits": 23,
+              "shortlist_hits": 23
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 41,
+              "shortlist_hits": 41
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 47,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          },
+          "email": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 10,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 24,
+              "top5_hits": 30,
+              "shortlist_hits": 31
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 34,
+              "top5_hits": 44,
+              "shortlist_hits": 44
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 47,
+              "shortlist_hits": 47
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 43,
+              "top5_hits": 52,
+              "shortlist_hits": 52
+            }
+          },
+          "messages": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 12,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 26,
+              "top5_hits": 38,
+              "shortlist_hits": 41
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 41,
+              "top5_hits": 56,
+              "shortlist_hits": 57
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 59,
+              "shortlist_hits": 59
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 63,
+              "shortlist_hits": 63
+            }
+          },
+          "search": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 5,
+              "top5_hits": 7,
+              "shortlist_hits": 7
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 12,
+              "shortlist_hits": 12
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 19,
+              "top5_hits": 22,
+              "shortlist_hits": 22
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 41,
+              "shortlist_hits": 42
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 35,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          }
+        },
+        "gguf_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+        "cache_hit": {
+          "queries": 1280,
+          "median_ms": 56.6761,
+          "p95_ms": 79.88149999999999,
+          "max_ms": 166.6237
+        },
+        "prediction_sha256": "c15a0a27ba6d863b5fe5f73cc2d0fc34208ca766ea038d058572a9cb18617c56",
+        "batch_candidates": false,
+        "peak_process_working_set_bytes": 539799552
+      },
+      "q8-batched": {
+        "mode": "Neural",
+        "fixture_sha256": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+        "baseline_sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+        "model_manifest_sha256": "5099892d4ea02608c0710c55358c4fd38e5890c9fd061fa3291b89b21cacf140",
+        "per_cell": 64,
+        "shortlist": 8,
+        "context_tokens": 64,
+        "cold_load_ms": 2743.264,
+        "query_count": 1280,
+        "warm_median_ms": 159.8068,
+        "warm_p95_ms": 297.361,
+        "warm_max_ms": 436.3091,
+        "failed_queries": 0,
+        "model_file_bytes": 143041952,
+        "baseline_payload_bytes": 16821218,
+        "cells": {
+          "documents": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 7,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 9,
+              "top5_hits": 10,
+              "shortlist_hits": 10
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 21,
+              "top5_hits": 23,
+              "shortlist_hits": 23
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 41,
+              "shortlist_hits": 41
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 47,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          },
+          "email": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 10,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 24,
+              "top5_hits": 30,
+              "shortlist_hits": 31
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 34,
+              "top5_hits": 44,
+              "shortlist_hits": 44
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 38,
+              "top5_hits": 47,
+              "shortlist_hits": 47
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 43,
+              "top5_hits": 52,
+              "shortlist_hits": 52
+            }
+          },
+          "messages": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 12,
+              "top5_hits": 18,
+              "shortlist_hits": 19
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 26,
+              "top5_hits": 38,
+              "shortlist_hits": 41
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 41,
+              "top5_hits": 56,
+              "shortlist_hits": 57
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 59,
+              "shortlist_hits": 59
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 50,
+              "top5_hits": 63,
+              "shortlist_hits": 63
+            }
+          },
+          "search": {
+            "0": {
+              "queries": 64,
+              "top1_hits": 5,
+              "top5_hits": 7,
+              "shortlist_hits": 7
+            },
+            "1": {
+              "queries": 64,
+              "top1_hits": 11,
+              "top5_hits": 12,
+              "shortlist_hits": 12
+            },
+            "2": {
+              "queries": 64,
+              "top1_hits": 19,
+              "top5_hits": 22,
+              "shortlist_hits": 22
+            },
+            "3": {
+              "queries": 64,
+              "top1_hits": 32,
+              "top5_hits": 41,
+              "shortlist_hits": 42
+            },
+            "4": {
+              "queries": 64,
+              "top1_hits": 35,
+              "top5_hits": 53,
+              "shortlist_hits": 53
+            }
+          }
+        },
+        "gguf_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+        "cache_hit": {
+          "queries": 1280,
+          "median_ms": 32.382099999999994,
+          "p95_ms": 69.1143,
+          "max_ms": 114.19269999999999
+        },
+        "prediction_sha256": "c15a0a27ba6d863b5fe5f73cc2d0fc34208ca766ea038d058572a9cb18617c56",
+        "batch_candidates": true,
+        "peak_process_working_set_bytes": 556535808
+      }
+    },
+    "failed_modes": {},
+    "promote": false,
+    "cache_workload": "Each frozen query starts with no cached context and is then repeated once. Only context KV/logits are cached, never candidate scores. This is a best-case cache-hit probe, not a typing trace.",
+    "memory_method": "Windows peak process working set, including loading; unavailable on other platforms."
+  },
+  "futo": {
+    "source_commit": "70a5d390c505a6bbcc4e14966e5628e43ca3f1fc",
+    "source_archive_sha256": "465677ea63dcd53ed7ba58da9353c0d1dadf744d55a9e4b7978ccf6da2c79b6d",
+    "one_thread": {
+      "query_count": 1280,
+      "successful_inference_queries": 1279,
+      "cold_load_ms": 86.5863,
+      "warm_median_ms": 13.8488,
+      "warm_p95_ms": 24.067,
+      "warm_max_ms": 30.3368,
+      "filtered_non_prefix_suggestions": 789,
+      "unsupported_prefix_queries": 1,
+      "failed_queries": 0,
+      "cells": {
+        "documents": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 7,
+            "native_top3_hits": 11,
+            "exact_prefix_top1_hits": 7,
+            "exact_prefix_top3_hits": 11,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 1,
+            "native_top3_hits": 6,
+            "exact_prefix_top1_hits": 3,
+            "exact_prefix_top3_hits": 6,
+            "empty_exact_results": 10
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 21,
+            "native_top3_hits": 36,
+            "exact_prefix_top1_hits": 23,
+            "exact_prefix_top3_hits": 36,
+            "empty_exact_results": 0
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 29,
+            "native_top3_hits": 49,
+            "exact_prefix_top1_hits": 30,
+            "exact_prefix_top3_hits": 49,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 42,
+            "native_top3_hits": 57,
+            "exact_prefix_top1_hits": 42,
+            "exact_prefix_top3_hits": 57,
+            "empty_exact_results": 0
+          }
+        },
+        "email": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 11,
+            "native_top3_hits": 20,
+            "exact_prefix_top1_hits": 11,
+            "exact_prefix_top3_hits": 20,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 1,
+            "native_top3_hits": 7,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 7,
+            "empty_exact_results": 11
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 30,
+            "native_top3_hits": 41,
+            "exact_prefix_top1_hits": 33,
+            "exact_prefix_top3_hits": 41,
+            "empty_exact_results": 1
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 27,
+            "native_top3_hits": 39,
+            "exact_prefix_top1_hits": 27,
+            "exact_prefix_top3_hits": 39,
+            "empty_exact_results": 3
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 30,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 32,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 1
+          }
+        },
+        "messages": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 11,
+            "native_top3_hits": 15,
+            "exact_prefix_top1_hits": 11,
+            "exact_prefix_top3_hits": 15,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 5,
+            "native_top3_hits": 12,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 12,
+            "empty_exact_results": 11
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 29,
+            "native_top3_hits": 47,
+            "exact_prefix_top1_hits": 33,
+            "exact_prefix_top3_hits": 47,
+            "empty_exact_results": 1
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 36,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 38,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 38,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 40,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 2
+          }
+        },
+        "search": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 8,
+            "native_top3_hits": 11,
+            "exact_prefix_top1_hits": 8,
+            "exact_prefix_top3_hits": 11,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 4,
+            "native_top3_hits": 7,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 7,
+            "empty_exact_results": 7
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 14,
+            "native_top3_hits": 28,
+            "exact_prefix_top1_hits": 15,
+            "exact_prefix_top3_hits": 28,
+            "empty_exact_results": 0
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 24,
+            "native_top3_hits": 41,
+            "exact_prefix_top1_hits": 26,
+            "exact_prefix_top3_hits": 41,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 27,
+            "native_top3_hits": 49,
+            "exact_prefix_top1_hits": 28,
+            "exact_prefix_top3_hits": 49,
+            "empty_exact_results": 2
+          }
+        }
+      },
+      "prediction_sha256": "12a96eefdb411389beda808f1293ffda4f9e472d4ed839ae6a93ceb9ddc5e373",
+      "protocol": "futo-native-v1",
+      "model_sha256": "6545c1c9ef2d76e9bfb87ad4fcf2061889513af84fcf30d907412be7fcdedb7b",
+      "model_file_bytes": 30662880,
+      "executable_sha256": "c2717fb98454fc6a44423a75f0b26b13c9a34cb962ab394d820bf743991d5a34",
+      "queries_sha256": "64c916f03f2741694c59cb0c74a3f513274eeb9a54fe6ac475a27e936df10b11",
+      "hardware": "Windows-11-10.0.26200-SP0",
+      "peak_process_working_set_bytes": 112271360,
+      "threads": 1,
+      "results_limit": 3,
+      "promote": false,
+      "note": "Native no-coordinate correction path, then exact-prefix filtering. No backfill. Not a five-slot reranker; not validated against an Android device."
+    },
+    "four_threads": {
+      "query_count": 1280,
+      "successful_inference_queries": 1279,
+      "cold_load_ms": 82.8641,
+      "warm_median_ms": 7.5909,
+      "warm_p95_ms": 12.8327,
+      "warm_max_ms": 16.769,
+      "filtered_non_prefix_suggestions": 789,
+      "unsupported_prefix_queries": 1,
+      "failed_queries": 0,
+      "cells": {
+        "documents": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 7,
+            "native_top3_hits": 11,
+            "exact_prefix_top1_hits": 7,
+            "exact_prefix_top3_hits": 11,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 1,
+            "native_top3_hits": 6,
+            "exact_prefix_top1_hits": 3,
+            "exact_prefix_top3_hits": 6,
+            "empty_exact_results": 10
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 21,
+            "native_top3_hits": 36,
+            "exact_prefix_top1_hits": 23,
+            "exact_prefix_top3_hits": 36,
+            "empty_exact_results": 0
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 29,
+            "native_top3_hits": 49,
+            "exact_prefix_top1_hits": 30,
+            "exact_prefix_top3_hits": 49,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 42,
+            "native_top3_hits": 57,
+            "exact_prefix_top1_hits": 42,
+            "exact_prefix_top3_hits": 57,
+            "empty_exact_results": 0
+          }
+        },
+        "email": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 11,
+            "native_top3_hits": 20,
+            "exact_prefix_top1_hits": 11,
+            "exact_prefix_top3_hits": 20,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 1,
+            "native_top3_hits": 7,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 7,
+            "empty_exact_results": 11
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 30,
+            "native_top3_hits": 41,
+            "exact_prefix_top1_hits": 33,
+            "exact_prefix_top3_hits": 41,
+            "empty_exact_results": 1
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 27,
+            "native_top3_hits": 39,
+            "exact_prefix_top1_hits": 27,
+            "exact_prefix_top3_hits": 39,
+            "empty_exact_results": 3
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 30,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 32,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 1
+          }
+        },
+        "messages": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 11,
+            "native_top3_hits": 15,
+            "exact_prefix_top1_hits": 11,
+            "exact_prefix_top3_hits": 15,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 5,
+            "native_top3_hits": 12,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 12,
+            "empty_exact_results": 11
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 29,
+            "native_top3_hits": 47,
+            "exact_prefix_top1_hits": 33,
+            "exact_prefix_top3_hits": 47,
+            "empty_exact_results": 1
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 36,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 38,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 38,
+            "native_top3_hits": 53,
+            "exact_prefix_top1_hits": 40,
+            "exact_prefix_top3_hits": 53,
+            "empty_exact_results": 2
+          }
+        },
+        "search": {
+          "0": {
+            "queries": 64,
+            "native_top1_hits": 8,
+            "native_top3_hits": 11,
+            "exact_prefix_top1_hits": 8,
+            "exact_prefix_top3_hits": 11,
+            "empty_exact_results": 0
+          },
+          "1": {
+            "queries": 64,
+            "native_top1_hits": 4,
+            "native_top3_hits": 7,
+            "exact_prefix_top1_hits": 6,
+            "exact_prefix_top3_hits": 7,
+            "empty_exact_results": 7
+          },
+          "2": {
+            "queries": 64,
+            "native_top1_hits": 14,
+            "native_top3_hits": 28,
+            "exact_prefix_top1_hits": 15,
+            "exact_prefix_top3_hits": 28,
+            "empty_exact_results": 0
+          },
+          "3": {
+            "queries": 64,
+            "native_top1_hits": 24,
+            "native_top3_hits": 41,
+            "exact_prefix_top1_hits": 26,
+            "exact_prefix_top3_hits": 41,
+            "empty_exact_results": 1
+          },
+          "4": {
+            "queries": 64,
+            "native_top1_hits": 27,
+            "native_top3_hits": 49,
+            "exact_prefix_top1_hits": 28,
+            "exact_prefix_top3_hits": 49,
+            "empty_exact_results": 2
+          }
+        }
+      },
+      "prediction_sha256": "12a96eefdb411389beda808f1293ffda4f9e472d4ed839ae6a93ceb9ddc5e373",
+      "protocol": "futo-native-v1",
+      "model_sha256": "6545c1c9ef2d76e9bfb87ad4fcf2061889513af84fcf30d907412be7fcdedb7b",
+      "model_file_bytes": 30662880,
+      "executable_sha256": "c2717fb98454fc6a44423a75f0b26b13c9a34cb962ab394d820bf743991d5a34",
+      "queries_sha256": "64c916f03f2741694c59cb0c74a3f513274eeb9a54fe6ac475a27e936df10b11",
+      "hardware": "Windows-11-10.0.26200-SP0",
+      "peak_process_working_set_bytes": 111886336,
+      "threads": 4,
+      "results_limit": 3,
+      "promote": false,
+      "note": "Native no-coordinate correction path, then exact-prefix filtering. No backfill. Not a five-slot reranker; not validated against an Android device."
+    }
+  },
+  "baseline_database_bytes": 29802496,
+  "decision": {
+    "promote": false,
+    "neural_p95_target_passed": false,
+    "futo_four_thread_p95_target_passed": true,
+    "reason": "FUTO meets the speed target but uses a three-result correction decoder with weak one-character completion and unsupported prefixes. Neural variants still exceed 20 ms. Real-writing and Android equivalence tests remain outstanding."
+  }
+}
