@@ -170,6 +170,9 @@ remain. English alone is supported.
 
 The [AAC experiment protocol](docs/aac-experiment.md) and earlier
 [conversational results](docs/quality-results.md) document model-selection history.
+The [Taskmaster-2 data experiment](docs/taskmaster2-protocol.md) tests adding
+spoken USER turns and reserves COMM2 for evaluation. It does not change the
+production model.
 The `prepare` and `evaluate` commands retain the earlier comparison workflows;
 `prepare` alone does not prepare the promoted production corpus. Use the commands
 above for production. A new model-selection exercise needs a new protocol; these
