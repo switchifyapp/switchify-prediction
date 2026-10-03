@@ -170,6 +170,9 @@ remain. English alone is supported.
 
 The [AAC experiment protocol](docs/aac-experiment.md) and earlier
 [conversational results](docs/quality-results.md) document model-selection history.
+Switchify is a general-purpose typing app. The separate
+[neural experiment](docs/general-neural-protocol.md) tests messages, email,
+documents and search-style text equally, without changing the production model.
 The `prepare` and `evaluate` commands retain the earlier comparison workflows;
 `prepare` alone does not prepare the promoted production corpus. Use the commands
 above for production. A new model-selection exercise needs a new protocol; these
