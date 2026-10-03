@@ -11,7 +11,7 @@ class FutoTests(unittest.TestCase):
 
     def test_three_slot_correction_and_exact_prefix_scores_are_separate(self):
         queries = [dict(domain='messages', prefix_chars=1, prefix='w', target='word')]
-        report = summarize(queries, ['load\t10', '0\t1\tprime', '1\t2\tthe\tword\tWorld'])
+        report = summarize(queries, ['load\t10', '0\tok\t1\tprime', '1\tok\t2\tthe\tword\tWorld'])
         cell = report['cells']['messages']['1']
         self.assertEqual(cell['native_top1_hits'], 0)
         self.assertEqual(cell['exact_prefix_top1_hits'], 1)
@@ -19,6 +19,10 @@ class FutoTests(unittest.TestCase):
         self.assertEqual(report['warm_p95_ms'], 2)
         with self.assertRaises(ValueError):
             summarize(queries, ['load\t10'])
+        with self.assertRaises(ValueError):
+            summarize(queries, ['load\t10', '0\tok\t1\tprime', '1\tfailed\t0'])
+        with self.assertRaises(ValueError):
+            summarize(queries, ['load\t10', '0\tok\t1\tprime', '1\tok\tnan'])
 
 
 if __name__ == '__main__':

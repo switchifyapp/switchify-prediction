@@ -32,19 +32,25 @@ def normalize_word(text):
 def summarize(queries, lines):
     if len(lines) != len(queries) + 2 or not lines[0].startswith('load\t'):
         raise ValueError('Incomplete native output')
+    cold_load = float(lines[0].split('\t')[1])
+    prime = lines[1].split('\t')
+    if not math.isfinite(cold_load) or cold_load < 0 or len(prime) < 3 or prime[:2] != ['0', 'ok']:
+        raise ValueError('Invalid load or warm-up result')
     cells, latencies = {}, []
     filtered, unsupported = 0, 0
     # First query is an untimed prime, then each frozen query is measured once.
     for index, (q, line) in enumerate(zip(queries, lines[2:])):
         parts = line.split('\t')
+        if len(parts) < 3 or parts[1] != 'ok':
+            raise ValueError('Native inference did not report success')
         if int(parts[0]) != index + 1:
             raise ValueError('Native query order mismatch')
-        ms = float(parts[1])
+        ms = float(parts[2])
         if not math.isfinite(ms) or ms < 0:
             raise ValueError('Invalid timing')
         latencies.append(ms)
         native, exact = [], []
-        for raw in parts[2:]:
+        for raw in parts[3:]:
             word = normalize_word(raw)
             if word and word not in native:
                 native.append(word)
@@ -65,7 +71,7 @@ def summarize(queries, lines):
         cell['empty_exact_results'] += int(not exact)
     latencies.sort()
     percentile = lambda p: latencies[math.ceil(len(latencies) * p) - 1]
-    return dict(query_count=len(queries), cold_load_ms=float(lines[0].split('\t')[1]),
+    return dict(query_count=len(queries), successful_inference_queries=len(queries) - unsupported, cold_load_ms=cold_load,
                 warm_median_ms=percentile(.5), warm_p95_ms=percentile(.95), warm_max_ms=latencies[-1],
                 filtered_non_prefix_suggestions=filtered, unsupported_prefix_queries=unsupported,
                 failed_queries=0, cells=cells)

@@ -313,10 +313,23 @@ impl Neural {
             |p| p.ids == context && p.lanes == lanes,
             || {
                 let mut state = self.empty_cache.clone();
-                let input = Tensor::new(context.as_slice(), &Device::Cpu)?
-                    .unsqueeze(0)?
-                    .repeat((lanes, 1))?;
-                let logits = self.forward_tensor(&input, 0, &mut state)?.to_vec2()?;
+                let logits = if lanes > 1 && matches!(self.model, Engine::Quantized) {
+                    // Candle 0.11 GGUF's output slice is non-contiguous for B>1,
+                    // T>1. Single-token prefill keeps its public API contiguous.
+                    let mut last = None;
+                    for (position, token) in context.iter().enumerate() {
+                        let input = Tensor::new(&[*token], &Device::Cpu)?
+                            .unsqueeze(0)?
+                            .repeat((lanes, 1))?;
+                        last = Some(self.forward_tensor(&input, position, &mut state)?);
+                    }
+                    last.context("Empty context")?.to_vec2()?
+                } else {
+                    let input = Tensor::new(context.as_slice(), &Device::Cpu)?
+                        .unsqueeze(0)?
+                        .repeat((lanes, 1))?;
+                    self.forward_tensor(&input, 0, &mut state)?.to_vec2()?
+                };
                 Ok(Prepared {
                     ids: context.clone(),
                     lanes,

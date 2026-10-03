@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 import zipfile
+import re
 
 from aac_experiment import sha
 
@@ -44,7 +45,25 @@ def main():
     # Mechanical portability/safety fixes only, no ranking or sampling changes.
     text = text.replace('int seq_id_use_count[n_results];', 'std::vector<int> seq_id_use_count(n_results);')
     text = text.replace('auto start = s.begin();', 'if (s.empty()) return {};\n    auto start = s.begin();')
-    text = '#include <cmath>\n#include <cstring>\n#include "ggml/LanguageModel.h"\nusing std::isnan;\n' + text
+    # Upstream sometimes returns default/empty state on errors, and one decode
+    # call is unchecked. A benchmark must not count those as successful queries.
+    head, state = text.split('struct LanguageModelState {', 1)
+    state = re.sub(r'return\s*\{\s*\};', 'throw std::runtime_error("FUTO decoder failure or unsupported model");', state)
+    if state.count('llama_decode(ctx,') != 4:
+        raise ValueError('Pinned decode call layout changed')
+    state = state.replace('llama_decode(ctx,', 'checked_llama_decode(ctx,')
+    header = '''#include <cmath>
+#include <cstring>
+#include <stdexcept>
+#include "ggml/LanguageModel.h"
+using std::isnan;
+static int checked_llama_decode(llama_context *ctx, llama_batch batch) {
+    const int result = llama_decode(ctx, batch);
+    if (result != 0) throw std::runtime_error("FUTO llama_decode failed");
+    return result;
+}
+'''
+    text = header + head + 'struct LanguageModelState {' + state
     (root / 'decoder.inc').write_bytes(text.encode())
     print(source)
 

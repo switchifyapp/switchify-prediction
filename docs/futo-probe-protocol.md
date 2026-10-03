@@ -27,6 +27,10 @@ Mechanical local source changes remove JNI includes/entry points, replace one
 variable-length C++ array with `std::vector`, and guard empty-string trimming.
 Two bundled Abseil include paths are adjusted to the repository's layout.
 The harness retains the JNI wrapper's exact-match preference before sorting.
+All four decode calls are checked, and upstream empty/default error returns
+raise a native error. Each completed query emits an explicit success marker;
+the runner rejects missing/error markers and non-finite timings. These checks
+change failure handling only, never successful rankings.
 No weights, sampling thresholds or ranking are tuned against the fixtures.
 The native state maintains its own context reuse across the fixed query order.
 These timings are separate from the explicit hit/miss Candle measurements.

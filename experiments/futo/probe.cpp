@@ -6,7 +6,7 @@
 #include <sstream>
 #include "decoder.inc"
 
-int main(int argc, char **argv) {
+int probe_main(int argc, char **argv) {
     if (argc != 3) return 2;
     llama_backend_init(false);
     auto start = std::chrono::steady_clock::now();
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
         }
         sortProbabilityPairVectorDescending(words);
         const auto ms = elapsed(start);
-        std::cout << index++ << '\t' << std::setprecision(12) << ms;
+        std::cout << index++ << "\tok\t" << std::setprecision(12) << ms;
         for (const auto &word : words) {
             if (word.second.find_first_of("\r\n\t") != std::string::npos) return 6;
             std::cout << '\t' << word.second;
@@ -60,4 +60,12 @@ int main(int argc, char **argv) {
         std::cout << '\n';
     }
     return 0;
+}
+
+int main(int argc, char **argv) {
+    try { return probe_main(argc, argv); }
+    catch (const std::exception &error) {
+        std::cerr << error.what() << '\n';
+        return 7;
+    }
 }
