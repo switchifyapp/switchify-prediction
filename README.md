@@ -180,3 +180,23 @@ New code is MIT licensed. Corpus licences are separate: retain
 distributions. [Production guidance](docs/production.md) covers the recorded
 licensing evidence, OANC's differing historical/current notices, private-data
 handling, backup, upgrades, rollback and releases.
+
+## Experimental legacy backfill
+
+The opt-in `experimental-predict` command returns ordered `{word, source}` records.
+Use `--mode newer --baseline english.sqlite`, `--mode original --legacy old.sqlite`,
+or `--mode combined --baseline english.sqlite --legacy old.sqlite`, with the usual
+`--before`, `--prefix`, `--limit` and `--min-chars` arguments. Combined mode preserves
+all newer suggestions and fills only unused slots. Scores are never mixed. No
+personal database is opened. Existing APIs and the default model are unchanged.
+
+`experimental::LegacyPredictor` and `experimental::CombinedPredictor` provide the
+same opt-in behavior in Rust. Load once on a worker thread and reuse; predictions
+perform no file access. Missing/corrupt sources fail opening the requested mode.
+The original source is not distributed by this repository. Normalization follows
+the newer tokenizer; invalid single words and words longer than 48 characters
+are skipped. This differs intentionally from the original lowercase-only filter.
+
+For the reproducible comparison, see [the frozen protocol](docs/legacy-comparison-protocol.md)
+and [results](docs/legacy-comparison-results.md). No desktop integration or model
+promotion is part of this experiment.
