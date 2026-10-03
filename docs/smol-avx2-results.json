@@ -1,0 +1,555 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+  "logical_cpus": 24,
+  "capabilities": {
+    "accelerated": true,
+    "context_tokens": 64,
+    "deadline_ms": 500,
+    "shortlist": 8,
+    "threads": 4
+  },
+  "cold_load_ms": 3294.658499988145,
+  "process_tree_peak_rss_bytes": 669810688,
+  "memory_method": "10ms sum of parent and descendants RSS; shared pages may count twice",
+  "queries": 1760,
+  "failures": 0,
+  "timings": {
+    "immediate": {
+      "samples": 1760,
+      "median_ms": 0.5691999999999999,
+      "p95_ms": 7.4966,
+      "max_ms": 9.9528
+    },
+    "immediate_with_ipc": {
+      "samples": 1760,
+      "median_ms": 0.8190999942598864,
+      "p95_ms": 7.820099999662489,
+      "max_ms": 17.916700002388097
+    },
+    "refinement_with_ipc": {
+      "samples": 1759,
+      "median_ms": 91.55710000777617,
+      "p95_ms": 123.78069999977015,
+      "max_ms": 210.26760000677314
+    },
+    "context_miss": {
+      "samples": 1368,
+      "median_ms": 92.28149999398738,
+      "p95_ms": 125.7591999892611,
+      "max_ms": 210.26760000677314
+    },
+    "context_hit": {
+      "samples": 391,
+      "median_ms": 67.62349999917205,
+      "p95_ms": 115.72970000270288,
+      "max_ms": 152.74410000711214
+    }
+  },
+  "explicit_retry_load_ms": [],
+  "cells": {
+    "regression/documents/0": {
+      "queries": 64,
+      "baseline_top1": 2,
+      "baseline_top5": 6,
+      "refined_top1": 7,
+      "refined_top5": 10,
+      "failures": 0
+    },
+    "regression/documents/1": {
+      "queries": 64,
+      "baseline_top1": 7,
+      "baseline_top5": 9,
+      "refined_top1": 9,
+      "refined_top5": 10,
+      "failures": 0
+    },
+    "regression/documents/2": {
+      "queries": 64,
+      "baseline_top1": 10,
+      "baseline_top5": 19,
+      "refined_top1": 21,
+      "refined_top5": 23,
+      "failures": 0
+    },
+    "regression/documents/3": {
+      "queries": 64,
+      "baseline_top1": 12,
+      "baseline_top5": 34,
+      "refined_top1": 38,
+      "refined_top5": 41,
+      "failures": 0
+    },
+    "regression/documents/4": {
+      "queries": 64,
+      "baseline_top1": 22,
+      "baseline_top5": 46,
+      "refined_top1": 47,
+      "refined_top5": 53,
+      "failures": 0
+    },
+    "regression/email/0": {
+      "queries": 64,
+      "baseline_top1": 3,
+      "baseline_top5": 12,
+      "refined_top1": 10,
+      "refined_top5": 18,
+      "failures": 0
+    },
+    "regression/email/1": {
+      "queries": 64,
+      "baseline_top1": 16,
+      "baseline_top5": 29,
+      "refined_top1": 24,
+      "refined_top5": 30,
+      "failures": 0
+    },
+    "regression/email/2": {
+      "queries": 64,
+      "baseline_top1": 27,
+      "baseline_top5": 42,
+      "refined_top1": 34,
+      "refined_top5": 44,
+      "failures": 0
+    },
+    "regression/email/3": {
+      "queries": 64,
+      "baseline_top1": 26,
+      "baseline_top5": 42,
+      "refined_top1": 38,
+      "refined_top5": 47,
+      "failures": 0
+    },
+    "regression/email/4": {
+      "queries": 64,
+      "baseline_top1": 26,
+      "baseline_top5": 47,
+      "refined_top1": 43,
+      "refined_top5": 52,
+      "failures": 0
+    },
+    "regression/messages/0": {
+      "queries": 64,
+      "baseline_top1": 10,
+      "baseline_top5": 13,
+      "refined_top1": 12,
+      "refined_top5": 18,
+      "failures": 0
+    },
+    "regression/messages/1": {
+      "queries": 64,
+      "baseline_top1": 23,
+      "baseline_top5": 34,
+      "refined_top1": 26,
+      "refined_top5": 38,
+      "failures": 0
+    },
+    "regression/messages/2": {
+      "queries": 64,
+      "baseline_top1": 32,
+      "baseline_top5": 55,
+      "refined_top1": 41,
+      "refined_top5": 56,
+      "failures": 0
+    },
+    "regression/messages/3": {
+      "queries": 64,
+      "baseline_top1": 38,
+      "baseline_top5": 59,
+      "refined_top1": 50,
+      "refined_top5": 59,
+      "failures": 0
+    },
+    "regression/messages/4": {
+      "queries": 64,
+      "baseline_top1": 42,
+      "baseline_top5": 62,
+      "refined_top1": 50,
+      "refined_top5": 63,
+      "failures": 0
+    },
+    "regression/search/0": {
+      "queries": 64,
+      "baseline_top1": 2,
+      "baseline_top5": 5,
+      "refined_top1": 5,
+      "refined_top5": 7,
+      "failures": 0
+    },
+    "regression/search/1": {
+      "queries": 64,
+      "baseline_top1": 6,
+      "baseline_top5": 10,
+      "refined_top1": 11,
+      "refined_top5": 12,
+      "failures": 0
+    },
+    "regression/search/2": {
+      "queries": 64,
+      "baseline_top1": 10,
+      "baseline_top5": 19,
+      "refined_top1": 19,
+      "refined_top5": 22,
+      "failures": 0
+    },
+    "regression/search/3": {
+      "queries": 64,
+      "baseline_top1": 15,
+      "baseline_top5": 36,
+      "refined_top1": 32,
+      "refined_top5": 41,
+      "failures": 0
+    },
+    "regression/search/4": {
+      "queries": 64,
+      "baseline_top1": 24,
+      "baseline_top5": 49,
+      "refined_top1": 35,
+      "refined_top5": 53,
+      "failures": 0
+    },
+    "development/documents/0": {
+      "queries": 8,
+      "baseline_top1": 0,
+      "baseline_top5": 0,
+      "refined_top1": 0,
+      "refined_top5": 0,
+      "failures": 0
+    },
+    "development/documents/1": {
+      "queries": 8,
+      "baseline_top1": 0,
+      "baseline_top5": 1,
+      "refined_top1": 0,
+      "refined_top5": 0,
+      "failures": 0
+    },
+    "development/documents/2": {
+      "queries": 8,
+      "baseline_top1": 0,
+      "baseline_top5": 2,
+      "refined_top1": 1,
+      "refined_top5": 2,
+      "failures": 0
+    },
+    "development/documents/3": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 3,
+      "refined_top1": 2,
+      "refined_top5": 3,
+      "failures": 0
+    },
+    "development/documents/4": {
+      "queries": 8,
+      "baseline_top1": 3,
+      "baseline_top5": 5,
+      "refined_top1": 6,
+      "refined_top5": 6,
+      "failures": 0
+    },
+    "development/email/0": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 1,
+      "refined_top1": 1,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "development/email/1": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 1,
+      "refined_top1": 2,
+      "refined_top5": 2,
+      "failures": 0
+    },
+    "development/email/2": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 3,
+      "refined_top1": 3,
+      "refined_top5": 4,
+      "failures": 0
+    },
+    "development/email/3": {
+      "queries": 8,
+      "baseline_top1": 3,
+      "baseline_top5": 6,
+      "refined_top1": 7,
+      "refined_top5": 7,
+      "failures": 0
+    },
+    "development/email/4": {
+      "queries": 8,
+      "baseline_top1": 4,
+      "baseline_top5": 8,
+      "refined_top1": 7,
+      "refined_top5": 8,
+      "failures": 0
+    },
+    "development/messages/0": {
+      "queries": 8,
+      "baseline_top1": 0,
+      "baseline_top5": 2,
+      "refined_top1": 1,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "development/messages/1": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 3,
+      "refined_top1": 1,
+      "refined_top5": 3,
+      "failures": 0
+    },
+    "development/messages/2": {
+      "queries": 8,
+      "baseline_top1": 3,
+      "baseline_top5": 4,
+      "refined_top1": 3,
+      "refined_top5": 4,
+      "failures": 0
+    },
+    "development/messages/3": {
+      "queries": 8,
+      "baseline_top1": 4,
+      "baseline_top5": 6,
+      "refined_top1": 6,
+      "refined_top5": 6,
+      "failures": 0
+    },
+    "development/messages/4": {
+      "queries": 8,
+      "baseline_top1": 6,
+      "baseline_top5": 8,
+      "refined_top1": 7,
+      "refined_top5": 8,
+      "failures": 0
+    },
+    "development/search/0": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 1,
+      "refined_top1": 1,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "development/search/1": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 1,
+      "refined_top1": 1,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "development/search/2": {
+      "queries": 8,
+      "baseline_top1": 1,
+      "baseline_top5": 3,
+      "refined_top1": 3,
+      "refined_top5": 3,
+      "failures": 0
+    },
+    "development/search/3": {
+      "queries": 8,
+      "baseline_top1": 3,
+      "baseline_top5": 6,
+      "refined_top1": 5,
+      "refined_top5": 6,
+      "failures": 0
+    },
+    "development/search/4": {
+      "queries": 8,
+      "baseline_top1": 5,
+      "baseline_top5": 7,
+      "refined_top1": 7,
+      "refined_top5": 8,
+      "failures": 0
+    },
+    "test/documents/0": {
+      "queries": 16,
+      "baseline_top1": 0,
+      "baseline_top5": 0,
+      "refined_top1": 0,
+      "refined_top5": 0,
+      "failures": 0
+    },
+    "test/documents/1": {
+      "queries": 16,
+      "baseline_top1": 0,
+      "baseline_top5": 0,
+      "refined_top1": 1,
+      "refined_top5": 2,
+      "failures": 0
+    },
+    "test/documents/2": {
+      "queries": 16,
+      "baseline_top1": 1,
+      "baseline_top5": 3,
+      "refined_top1": 2,
+      "refined_top5": 3,
+      "failures": 0
+    },
+    "test/documents/3": {
+      "queries": 16,
+      "baseline_top1": 3,
+      "baseline_top5": 7,
+      "refined_top1": 10,
+      "refined_top5": 10,
+      "failures": 0
+    },
+    "test/documents/4": {
+      "queries": 16,
+      "baseline_top1": 5,
+      "baseline_top5": 14,
+      "refined_top1": 13,
+      "refined_top5": 14,
+      "failures": 0
+    },
+    "test/email/0": {
+      "queries": 16,
+      "baseline_top1": 0,
+      "baseline_top5": 0,
+      "refined_top1": 0,
+      "refined_top5": 0,
+      "failures": 0
+    },
+    "test/email/1": {
+      "queries": 16,
+      "baseline_top1": 1,
+      "baseline_top5": 5,
+      "refined_top1": 1,
+      "refined_top5": 5,
+      "failures": 0
+    },
+    "test/email/2": {
+      "queries": 16,
+      "baseline_top1": 3,
+      "baseline_top5": 8,
+      "refined_top1": 4,
+      "refined_top5": 9,
+      "failures": 0
+    },
+    "test/email/3": {
+      "queries": 16,
+      "baseline_top1": 5,
+      "baseline_top5": 11,
+      "refined_top1": 8,
+      "refined_top5": 11,
+      "failures": 0
+    },
+    "test/email/4": {
+      "queries": 16,
+      "baseline_top1": 9,
+      "baseline_top5": 14,
+      "refined_top1": 14,
+      "refined_top5": 15,
+      "failures": 0
+    },
+    "test/messages/0": {
+      "queries": 16,
+      "baseline_top1": 0,
+      "baseline_top5": 1,
+      "refined_top1": 0,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "test/messages/1": {
+      "queries": 16,
+      "baseline_top1": 3,
+      "baseline_top5": 4,
+      "refined_top1": 3,
+      "refined_top5": 6,
+      "failures": 0
+    },
+    "test/messages/2": {
+      "queries": 16,
+      "baseline_top1": 5,
+      "baseline_top5": 9,
+      "refined_top1": 4,
+      "refined_top5": 10,
+      "failures": 0
+    },
+    "test/messages/3": {
+      "queries": 16,
+      "baseline_top1": 8,
+      "baseline_top5": 14,
+      "refined_top1": 12,
+      "refined_top5": 15,
+      "failures": 0
+    },
+    "test/messages/4": {
+      "queries": 16,
+      "baseline_top1": 14,
+      "baseline_top5": 16,
+      "refined_top1": 15,
+      "refined_top5": 16,
+      "failures": 0
+    },
+    "test/search/0": {
+      "queries": 16,
+      "baseline_top1": 1,
+      "baseline_top5": 1,
+      "refined_top1": 1,
+      "refined_top5": 1,
+      "failures": 0
+    },
+    "test/search/1": {
+      "queries": 16,
+      "baseline_top1": 1,
+      "baseline_top5": 2,
+      "refined_top1": 1,
+      "refined_top5": 2,
+      "failures": 0
+    },
+    "test/search/2": {
+      "queries": 16,
+      "baseline_top1": 1,
+      "baseline_top5": 4,
+      "refined_top1": 5,
+      "refined_top5": 6,
+      "failures": 0
+    },
+    "test/search/3": {
+      "queries": 16,
+      "baseline_top1": 5,
+      "baseline_top5": 10,
+      "refined_top1": 9,
+      "refined_top5": 10,
+      "failures": 0
+    },
+    "test/search/4": {
+      "queries": 16,
+      "baseline_top1": 6,
+      "baseline_top5": 12,
+      "refined_top1": 13,
+      "refined_top5": 14,
+      "failures": 0
+    }
+  },
+  "prediction_sha256": "a1521815e0742be25878e609da9a930a0a3e3a2ce504bbe81daab0854b159b70",
+  "inputs": {
+    "neural\\evaluation-protocol.json": "2a2f93a39de9a8a9ab7d18350aef51539b05600781ea972a666ea626b97023ca",
+    "neural\\fixtures\\regression.json": "5e7fe93fc126862da5895d6c7304414c2a49a48303688648349afb3db956fe76",
+    "neural\\fixtures\\general-writing.json": "315cb0dacf6026d752c60482915d2dae17ff8842a77290325c6b5f780769fee9",
+    "english.sqlite": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+    "data\\aac-oanc\\prepared\\candidate.txt": "ff724de5ab3b6e609ed77b699c51287fc82f79d026fdecfa4892939abfbb2834",
+    "target\\smol-portable\\release\\switchify-prediction-neural.exe": "19791cf8287ffcfcf1ae3e351ed5157c08311e149df66b4fc29f82dc4f421e6a",
+    "target\\smol-portable\\release\\switchify-smol-worker.exe": "7827ccaf9a05dff03ac59bdd04ab01dd7bf64e90734c23e68f95a52c86b2fca4"
+  },
+  "gates": {
+    "overall_top5": true,
+    "early_cell_regressions": [
+      "development/documents/1",
+      "development/messages/0"
+    ],
+    "immediate_latency": true,
+    "refinement_latency": true,
+    "minimum_successful_samples": true,
+    "no_failures": true
+  },
+  "interpretation": "Frozen regression comparison, unknown pretraining overlap; no automatic promotion.",
+  "accelerated_worker_sha256": "97fc8d5665ed06ded104536c560bfa2a1d73ce7219b4a5a1bc84d5553729dc32"
+}

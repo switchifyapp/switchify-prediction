@@ -78,6 +78,8 @@ def main():
             shutil.copy2(args.accelerated / ('switchify-smol-worker'+ext), stage / ('switchify-smol-worker-avx2'+ext))
         for source, destination in [('LICENSE','LICENSE'), ('neural/Cargo.lock','Cargo.lock'),
                                     ('neural/README.md','README.md'), ('neural/SECURITY.md','SECURITY.md'),
+                                    ('neural/qualification.json','QUALIFICATION.json'),
+                                    ('docs/smol-production-results.md','QUALIFICATION.md'),
                                     ('scripts/verify_bundle.py','verify_bundle.py')]:
             shutil.copyfile(ROOT / source, stage / destination)
         (stage / 'THIRD_PARTY_NOTICES.md').write_text(notices(target), encoding='utf-8')
@@ -87,6 +89,7 @@ def main():
             'platform':platform.platform(), 'libc':platform.libc_ver(), 'signed':False,
             'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
             'model_id':'smollm2-135m-q8-v1', 'accelerated_requires':['avx2','fma','f16c'] if args.accelerated else [],
+            'production_qualified':json.loads((ROOT / 'neural/qualification.json').read_bytes())['production_qualified'],
             'model_assets_included':False}, indent=2)+'\n',encoding='utf-8')
         (stage / 'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(stage.iterdir())), encoding='utf-8')
         subprocess.run([str(stage / ('switchify-prediction-neural'+ext)), '--version'], check=True)

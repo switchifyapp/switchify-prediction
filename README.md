@@ -180,3 +180,9 @@ New code is MIT licensed. Corpus licences are separate: retain
 distributions. [Production guidance](docs/production.md) covers the recorded
 licensing evidence, OANC's differing historical/current notices, private-data
 handling, backup, upgrades, rollback and releases.
+
+The optional [SmolLM2 companion](neural/README.md) adds a separate library, worker
+and CLI for immediate statistical results followed by offline neural refinement.
+It has its own dependencies and model bundle. It remains opt-in and is not yet
+production-qualified: the frozen comparison found two development-cell quality
+regressions. See the [qualification report](docs/smol-production-results.md).

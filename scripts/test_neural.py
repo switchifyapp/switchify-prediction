@@ -5,11 +5,25 @@ import tempfile
 import unittest
 
 from neural_bundle import verify
+from neural_evaluate import warmup
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class NeuralBundleTests(unittest.TestCase):
+    def test_warmup_cannot_silently_turn_into_statistical_only_measurement(self):
+        class FakeClient:
+            def __init__(self, status, requested, refined):
+                self.status, self.requested, self.refined = status, requested, refined
+            def query(self, before, prefix):
+                return {'result':{'status':self.status, 'refinement_requested':self.requested}}, self.refined, 0, 0
+        query = [None, None, None, None, '', '']
+        for client in [FakeClient('Ready', True, None), FakeClient({'Unavailable':'Timeout'}, False, None)]:
+            with self.assertRaisesRegex(RuntimeError, 'warm-up failed'):
+                warmup(client, [query])
+        warmup(FakeClient('Ready', True, {'result':{}}), [query])
+        warmup(FakeClient('Ready', False, None), [query])
+
     def test_corrupt_file_and_wrong_length_are_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'test'

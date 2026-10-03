@@ -37,9 +37,9 @@ jobs:
       - run: cargo build --manifest-path neural/Cargo.toml --workspace --release --locked --target-dir target/smol-portable
       - name: Build explicit x64 ISA worker
         if: runner.arch == 'X64'
-        shell: bash
-        run: |
-          RUSTFLAGS="${RUSTFLAGS} -C target-feature=+avx2,+fma,+f16c" cargo build --manifest-path neural/Cargo.toml -p switchify-smol-worker --features accelerated --release --locked --target-dir target/smol-avx2
+        env:
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static,+avx2,+fma,+f16c' || '-C target-feature=+avx2,+fma,+f16c' }}
+        run: cargo build --manifest-path neural/Cargo.toml -p switchify-smol-worker --features accelerated --release --locked --target-dir target/smol-avx2
       - name: Package x64
         if: runner.arch == 'X64'
         run: python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release

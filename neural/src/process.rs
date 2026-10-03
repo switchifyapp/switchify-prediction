@@ -74,7 +74,15 @@ impl Worker {
                 return Err(Failure::Worker);
             }
             match self.replies.recv_timeout(Duration::from_millis(5)) {
-                Ok(Ok(reply)) => return Ok(reply),
+                // A descheduled controller may wake with a reply already queued.
+                // Do not accept it after the request's deadline has elapsed.
+                Ok(Ok(reply)) => {
+                    return if start.elapsed() < timeout {
+                        Ok(reply)
+                    } else {
+                        Err(Failure::Timeout)
+                    };
+                }
                 Ok(Err(_)) => return Err(Failure::Protocol),
                 Err(mpsc::RecvTimeoutError::Disconnected) => return Err(Failure::Worker),
                 Err(mpsc::RecvTimeoutError::Timeout) => {}

@@ -17,9 +17,6 @@ import threading
 import time
 import unicodedata
 
-import psutil
-import regex
-
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -29,6 +26,7 @@ def sha(path):
 
 
 def words(text):
+    import regex
     text = unicodedata.normalize('NFC', text.replace('’', "'").lower())
     return regex.findall(r"\p{L}[\p{L}\p{M}]*(?:'\p{L}[\p{L}\p{M}]*)*", text)
 
@@ -38,6 +36,7 @@ def key(text):
 
 
 def workload():
+    import regex
     result = []
     regression = json.loads((ROOT / 'neural/fixtures/regression.json').read_bytes())
     for domain, texts in sorted(regression.items()):
@@ -84,6 +83,7 @@ def timing(values):
 
 class Client:
     def __init__(self, command):
+        import psutil
         self.started = time.perf_counter()
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, text=True, encoding='utf-8')
@@ -162,7 +162,16 @@ class Client:
         self.process.stderr.close()
 
 
+def warmup(client, queries):
+    for query in queries[:20]:
+        immediate, refined, _, _ = client.query(query[4], query[5])
+        result = immediate['result']
+        if result['status'] != 'Ready' or (result['refinement_requested'] and refined is None):
+            raise RuntimeError('Neural warm-up failed; no measured run was produced')
+
+
 def evaluate(args):
+    import psutil
     queries = workload()
     training = {' '.join(words(line)) for line in args.training.read_text(encoding='utf-8').splitlines()}
     for name in ['regression', 'general-writing']:
@@ -180,8 +189,7 @@ def evaluate(args):
     failures = 0
     reload_ms = []
     try:
-        for query in queries[:20]:
-            client.query(query[4], query[5])
+        warmup(client, queries)
         for index, (_, part, domain, n, before, prefix, target) in enumerate(queries):
             immediate, refined, ipc_immediate, elapsed = client.query(before, prefix)
             baseline = immediate['result']['words']
@@ -217,6 +225,8 @@ def evaluate(args):
               'process_tree_peak_rss_bytes':client.peak, 'memory_method':'10ms sum of parent and descendants RSS; shared pages may count twice',
               'queries':len(queries), 'failures':failures, 'timings':{k:timing(v) for k,v in times.items()},
               'explicit_retry_load_ms':reload_ms,
+              'model_file_bytes':(args.bundle / 'model.gguf').stat().st_size,
+              'baseline_file_bytes':args.baseline.stat().st_size,
               'cells':dict(cells), 'prediction_sha256':digest.hexdigest(),
               'inputs':{str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else p.name:sha(p) for p in
                         [ROOT/'neural/evaluation-protocol.json', ROOT/'neural/fixtures/regression.json', ROOT/'neural/fixtures/general-writing.json',
