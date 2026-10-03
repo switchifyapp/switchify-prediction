@@ -42,6 +42,20 @@ def peak_rss(pid):
             return None
     return None
 
+
+def validate_batch(batch):
+    if batch['combined']['position_violations']:
+        raise ValueError('Modern positions changed')
+    newer = batch['newer']['accuracy']
+    combined = batch['combined']['accuracy']
+    if len(newer) != 5 or len(combined) != 5:
+        raise ValueError('Missing prefix results')
+    for new, mixed in zip(newer, combined):
+        if (new['prefix_chars'], new['queries']) != (mixed['prefix_chars'], mixed['queries']):
+            raise ValueError('Mismatched evaluation queries')
+        if mixed['top5'] < new['top5'] or mixed['top1'] < new['top1']:
+            raise ValueError('Prediction accuracy regressed')
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--exe', type=Path, required=True)
@@ -77,10 +91,7 @@ def main():
                 report.update(domain=domain, split=split, peak_process_rss_bytes=peak, memory_method='Windows process peak working set' if platform.system() == 'Windows' else 'sampled RSS; lower bound', hardware=platform.platform() + ' ' + platform.processor())
                 batch[mode] = report; reports.append(report)
                 print(domain, split, mode, report['warm_p95_ms'], flush=True)
-            if batch['combined']['position_violations']:
-                raise ValueError('Modern positions changed')
-            for new, combined in zip(batch['newer']['accuracy'], batch['combined']['accuracy']):
-                if combined['top5'] < new['top5']: raise ValueError('Top-five accuracy regressed')
+            validate_batch(batch)
     if sha(args.legacy) != LEGACY_SHA or sha(args.baseline) != BASELINE_SHA:
         raise ValueError('Source database changed')
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -340,6 +340,22 @@ pub fn compare(
             .as_ref()
             .map_or(0, LegacyPredictor::model_payload_bytes);
     Ok(
-        serde_json::json!({"protocol":"legacy-slot-fill-v1","mode":mode,"input_sha256":crate::digest(text.as_bytes()),"baseline_sha256":crate::digest(&fs::read(baseline)?),"legacy_sha256":crate::digest(&fs::read(legacy)?),"sentences":tests.len(),"accuracy":accuracy,"position_violations":position_violations,"warm_query_count":timings.len(),"cold_load_ms":cold,"warm_median_ms":percentile(50),"warm_p95_ms":percentile(95),"warm_max_ms":timings.last(),"warm_p95_target_met":percentile(95)<20.0,"model_payload_bytes":payload,"database_bytes":if mode=="original" {fs::metadata(legacy)?.len()} else if mode=="newer" {fs::metadata(baseline)?.len()} else {fs::metadata(legacy)?.len()+fs::metadata(baseline)?.len()}}),
+        serde_json::json!({"protocol":"legacy-slot-fill-v1","mode":mode,"input_sha256":crate::digest(text.as_bytes()),"baseline_sha256":file_digest(baseline)?,"legacy_sha256":file_digest(legacy)?,"sentences":tests.len(),"accuracy":accuracy,"position_violations":position_violations,"warm_query_count":timings.len(),"cold_load_ms":cold,"warm_median_ms":percentile(50),"warm_p95_ms":percentile(95),"warm_max_ms":timings.last(),"warm_p95_target_met":percentile(95)<20.0,"model_payload_bytes":payload,"database_bytes":if mode=="original" {fs::metadata(legacy)?.len()} else if mode=="newer" {fs::metadata(baseline)?.len()} else {fs::metadata(legacy)?.len()+fs::metadata(baseline)?.len()}}),
     )
+}
+
+fn file_digest(path: &Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0; 65536];
+    loop {
+        let n = file.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        hash.update(&buffer[..n]);
+    }
+    Ok(format!("{:x}", hash.finalize()))
 }
