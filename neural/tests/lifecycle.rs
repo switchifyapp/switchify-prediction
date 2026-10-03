@@ -192,6 +192,38 @@ fn learning_after_submission_does_not_change_captured_shortlist() {
     });
     assert_eq!(result.unwrap().words, expected);
 }
+
+#[test]
+fn rejected_request_also_invalidates_previous_work() {
+    let (_temp, predictor, mut engine) = fixture("delay");
+    until(|| engine.status() == Status::Ready);
+    engine.submit(&predictor, "", "", options(), 1).unwrap();
+    thread::sleep(Duration::from_millis(20));
+    assert!(
+        engine
+            .submit(&predictor, &"x".repeat(16_385), "", options(), 2)
+            .is_err()
+    );
+    thread::sleep(Duration::from_millis(200));
+    assert!(engine.poll().is_none());
+    engine.submit(&predictor, "", "", options(), 2).unwrap();
+    thread::sleep(Duration::from_millis(200));
+    assert!(
+        engine
+            .submit(
+                &predictor,
+                "",
+                "",
+                Options {
+                    limit: 6,
+                    ..options()
+                },
+                2
+            )
+            .is_err()
+    );
+    assert!(engine.poll().is_none());
+}
 #[test]
 fn context_and_bundle_validation() {
     assert_eq!(
@@ -206,4 +238,75 @@ fn context_and_bundle_validation() {
     assert!(bundle::load(temp.path()).is_err());
     std::fs::write(temp.path().join("model-bundle.json"), bundle::MANIFEST).unwrap();
     assert!(bundle::load(temp.path()).is_err());
+}
+
+#[test]
+fn cli_errors_do_not_echo_input_and_once_requires_request() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let (temp, _predictor, mut engine) = fixture("ok");
+    engine.shutdown();
+    for input in [
+        "private-malformed-text".to_string(),
+        "private".repeat(10_000),
+        String::new(),
+    ] {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_switchify-prediction-neural"))
+            .arg("once")
+            .arg("--baseline")
+            .arg(temp.path().join("baseline.sqlite"))
+            .arg("--bundle")
+            .arg(temp.path())
+            .arg("--worker")
+            .arg(env!("CARGO_BIN_EXE_fake-worker"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
+        let output = child.wait_with_output().unwrap();
+        assert!(!output.status.success());
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("private"));
+        assert!(!String::from_utf8_lossy(&output.stdout).contains("private"));
+    }
+}
+
+#[test]
+fn bare_worker_filename_resolves_in_callers_directory() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let (temp, _predictor, mut engine) = fixture("ok");
+    engine.shutdown();
+    let filename = std::path::Path::new(env!("CARGO_BIN_EXE_fake-worker"))
+        .file_name()
+        .unwrap();
+    std::fs::copy(
+        env!("CARGO_BIN_EXE_fake-worker"),
+        temp.path().join(filename),
+    )
+    .unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_switchify-prediction-neural"))
+        .current_dir(temp.path())
+        .arg("once")
+        .arg("--baseline")
+        .arg("baseline.sqlite")
+        .arg("--bundle")
+        .arg(".")
+        .arg("--worker")
+        .arg(filename)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(br#"{"command":"predict","before":"","prefix":"","session":1,"min_chars":0}"#)
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("refined"));
 }

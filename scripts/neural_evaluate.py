@@ -135,6 +135,19 @@ class Client:
         assert refined['result']['request_id'] == immediate['result']['request_id']
         return immediate, refined, ipc_immediate, elapsed
 
+    def retry(self):
+        start = time.perf_counter()
+        self.process.stdin.write('{"command":"retry"}\n')
+        self.process.stdin.flush()
+        while True:
+            message = self.receive()
+            if message is None:
+                raise RuntimeError('Worker exited during explicit benchmark retry')
+            if message.get('status') == 'Ready':
+                return (time.perf_counter()-start)*1000
+            if isinstance(message.get('status'), dict):
+                raise RuntimeError('Worker retry failed')
+
     def close(self):
         self.process.stdin.close()
         try:
@@ -165,6 +178,7 @@ def evaluate(args):
                                             'refined_top1':0, 'refined_top5':0, 'failures':0})
     digest = hashlib.sha256()
     failures = 0
+    reload_ms = []
     try:
         for query in queries[:20]:
             client.query(query[4], query[5])
@@ -187,6 +201,9 @@ def evaluate(args):
             cell['refined_top5'] += int(target in final)
             cell['failures'] += int(failed)
             digest.update(json.dumps(final, ensure_ascii=False, separators=(',', ':')).encode()+b'\n')
+            if failed:
+                # The benchmark caller explicitly retries; the library never auto-reloads.
+                reload_ms.append(client.retry())
             if index % 200 == 0:
                 print(f'{index}/{len(queries)} completed', flush=True)
     finally:
@@ -199,6 +216,7 @@ def evaluate(args):
               'capabilities':client.ready['capabilities'], 'cold_load_ms':client.cold_ms,
               'process_tree_peak_rss_bytes':client.peak, 'memory_method':'10ms sum of parent and descendants RSS; shared pages may count twice',
               'queries':len(queries), 'failures':failures, 'timings':{k:timing(v) for k,v in times.items()},
+              'explicit_retry_load_ms':reload_ms,
               'cells':dict(cells), 'prediction_sha256':digest.hexdigest(),
               'inputs':{str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else p.name:sha(p) for p in
                         [ROOT/'neural/evaluation-protocol.json', ROOT/'neural/fixtures/regression.json', ROOT/'neural/fixtures/general-writing.json',

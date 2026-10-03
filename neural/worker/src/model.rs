@@ -141,4 +141,36 @@ mod tests {
         assert!((log_boundary(&[0., 0.], &[1]) + 2_f64.ln()).abs() < 1e-12);
         assert_eq!(log_boundary(&[0., 0.], &[0, 1]), 0.);
     }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; never downloads model assets"]
+    fn pinned_model_order_and_session_cache() {
+        let path =
+            std::env::var_os("SWITCHIFY_SMOL_BUNDLE").expect("explicit model bundle required");
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        let candidates: Vec<_> = [
+            "receipt",
+            "order",
+            "tickets",
+            "confirmation",
+            "car",
+            "details",
+            "directions",
+            "address",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let (first, hit) = model.rank(1, "please send the", &candidates, 5).unwrap();
+        assert!(!hit);
+        assert_eq!(first, ["address", "details", "order", "directions", "car"]);
+        let (second, hit) = model.rank(1, "please send the", &candidates, 5).unwrap();
+        assert!(hit);
+        assert_eq!(first, second);
+        assert!(!model.rank(2, "please send the", &candidates, 5).unwrap().1);
+        model.reset();
+        assert!(!model.rank(2, "please send the", &candidates, 5).unwrap().1);
+    }
 }

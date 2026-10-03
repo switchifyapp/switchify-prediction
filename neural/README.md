@@ -37,7 +37,7 @@ Append `.exe` on Windows. The assembler verifies every source and converted hash
 
 ## CLI
 
-`once` accepts one JSON request on stdin. `stream` accepts JSONL and keeps the worker loaded. Supply `--baseline`, `--bundle` and `--worker` explicitly. Optional flags are `--personal`, `--accelerated-worker` and `--threads 1..4`. Existing personal files are read through the established predictor; these commands never learn.
+`once` accepts one JSON request on stdin. `stream` accepts JSONL and keeps the worker loaded. The CLI waits for a validated model before accepting requests, and exits nonzero if startup fails. The library can return immediate suggestions during Loading. After successful CLI startup, an inference failure leaves immediate predictions available and allows explicit retry. Supply `--baseline`, `--bundle` and `--worker` explicitly. Optional flags are `--personal`, `--accelerated-worker` and `--threads 1..4`. Existing personal files are read through the established predictor; these commands never learn.
 
 ```sh
 switchify-prediction-neural stream --baseline english.sqlite --bundle MODEL_BUNDLE --worker switchify-smol-worker

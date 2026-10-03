@@ -114,6 +114,7 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
     let rx = input();
     let mut outstanding = false;
     let mut eof = false;
+    let mut predicted = false;
     let mut started = Instant::now();
     let mut last_status = Status::Ready;
     loop {
@@ -132,7 +133,7 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
             }
         }
         if eof && !outstanding {
-            return Ok(());
+            return if once && !predicted { Err(()) } else { Ok(()) };
         }
         if eof {
             thread::sleep(Duration::from_millis(1));
@@ -148,6 +149,7 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
                 unigram_only,
             })) => {
                 started = Instant::now();
+                predicted = true;
                 let result = engine
                     .submit(
                         &predictor,

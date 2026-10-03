@@ -117,7 +117,17 @@ pub fn effective_context(before: &str) -> String {
 }
 
 impl Refiner {
-    pub fn new(config: Config) -> Result<Self> {
+    pub fn new(mut config: Config) -> Result<Self> {
+        config.bundle = config.bundle.canonicalize().map_err(|_| Error::Config)?;
+        config.portable_worker = config
+            .portable_worker
+            .canonicalize()
+            .map_err(|_| Error::Config)?;
+        config.accelerated_worker = config
+            .accelerated_worker
+            .map(|p| p.canonicalize())
+            .transpose()
+            .map_err(|_| Error::Config)?;
         if !(1..=4).contains(&config.threads)
             || !config.bundle.is_dir()
             || !config.portable_worker.is_file()
@@ -179,6 +189,7 @@ impl Refiner {
         session: u64,
     ) -> Result<Immediate> {
         if before.len() > 16_384 || prefix.len() > 256 || options.limit > 5 {
+            self.reset();
             return Err(Error::Input);
         }
         let candidates: Vec<String> = predictor
