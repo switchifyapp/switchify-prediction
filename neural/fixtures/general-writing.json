@@ -1,0 +1,58 @@
+{
+  "messages": [
+    "Could you collect the parcel from reception this afternoon",
+    "The train has stopped outside the station again",
+    "I left your charger beside the kitchen window",
+    "We should book a table before everyone arrives",
+    "Please bring another towel for the swimming lesson",
+    "My appointment was moved to Thursday morning",
+    "The delivery driver called while I was sleeping",
+    "Can someone check whether the garden gate is locked",
+    "I will send the photographs after dinner tonight",
+    "There is fresh bread on the counter for lunch",
+    "The concert finishes too late for the last bus",
+    "Please remind me to return your book tomorrow"
+  ],
+  "email": [
+    "Please confirm which address we should use for the invoice",
+    "The attached spreadsheet includes the revised delivery dates",
+    "We have reserved a meeting room for next Wednesday",
+    "Thank you for sending the updated contract yesterday",
+    "Could you explain the difference between these two estimates",
+    "I am writing to request a replacement for the damaged item",
+    "Your application has been received by our recruitment team",
+    "The project schedule needs another review before approval",
+    "Please remove my previous address from your mailing list",
+    "I would appreciate a response before the end of next week",
+    "We need permission to include these images in the report",
+    "The maintenance team will inspect the equipment on Friday"
+  ],
+  "documents": [
+    "The survey found that most residents preferred the revised proposal",
+    "Each participant received written instructions before the session began",
+    "The library provides quiet study spaces on the upper floor",
+    "Water samples were collected from several locations along the river",
+    "The committee recommended further consultation with local businesses",
+    "These measurements should be repeated under controlled conditions",
+    "The final chapter examines changes in public transport funding",
+    "A separate entrance allows visitors to reach the exhibition directly",
+    "The procedure requires careful inspection of every completed component",
+    "This section describes the methods used to estimate annual demand",
+    "The building was restored using materials from the original structure",
+    "Several independent studies reached similar conclusions about the results"
+  ],
+  "search": [
+    "How to replace the battery in a wireless keyboard",
+    "Opening hours for the public swimming pool on Sunday",
+    "Best way to remove coffee stains from a cotton shirt",
+    "Where to find the serial number on a washing machine",
+    "Train tickets from Dublin to Cork tomorrow morning",
+    "Simple vegetarian recipes with potatoes and frozen spinach",
+    "How long does bread dough need to rise in winter",
+    "Weather forecast for the west coast this weekend",
+    "Instructions for changing the default browser on a laptop",
+    "Local recycling centre rules for old electrical appliances",
+    "Difference between a fixed rate and a variable rate",
+    "How to keep indoor plants healthy during a holiday"
+  ]
+}
