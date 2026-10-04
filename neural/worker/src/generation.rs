@@ -299,4 +299,75 @@ mod tests {
         assert!(!words.contains(&"hello".into()));
         assert!(calls <= 63);
     }
+
+    #[test]
+    fn incomplete_utf8_and_decomposed_words_complete_without_replacement() {
+        for (first, second) in [
+            (b" caf\xc3".to_vec(), b"\xa9".to_vec()),
+            (b" cafe".to_vec(), "\u{301}".as_bytes().to_vec()),
+        ] {
+            let query = GenerationQuery {
+                id: 1,
+                session: 1,
+                before: "a".into(),
+                prefix: "café".into(),
+                exclude: vec![],
+                limit: 3,
+            };
+            let pieces = vec![vec![], first, second];
+            let result = search(
+                &query,
+                &pieces,
+                (),
+                vec![-20., 10., -20.],
+                1,
+                Instant::now(),
+                |_, token, _| {
+                    Ok(if token == 1 {
+                        vec![-20., -20., 10.]
+                    } else {
+                        vec![10., -20., -20.]
+                    })
+                },
+            )
+            .unwrap();
+            assert_eq!(result[0], "café");
+            assert!(result.iter().all(|w| !w.contains('\uFFFD')));
+        }
+    }
+
+    #[test]
+    fn budget_and_fragment_gate_do_not_fill_from_statistics() {
+        let query = GenerationQuery {
+            id: 1,
+            session: 1,
+            before: "".into(),
+            prefix: "".into(),
+            exclude: vec![],
+            limit: 3,
+        };
+        let pieces = std::iter::once(vec![])
+            .chain((b'a'..=b'h').map(|b| vec![b]))
+            .collect::<Vec<_>>();
+        let mut calls = 0;
+        let result = search(
+            &query,
+            &pieces,
+            (),
+            vec![0.; 9],
+            1,
+            Instant::now(),
+            |_, _, _| {
+                calls += 1;
+                Ok(vec![0.; 9])
+            },
+        )
+        .unwrap();
+        assert_eq!(calls, 63);
+        assert!(
+            result.is_empty(),
+            "continuations are more probable than boundaries"
+        );
+        assert!(!partial(&[b'a'; 129], false, ""));
+    }
 }

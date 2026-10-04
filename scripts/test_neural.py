@@ -6,11 +6,22 @@ import unittest
 
 from neural_bundle import verify
 from neural_evaluate import warmup
+from generation_evaluate import generated
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class NeuralBundleTests(unittest.TestCase):
+    def test_generation_comparison_resets_context_before_measuring(self):
+        import io
+        from types import SimpleNamespace
+        replies = iter([{'type':'reset'}, {'type':'immediate', 'result':{'refinement_requested':True, 'request_id':8}},
+                        {'type':'refined', 'result':{'request_id':8}}])
+        client = SimpleNamespace(process=SimpleNamespace(stdin=io.StringIO()), receive=lambda: next(replies))
+        generated(client, 'synthetic', 'sy')
+        commands = [json.loads(line) for line in client.process.stdin.getvalue().splitlines()]
+        self.assertEqual([c['command'] for c in commands], ['reset', 'generate'])
+
     def test_warmup_cannot_silently_turn_into_statistical_only_measurement(self):
         class FakeClient:
             def __init__(self, status, requested, refined):

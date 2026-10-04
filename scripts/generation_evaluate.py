@@ -17,6 +17,11 @@ from neural_evaluate import Client, ROOT, sha, timing, workload
 
 
 def generated(client, before, prefix):
+    # Match the desktop's changed-context reset. The comparison mode must not
+    # prefill generation's context cache before the measured request.
+    client.process.stdin.write('{"command":"reset"}\n')
+    client.process.stdin.flush()
+    assert client.receive()['type'] == 'reset'
     started = time.perf_counter()
     client.process.stdin.write(json.dumps(dict(command='generate', before=before,
                                               prefix=prefix, session=1)) + '\n')
@@ -85,6 +90,7 @@ def evaluate(args):
             cell['oov_targets'] += target not in vocabulary
             cell['oov_hits'] += target not in vocabulary and target in words
             cell['generation_failures'] += reply is None
+            cell['generation_context_hits'] += bool(reply and reply['result']['cache_hit'])
             for mode, values in [('current', old_words), ('statistical_six', stats), ('six_slots', slots)]:
                 cell[mode + '_top3_hits'] += target in values[:3]
                 cell[mode + '_top6_hits'] += target in values[:6]
