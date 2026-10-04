@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "frozen_before_scoring": true,
+  "policy": "SmolLM2-135M Q8, top 8 statistical candidates, last sentence/64 tokens, whole-word plus boundary probability, sequential, return 5",
+  "regression": "Existing 96 authored sentences; 64 hash-selected queries per domain/prefix using the previous experiment selection rule",
+  "additional": "48 new general-writing sentences; first 6 per domain development, remaining 6 test. Select 8 dev and 16 test target positions per domain by SHA256, words longer than four graphemes. Run each position at 0 through 4 typed graphemes in order.",
+  "personal_learning": false,
+  "warmup_requests": 20,
+  "latency": "At least 1000 successful warmed queries/configuration; CLI immediate and refinement end-to-end, exact-context hits and misses; cold start to ready; 10ms sampled sum of parent and descendant RSS",
+  "gates": {"overall_top5_non_decreasing": true, "early_cell_max_decline_percentage_points": 1.0, "immediate_p95_ms": 20, "refinement_p95_ms_reference_windows": 150},
+  "interpretation": "Regression comparisons, not unseen-data accuracy. Unknown pretraining overlap. Freeze before scoring; do not tune on test failures. No automatic promotion. Other platforms require their own measurements."
+}

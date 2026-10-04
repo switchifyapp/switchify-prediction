@@ -1,4 +1,5 @@
 /target/
+/neural/target/
 /data/
 /artifacts/
 *.sqlite*
