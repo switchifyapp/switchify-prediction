@@ -9,6 +9,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import tomllib
 
 import dependency_notices
 
@@ -65,7 +66,8 @@ def main():
     rustc = subprocess.check_output(['rustc', '-vV'], text=True)
     target = next(line.split(': ',1)[1] for line in rustc.splitlines() if line.startswith('host: '))
     ext = '.exe' if os.name == 'nt' else ''
-    name = 'switchify-prediction-neural-0.1.0-' + target
+    version = tomllib.loads((ROOT / 'neural/Cargo.toml').read_text())['package']['version']
+    name = 'switchify-prediction-neural-' + version + '-' + target
     args.output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as temp:
         stage = Path(temp) / name
@@ -85,7 +87,7 @@ def main():
         (stage / 'THIRD_PARTY_NOTICES.md').write_text(notices(target), encoding='utf-8')
         sysroot = Path(subprocess.check_output(['rustc','--print','sysroot'], text=True).strip())
         shutil.copyfile(sysroot / 'share/doc/rust/COPYRIGHT-library.html', stage / 'RUST_LIBRARY_COPYRIGHT.html')
-        (stage / 'BUILD.json').write_text(json.dumps({'version':'0.1.0','target':target, 'rustc':rustc,
+        (stage / 'BUILD.json').write_text(json.dumps({'version':version,'target':target, 'rustc':rustc,
             'platform':platform.platform(), 'libc':platform.libc_ver(), 'signed':False,
             'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
             'model_id':'smollm2-135m-q8-v1', 'accelerated_requires':['avx2','fma','f16c'] if args.accelerated else [],
