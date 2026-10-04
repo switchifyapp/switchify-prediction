@@ -122,6 +122,26 @@ fn immediate_snapshot_options_and_latest_only() {
     );
 }
 #[test]
+fn replies_beyond_half_a_second_refine_without_blocking_the_snapshot() {
+    for mode in ["slow", "slow-reset"] {
+        let (_temp, predictor, mut engine) = fixture(mode);
+        until(|| engine.status() == Status::Ready);
+        assert_eq!(engine.capabilities().deadline_ms, 2_000);
+        let immediate = engine.submit(&predictor, "", "", options(), 1).unwrap();
+        assert_eq!(immediate.words.len(), 5);
+        assert!(immediate.refinement_requested);
+        assert!(engine.poll().is_none());
+        let mut refined = None;
+        until(|| {
+            refined = engine.poll();
+            refined.is_some()
+        });
+        assert_eq!(refined.unwrap().request_id, immediate.request_id);
+        assert_eq!(engine.status(), Status::Ready);
+    }
+}
+
+#[test]
 fn failures_leave_immediate_available_and_require_explicit_retry() {
     for mode in [
         "stall",

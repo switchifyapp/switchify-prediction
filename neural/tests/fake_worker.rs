@@ -29,12 +29,18 @@ fn main() {
     let mut input = io::stdin().lock();
     while let Ok(command) = protocol::read_frame(&mut input) {
         let reply = match command {
-            Command::Reset => Reply::Reset,
+            Command::Reset => {
+                if mode == "slow-reset" {
+                    thread::sleep(Duration::from_millis(750));
+                }
+                Reply::Reset
+            }
             Command::Predict(mut query) => {
                 match mode.as_str() {
                     "crash" => return,
                     "stall" => thread::sleep(Duration::from_secs(30)),
                     "delay" => thread::sleep(Duration::from_millis(100)),
+                    "slow" => thread::sleep(Duration::from_millis(750)),
                     "malformed" => {
                         out.write_all(&[1, 0, 0, 0, b'!']).unwrap();
                         out.flush().unwrap();

@@ -14,6 +14,8 @@ use std::{
 };
 use switchify_prediction::{Options, Predictor, normalize, sentences};
 
+const REPLY_DEADLINE_MS: u64 = 2_000;
+
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -144,7 +146,7 @@ impl Refiner {
             threads: config.threads,
             context_tokens: 64,
             shortlist: 8,
-            deadline_ms: 500,
+            deadline_ms: REPLY_DEADLINE_MS,
         };
         let state = Arc::new((
             Mutex::new(Shared {

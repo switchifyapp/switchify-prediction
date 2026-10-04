@@ -1,5 +1,5 @@
 use crate::{
-    Config, Failure, Refined, State, Status, pause,
+    Config, Failure, REPLY_DEADLINE_MS, Refined, State, Status, pause,
     protocol::{self, Command, Reply},
 };
 use std::{
@@ -149,7 +149,10 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
             if let Some(w) = &mut worker {
                 if reset {
                     w.send(Command::Reset)?;
-                    if !matches!(w.receive(&state, Duration::from_millis(500))?, Reply::Reset) {
+                    if !matches!(
+                        w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))?,
+                        Reply::Reset
+                    ) {
                         return Err(Failure::Protocol);
                     }
                 }
@@ -161,7 +164,7 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     let limit = query.limit.min(query.candidates.len());
                     let candidates = query.candidates.clone();
                     w.send(Command::Predict(query))?;
-                    match w.receive(&state, Duration::from_millis(500))? {
+                    match w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))? {
                         Reply::Ranked {
                             id: actual,
                             words,
