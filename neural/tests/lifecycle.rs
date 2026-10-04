@@ -330,3 +330,67 @@ fn bare_worker_filename_resolves_in_callers_directory() {
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stdout).contains("refined"));
 }
+
+#[test]
+fn generation_is_async_normalized_and_latest_only() {
+    let (_temp, _predictor, mut engine) = fixture("delay");
+    until(|| engine.status() == Status::Ready);
+    let start = Instant::now();
+    let first = engine
+        .generate("old. say", "he", 1, &["HELLO".into()], 3)
+        .unwrap()
+        .unwrap();
+    assert!(start.elapsed() < Duration::from_millis(50));
+    let latest = engine
+        .generate("say", "cafe\u{301}", 2, &[], 3)
+        .unwrap()
+        .unwrap();
+    assert_ne!(first, latest);
+    let mut result = None;
+    until(|| {
+        result = engine.poll();
+        result.is_some()
+    });
+    let result = result.unwrap();
+    assert_eq!(result.request_id, latest);
+    assert_eq!(result.words, ["café"]);
+    engine.generate("", "", 2, &[], 3).unwrap();
+    engine.reset();
+    thread::sleep(Duration::from_millis(150));
+    assert!(engine.poll().is_none());
+    assert!(engine.generate("", "", 2, &[], 4).is_err());
+}
+
+#[test]
+fn generation_rejects_invalid_workers_and_timeout_requires_retry() {
+    for mode in ["foreign", "duplicate", "id", "stall", "crash"] {
+        let (temp, _predictor, mut engine) = fixture(mode);
+        until(|| engine.status() == Status::Ready);
+        engine.generate("", "", 1, &[], 3).unwrap();
+        until(|| matches!(engine.status(), Status::Unavailable(_)));
+        assert!(engine.poll().is_none());
+        assert_eq!(engine.generate("", "", 1, &[], 3).unwrap(), None);
+        std::fs::write(temp.path().join("mode"), "delay").unwrap();
+        engine.retry();
+        until(|| engine.status() == Status::Ready);
+        let id = engine
+            .generate("", "he", 2, &["HELLO".into()], 3)
+            .unwrap()
+            .unwrap();
+        let mut result = None;
+        until(|| {
+            result = engine.poll();
+            result.is_some()
+        });
+        let result = result.unwrap();
+        assert_eq!(result.request_id, id);
+        assert_eq!(result.words, ["help", "helium"]);
+    }
+}
+
+#[test]
+fn generation_rejects_old_protocol_without_retry_loop() {
+    let (_temp, _predictor, mut engine) = fixture("old");
+    until(|| matches!(engine.status(), Status::Unavailable(_)));
+    assert_eq!(engine.generate("", "", 1, &[], 3).unwrap(), None);
+}

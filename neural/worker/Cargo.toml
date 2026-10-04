@@ -1,6 +1,6 @@
 [package]
 name = "switchify-smol-worker"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.97.1"
 license = "MIT"
@@ -12,6 +12,8 @@ accelerated = []
 [dependencies]
 switchify-prediction-neural = { path = ".." }
 anyhow = "1"
+switchify-prediction = { path = "../.." }
+unicode-normalization = "0.1"
 candle-core = "=0.11.0"
 candle-transformers = "=0.11.0"
 serde_json = "1"

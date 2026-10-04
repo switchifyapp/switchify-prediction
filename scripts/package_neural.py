@@ -90,7 +90,7 @@ def main():
         (stage / 'BUILD.json').write_text(json.dumps({'version':version,'target':target, 'rustc':rustc,
             'platform':platform.platform(), 'libc':platform.libc_ver(), 'signed':False,
             'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
-            'model_id':'smollm2-135m-q8-v1', 'accelerated_requires':['avx2','fma','f16c'] if args.accelerated else [],
+            'model_id':'smollm2-135m-q8-v1', 'worker_protocol':2, 'generation_policy':json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy']['generation'], 'accelerated_requires':['avx2','fma','f16c'] if args.accelerated else [],
             'production_qualified':json.loads((ROOT / 'neural/qualification.json').read_bytes())['production_qualified'],
             'model_assets_included':False}, indent=2)+'\n',encoding='utf-8')
         (stage / 'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(stage.iterdir())), encoding='utf-8')

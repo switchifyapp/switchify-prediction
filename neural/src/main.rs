@@ -47,6 +47,11 @@ struct Run {
 #[derive(Deserialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 enum Input {
+    Generate {
+        before: String,
+        prefix: String,
+        session: u64,
+    },
     Predict {
         before: String,
         prefix: String,
@@ -140,6 +145,39 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
             continue;
         }
         match rx.recv_timeout(Duration::from_millis(1)) {
+            Ok(Ok(Input::Generate {
+                before,
+                prefix,
+                session,
+            })) => {
+                started = Instant::now();
+                predicted = true;
+                let statistical: Vec<String> = predictor
+                    .predict(
+                        &before,
+                        &prefix,
+                        Options {
+                            limit: 6,
+                            min_chars: 0,
+                            unigram_only: false,
+                        },
+                    )
+                    .into_iter()
+                    .map(|s| s.word)
+                    .collect();
+                let words: Vec<String> = statistical.iter().take(3).cloned().collect();
+                let id = engine
+                    .generate(&before, &prefix, session, &words, 3)
+                    .map_err(|_| ())?;
+                outstanding = id.is_some();
+                emit(json!({"type":"immediate", "result": {
+                    "request_id":id, "words":words, "statistical_six":statistical,
+                    "status":engine.status(), "refinement_requested":outstanding
+                }, "elapsed_ms":started.elapsed().as_secs_f64()*1000.}))?;
+                if once {
+                    eof = true;
+                }
+            }
             Ok(Ok(Input::Predict {
                 before,
                 prefix,

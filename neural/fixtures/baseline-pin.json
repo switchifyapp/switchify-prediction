@@ -1,0 +1,11 @@
+{
+  "archive": {
+    "url": "https://github.com/switchifyapp/switchify-prediction/releases/download/v0.1.0/switchify-english-en-aac-oanc-v1.zip",
+    "sha256": "4537c70b44f553b31e618378a5cc500cd83ffa2dff940263ecabf88e18945b17",
+    "bytes": 10393776
+  },
+  "database": {
+    "sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+    "bytes": 29802496
+  }
+}

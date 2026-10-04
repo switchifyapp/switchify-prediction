@@ -1,4 +1,5 @@
 //! Dedicated offline inference process. All errors are deliberately text-free.
+mod generation;
 mod model;
 use std::{io, path::PathBuf};
 use switchify_prediction_neural::{
@@ -41,6 +42,16 @@ fn run() -> anyhow::Result<()> {
             Command::Reset => {
                 model.reset();
                 Reply::Reset
+            }
+            Command::Generate(query) => {
+                anyhow::ensure!(query.valid(), "query");
+                let (words, cache_hit) = model.generate(&query)?;
+                anyhow::ensure!(query.accepts(&words), "generation");
+                Reply::Generated {
+                    id: query.id,
+                    words,
+                    cache_hit,
+                }
             }
             Command::Predict(query) => {
                 anyhow::ensure!(

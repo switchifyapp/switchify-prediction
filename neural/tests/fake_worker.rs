@@ -17,7 +17,7 @@ fn main() {
     protocol::write_frame(
         &mut out,
         &Reply::Ready {
-            version: protocol::VERSION,
+            version: if mode == "old" { 1 } else { protocol::VERSION },
             accelerated: false,
         },
     )
@@ -34,6 +34,31 @@ fn main() {
                     thread::sleep(Duration::from_millis(750));
                 }
                 Reply::Reset
+            }
+            Command::Generate(query) => {
+                match mode.as_str() {
+                    "crash" => return,
+                    "stall" => thread::sleep(Duration::from_secs(30)),
+                    "delay" => thread::sleep(Duration::from_millis(100)),
+                    _ => {}
+                }
+                let mut words: Vec<String> = ["hello", "help", "helium", "café", "can't"]
+                    .into_iter()
+                    .map(String::from)
+                    .filter(|w| query.accepts(std::slice::from_ref(w)))
+                    .take(query.limit)
+                    .collect();
+                if mode == "foreign" {
+                    words = vec!["two words".into()];
+                }
+                if mode == "duplicate" {
+                    words = vec!["hello".into(), "hello".into()];
+                }
+                Reply::Generated {
+                    id: query.id + u64::from(mode == "id"),
+                    words,
+                    cache_hit: false,
+                }
             }
             Command::Predict(mut query) => {
                 match mode.as_str() {

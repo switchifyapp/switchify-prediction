@@ -4,7 +4,7 @@ pub mod bundle;
 mod process;
 pub mod protocol;
 
-use protocol::Query;
+use protocol::{Command, GenerationQuery, Query};
 use serde::Serialize;
 use std::{
     path::PathBuf,
@@ -74,7 +74,7 @@ pub struct Refined {
 struct Shared {
     latest: u64,
     session: u64,
-    pending: Option<Query>,
+    pending: Option<Command>,
     result: Option<Refined>,
     status: Status,
     reset: bool,
@@ -224,13 +224,13 @@ impl Refiner {
             && !candidates.is_empty()
             && matches!(shared.status, Status::Loading | Status::Ready);
         if refinement_requested {
-            shared.pending = Some(Query {
+            shared.pending = Some(Command::Predict(Query {
                 id: shared.latest,
                 session,
                 before: effective_context(before),
                 candidates,
                 limit: options.limit,
-            });
+            }));
         }
         let result = Immediate {
             request_id: shared.latest,
@@ -240,6 +240,48 @@ impl Refiner {
         };
         self.state.1.notify_one();
         Ok(result)
+    }
+
+    /// Generate additional whole words without a statistical vocabulary restriction.
+    /// Results use the same request-ID-based poll method as reranking.
+    /// None means generation is unavailable until an explicit retry.
+    pub fn generate(
+        &mut self,
+        before: &str,
+        prefix: &str,
+        session: u64,
+        exclude: &[String],
+        limit: usize,
+    ) -> Result<Option<u64>> {
+        let mut query = GenerationQuery {
+            id: 0,
+            session,
+            before: before.to_owned(),
+            prefix: normalize(prefix),
+            exclude: exclude.iter().map(|s| normalize(s)).collect(),
+            limit,
+        };
+        if before.len() > 16_384 || prefix.len() > 256 || !query.valid() {
+            self.reset();
+            return Err(Error::Input);
+        }
+        query.before = effective_context(before);
+        let mut shared = self.state.0.lock().unwrap();
+        shared.latest = shared.latest.checked_add(1).ok_or(Error::Input)?;
+        shared.pending = None;
+        shared.result = None;
+        if shared.session != session {
+            shared.session = session;
+            shared.reset = true;
+        }
+        let id = shared.latest;
+        let requested = limit > 0 && matches!(shared.status, Status::Loading | Status::Ready);
+        if requested {
+            query.id = id;
+            shared.pending = Some(Command::Generate(query));
+        }
+        self.state.1.notify_one();
+        Ok(requested.then_some(id))
     }
 
     /// A subsequent submit/reset invalidates any previously unconsumed result.
