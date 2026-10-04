@@ -9,5 +9,8 @@
   ],
   "optimized_windows_latency_passed": true,
   "desktop_integration": false,
-  "automatic_promotion": false
+  "automatic_promotion": false,
+  "scope": "Historical v0.2.0 reranking qualification; retained unchanged reasons are not generation qualification claims.",
+  "generation_report_command": "python scripts/generation_evaluate.py",
+  "generation_production_qualified": false
 }
