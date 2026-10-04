@@ -8,7 +8,19 @@
     "context_tokens": 64,
     "shortlist": 8,
     "max_results": 5,
-    "scoring": "whole-word log probability plus boundary probability, sequential"
+    "scoring": "whole-word log probability plus boundary probability, sequential",
+    "generation": {
+      "protocol_version": 2,
+      "beam_width": 8,
+      "max_tokens_per_word": 8,
+      "max_forward_evaluations": 64,
+      "max_results": 3,
+      "max_word_bytes": 128,
+      "reply_deadline_ms": 2000,
+      "scoring": "whole-word probability including following boundary; normalized duplicates excluded",
+      "minimum_boundary_probability": 0.5,
+      "search_cutoff_ms": 1600
+    }
   },
   "files": {
     "model.gguf": {

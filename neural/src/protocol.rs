@@ -2,10 +2,10 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::io::{self, Read, Write};
 
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 pub const MAX_FRAME: usize = 65_536;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Query {
     pub id: u64,
@@ -15,19 +15,71 @@ pub struct Query {
     pub limit: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GenerationQuery {
+    pub id: u64,
+    pub session: u64,
+    pub before: String,
+    pub prefix: String,
+    pub exclude: Vec<String>,
+    pub limit: usize,
+}
+
+impl GenerationQuery {
+    pub fn valid(&self) -> bool {
+        self.before.len() <= 16_384
+            && self.prefix.len() <= 256
+            && self.limit <= 3
+            && self.exclude.len() <= 3
+            && self.exclude.iter().all(|w| w.len() <= 128)
+    }
+    pub fn accepts(&self, words: &[String]) -> bool {
+        let prefix = switchify_prediction::normalize(&self.prefix);
+        words.len() <= self.limit
+            && words.iter().all(|w| {
+                valid_word(w)
+                    && w.starts_with(&prefix)
+                    && !self
+                        .exclude
+                        .iter()
+                        .any(|e| switchify_prediction::normalize(e) == *w)
+            })
+            && words
+                .iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                == words.len()
+    }
+}
+
+/// A canonical, single whole word. Apostrophes are allowed only internally.
+pub fn valid_word(word: &str) -> bool {
+    !word.is_empty()
+        && word.len() <= 128
+        && switchify_prediction::normalize(word) == word
+        && switchify_prediction::sentences(word) == vec![vec![word.to_owned()]]
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Command {
     Predict(Query),
+    Generate(GenerationQuery),
     Reset,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Reply {
     Ready {
         version: u32,
         accelerated: bool,
     },
     Ranked {
+        id: u64,
+        words: Vec<String>,
+        cache_hit: bool,
+    },
+    Generated {
         id: u64,
         words: Vec<String>,
         cache_hit: bool,

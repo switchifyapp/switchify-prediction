@@ -14,6 +14,7 @@ pub struct Model {
     empty: ModelWeights,
     tokenizer: Tokenizer,
     boundaries: Vec<usize>,
+    pieces: Vec<Vec<u8>>,
     prepared: Option<Prepared>,
 }
 fn forward(state: &mut ModelWeights, ids: &[u32], position: usize) -> Result<Vec<f32>> {
@@ -61,7 +62,9 @@ impl Model {
                 boundaries.push(id as usize);
             }
         }
+        let pieces = crate::generation::pieces(&tokenizer)?;
         Ok(Self {
+            pieces,
             empty,
             tokenizer,
             boundaries,
@@ -71,13 +74,7 @@ impl Model {
     pub fn reset(&mut self) {
         self.prepared = None;
     }
-    pub fn rank(
-        &mut self,
-        session: u64,
-        before: &str,
-        candidates: &[String],
-        limit: usize,
-    ) -> Result<(Vec<String>, bool)> {
+    fn prepare(&mut self, session: u64, before: &str) -> Result<bool> {
         let encoded = self
             .tokenizer
             .encode(before, false)
@@ -100,6 +97,36 @@ impl Model {
                 logits,
             });
         }
+        Ok(cache_hit)
+    }
+
+    pub fn generate(
+        &mut self,
+        query: &switchify_prediction_neural::protocol::GenerationQuery,
+    ) -> Result<(Vec<String>, bool)> {
+        let started = std::time::Instant::now();
+        let hit = self.prepare(query.session, &query.before)?;
+        let prepared = self.prepared.as_ref().unwrap();
+        let words = crate::generation::search(
+            query,
+            &self.pieces,
+            prepared.state.clone(),
+            prepared.logits.clone(),
+            usize::from(!hit),
+            started,
+            |state, token, depth| forward(state, &[token], prepared.ids.len() + depth),
+        )?;
+        Ok((words, hit))
+    }
+
+    pub fn rank(
+        &mut self,
+        session: u64,
+        before: &str,
+        candidates: &[String],
+        limit: usize,
+    ) -> Result<(Vec<String>, bool)> {
+        let cache_hit = self.prepare(session, before)?;
         let prepared = self.prepared.as_ref().unwrap();
         let mut scored = Vec::new();
         for (index, word) in candidates.iter().enumerate() {

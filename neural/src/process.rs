@@ -157,37 +157,52 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     }
                 }
                 if let Some(query) = query {
-                    let id = query.id;
+                    let id = match &query {
+                        Command::Predict(q) => q.id,
+                        Command::Generate(q) => q.id,
+                        Command::Reset => return Err(Failure::Protocol),
+                    };
                     if state.0.lock().unwrap().latest != id {
                         return Ok(());
                     }
-                    let limit = query.limit.min(query.candidates.len());
-                    let candidates = query.candidates.clone();
-                    w.send(Command::Predict(query))?;
-                    match w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))? {
-                        Reply::Ranked {
-                            id: actual,
-                            words,
-                            cache_hit,
-                        } if actual == id
-                            && words.len() == limit
-                            && words.iter().all(|w| candidates.contains(w))
+                    w.send(query.clone())?;
+                    let reply = w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))?;
+                    let (words, cache_hit) = match (query, reply) {
+                        (
+                            Command::Predict(q),
+                            Reply::Ranked {
+                                id: actual,
+                                words,
+                                cache_hit,
+                            },
+                        ) if actual == id
+                            && words.len() == q.limit.min(q.candidates.len())
+                            && words.iter().all(|w| q.candidates.contains(w))
                             && words
                                 .iter()
                                 .collect::<std::collections::BTreeSet<_>>()
                                 .len()
                                 == words.len() =>
                         {
-                            let mut s = state.0.lock().unwrap();
-                            if s.latest == id && !s.reset && !s.stop {
-                                s.result = Some(Refined {
-                                    request_id: id,
-                                    words,
-                                    cache_hit,
-                                });
-                            }
+                            (words, cache_hit)
                         }
+                        (
+                            Command::Generate(q),
+                            Reply::Generated {
+                                id: actual,
+                                words,
+                                cache_hit,
+                            },
+                        ) if actual == id && q.accepts(&words) => (words, cache_hit),
                         _ => return Err(Failure::Protocol),
+                    };
+                    let mut s = state.0.lock().unwrap();
+                    if s.latest == id && !s.reset && !s.stop {
+                        s.result = Some(Refined {
+                            request_id: id,
+                            words,
+                            cache_hit,
+                        });
                     }
                 }
             }

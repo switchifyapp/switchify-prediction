@@ -1416,7 +1416,7 @@ dependencies = [
 
 [[package]]
 name = "switchify-prediction-neural"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "serde",
@@ -1429,14 +1429,16 @@ dependencies = [
 
 [[package]]
 name = "switchify-smol-worker"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "candle-core",
  "candle-transformers",
  "serde_json",
+ "switchify-prediction",
  "switchify-prediction-neural",
  "tokenizers",
+ "unicode-normalization",
 ]
 
 [[package]]

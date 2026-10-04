@@ -64,3 +64,31 @@ python scripts/neural_evaluate.py --cli target/smol-portable/release/switchify-p
 Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for the optimized comparison. Each run contains 1,760 warmed queries with personal learning disabled. Reports include quality cells, immediate and IPC-inclusive refinement timings, cache hits/misses, cold load and sampled process-tree RSS. Training overlap is checked; unknown neural pretraining overlap remains possible. These are regression comparisons and do not prove unseen-data accuracy. A failed quality or latency gate prevents a production-quality claim; it does not cause test-set tuning or automatic promotion.
 
 `python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release` packages binaries, hashes and dependency notices without model files. Omit the accelerated path for ARM. CI builds/tests Windows x64, Linux x64, macOS ARM64 and macOS x64. Build/test success is not a claim of measured model latency on those platforms. See `SECURITY.md` for the scoped dependency advisory exception and deployment boundaries.
+
+
+## Asynchronous generation
+
+The generation API returns up to three additional normalized whole words without
+requiring statistical-vocabulary membership. Call
+Refiner::generate(before, prefix, session, instant_words, 3), then poll using the
+returned request ID. A subsequent submit, generate or reset invalidates old results.
+The existing submit/reranking API is unchanged. The stream CLI accepts
+{"command":"generate","before":"please send the","prefix":"","session":1} on stdin.
+
+Worker protocol 2 is required; protocol 1 workers fail cleanly. Model weights and
+tokenizer hashes are unchanged. The manifest records beam width 8, at most 8 tokens
+per word, at most 64 forward evaluations including uncached context, and a 1600 ms
+search cutoff within the unchanged 2000 ms parent reply deadline. Results are
+ranked by whole-word probability including following boundary mass. A boundary
+probability of at least 0.5 excludes likely unfinished fragments. Search can return
+fewer than three words, including none. This is English-focused and not a spelling
+dictionary; plausible but incorrect words remain possible.
+
+Run scripts/generation_evaluate.py with explicit --cli, --worker, --baseline,
+--bundle and --output paths. Optional --samples 1000 selects a reproducible spread
+across the existing frozen corpus partitions and zero through four graphemes.
+Omit --samples for the full comparison. Install psutil==7.0.0 and regex==2025.11.3.
+The report includes top-three/top-six counts, fill, OOV, regressions, latency and
+process-tree RSS. This is a regression comparison, not unseen-data qualification.
+Existing model-quality failures remain; generation has not been promoted to a
+qualified model. CI artifacts are prepared without publishing a release.
