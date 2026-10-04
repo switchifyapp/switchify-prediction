@@ -332,7 +332,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(result[0], "café");
-            assert!(result.iter().all(|w| !w.contains('\uFFFD')));
+            assert!(result.iter().all(|w| !w.contains('\u{FFFD}')));
         }
     }
 
