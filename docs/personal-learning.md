@@ -11,12 +11,22 @@ Learned counts are kept apart from the baseline and combined when predicting:
 - **Weight.** One learned occurrence counts as 500 baseline occurrences while
   little has been learned. The weight is `500 / (1 + learned words / 2000)`, so
   it has halved after 2,000 learned words. However much is learned, learned
-  counts approach a bounded share of the baseline instead of outgrowing it.
-- **New words.** A word the baseline does not know is suggested only once it
-  has been learned twice, so a single misspelling is not. Words the baseline
-  knows count from their first use.
-- **Memory.** The baseline is no longer copied. Peak memory of the predictor
-  falls from 362 MiB to 134 MiB, with or without a personal database.
+  unigram mass approaches 500 × 2,000 = 1,000,000 occurrences, about the size
+  of the production baseline's 1,076,617, so learned words approach half the
+  unigram distribution rather than outgrowing the baseline. These constants are
+  tuned to this baseline; a much larger or smaller one would change that share.
+- **New and rare words.** Learned counts of a word are used once it has been
+  learned twice, unless the baseline has it at least three times. A single
+  misspelling is not suggested, including one the baseline itself contains
+  once or twice: the production baseline has over 9,000 such words, many of
+  them misspellings. Words the baseline knows well count from their first use.
+  A word learned once still counts as context for the word after it.
+- **Memory and speed.** The baseline is no longer copied. Peak memory of the
+  predictor falls from 362 MiB to 134 MiB, with or without a personal database.
+  What prediction uses of the learned counts is rebuilt when they change, so a
+  prediction costs about the same as before: 5.3 ms instead of 7.5 ms for an
+  empty sentence on the production baseline, and 8.9 ms after 2,000 new words
+  were learned twice.
 - **No learning.** With no personal database, or an empty one, predictions are
   bit-identical to before.
 

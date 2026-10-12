@@ -238,12 +238,16 @@ fn interpolation_renormalizes_and_personal_counts_are_weighted_before_probabilit
     assert!((tea - (0.6 * 0.5 + 0.3 * 0.5 + 0.1 / 9.0)).abs() < 1e-12);
     let backed_off = p.predict("unknown like ", "tea", opts).remove(0).score;
     assert!((backed_off - (0.3 * 0.5 + 0.1 / 9.0) / 0.4).abs() < 1e-12);
+    // Words this rare in the baseline count once learned twice.
+    p.learn("i like tea.").unwrap();
+    assert_eq!(p.predict("i like ", "tea", opts).remove(0).score, tea);
     p.learn("i like tea.").unwrap();
     let learned = p.predict("i like ", "tea", opts).remove(0).score;
     // One learned occurrence counts as 500 baseline ones, less as more is
-    // learned: here three words.
-    let w = 500.0 / (1.0 + 3.0 / 2000.0);
-    let expected = 0.9 * (1.0 + w) / (2.0 + w) + 0.1 * (1.0 + w) / (9.0 + 3.0 * w);
+    // learned: here six words.
+    let w = 500.0 / (1.0 + 6.0 / 2000.0);
+    let expected =
+        0.9 * (1.0 + 2.0 * w) / (2.0 + 2.0 * w) + 0.1 * (1.0 + 2.0 * w) / (9.0 + 6.0 * w);
     assert!((learned - expected).abs() < 1e-12);
     let total: f64 = p.predict("i like ", "", opts).iter().map(|s| s.score).sum();
     assert!((total - 1.0).abs() < 1e-12);
@@ -585,9 +589,13 @@ fn a_misspelling_learned_once_is_not_suggested_but_a_new_word_used_twice_is() {
     p.learn("I drink teh water.").unwrap();
     assert!(!words(&p, "I drink ", "t").contains(&"teh".to_string()));
     assert!(!words(&p, "", "te").contains(&"teh".to_string()));
-    // A word the baseline knows counts at once.
-    p.learn("We walk apple.").unwrap();
-    assert_eq!(words(&p, "We walk ", "a")[0], "apple");
+    // A word the baseline knows well counts at once; one it has rarely seen,
+    // which may itself be a misspelling, needs a second use.
+    assert_eq!(words(&p, "We walk ", "")[0], "home");
+    p.learn("We walk wine.").unwrap();
+    assert_eq!(words(&p, "We walk ", "")[0], "home");
+    p.learn("We walk drink.").unwrap();
+    assert_eq!(words(&p, "We walk ", "")[0], "drink");
     p.learn("I drink teh tea.").unwrap();
     assert!(words(&p, "I drink ", "t").contains(&"teh".to_string()));
 }
@@ -629,4 +637,52 @@ fn huge_stored_personal_counts_do_not_overflow() {
     );
     assert!(!ranked.is_empty());
     assert!(ranked.iter().all(|s| s.score.is_finite()));
+}
+
+#[test]
+fn without_learning_scores_are_exactly_the_interpolated_counts() {
+    let (_tmp, base) = fixture();
+    let p = Predictor::open(&base, None).unwrap();
+    let water = p.predict("I drink ", "wa", Options::default()).remove(0);
+    assert_eq!(water.word, "water");
+    // Seventeen baseline words; "i drink" and "drink" are followed by water
+    // twice and wine once. Summed in the order the predictor sums them.
+    let weights: f64 = 0.1 + 0.3 + 0.6;
+    let expected =
+        0.0 + 2.0 / 17.0 * 0.1 / weights + 2.0 / 3.0 * 0.3 / weights + 2.0 / 3.0 * 0.6 / weights;
+    assert_eq!(water.score.to_bits(), expected.to_bits());
+}
+
+/// Run with SWITCHIFY_BASELINE pointing at the production english.sqlite.
+#[test]
+#[ignore = "requires explicit SWITCHIFY_BASELINE"]
+fn prediction_cost_on_production_baseline() {
+    let base = std::path::PathBuf::from(std::env::var_os("SWITCHIFY_BASELINE").unwrap());
+    let tmp = tempfile::tempdir().unwrap();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let options = Options {
+        limit: 6,
+        min_chars: 0,
+        unigram_only: false,
+    };
+    let time = |p: &Predictor, label: &str| {
+        for (before, prefix) in [("", ""), ("i want to", ""), ("the", "s")] {
+            let started = std::time::Instant::now();
+            for _ in 0..50 {
+                p.predict(before, prefix, options);
+            }
+            println!(
+                "{label} {before:?} {prefix:?}: {:?}",
+                started.elapsed() / 50
+            );
+        }
+    };
+    time(&p, "none");
+    let text: String = (0..2000)
+        .map(|i| format!("I need to call friend{i} about the physio. "))
+        .collect();
+    p.learn(&text).unwrap();
+    p.learn(&text).unwrap();
+    time(&p, "learned");
 }

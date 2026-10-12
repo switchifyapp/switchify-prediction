@@ -353,17 +353,30 @@ const PERSONAL_WEIGHT: f64 = 500.;
 /// learned counts approach a bounded share of the baseline rather than
 /// outgrowing it.
 const PERSONAL_SATURATION: f64 = 2000.;
-/// Times a word the baseline lacks must be learned before it is suggested, so
-/// a single misspelling is not.
+/// Times a word must be learned before its learned counts are used, unless the
+/// baseline has it at least `TRUSTED_BASELINE` times. A single misspelling,
+/// including one the baseline itself has once or twice, is not suggested.
 const NEW_WORD_REPEATS: i64 = 2;
+const TRUSTED_BASELINE: i64 = 3;
 pub struct Predictor {
     baseline: Counts,
-    /// Learned counts, combined with the baseline when predicting.
+    /// Learned counts, as stored.
     learned: Counts,
+    /// What predicting uses of `learned`, rebuilt whenever it changes.
+    usable: Usable,
     personal: Option<Connection>,
     /// The personal database's `data_version` when `learned` last matched it.
     /// It changes only when another connection commits.
     seen: Option<i64>,
+}
+
+/// The learned counts whose words may count, their total per context, and
+/// the weight of one learned occurrence.
+#[derive(Default)]
+struct Usable {
+    counts: Counts,
+    totals: BTreeMap<Vec<String>, f64>,
+    weight: f64,
 }
 
 fn data_version(db: &Connection) -> Result<i64> {
@@ -431,6 +444,7 @@ impl Predictor {
         let mut result = Self {
             baseline: counts,
             learned: Counts::default(),
+            usable: Usable::default(),
             personal,
             seen: None,
         };
@@ -456,30 +470,36 @@ impl Predictor {
             self.seen = Some(version);
         }
         self.learned = learned;
+        self.rebuild();
         Ok(())
     }
-    /// The current weight of one learned occurrence.
-    fn personal_weight(&self) -> f64 {
-        // Summed as floats: stored counts are bounded one by one, not in total.
-        let learned: f64 = self
-            .learned
-            .0
-            .get(&Vec::new())
-            .map_or(0., |w| w.values().map(|c| *c as f64).sum());
-        PERSONAL_WEIGHT / (1. + learned / PERSONAL_SATURATION)
-    }
-    /// Whether learned counts of `word` are used: always for words the
-    /// baseline knows, and for others once learned `NEW_WORD_REPEATS` times.
-    fn known(&self, word: &str) -> bool {
-        let count = |counts: &Counts| {
-            counts
-                .0
-                .get(&Vec::new())
-                .and_then(|w| w.get(word))
-                .copied()
-                .unwrap_or(0)
+    /// Rebuilds what predicting uses after `learned` changes. Summed as
+    /// floats: stored counts are bounded one by one, not in total.
+    fn rebuild(&mut self) {
+        let empty = BTreeMap::new();
+        let learned = self.learned.0.get(&Vec::new()).unwrap_or(&empty);
+        let baseline = self.baseline.0.get(&Vec::new()).unwrap_or(&empty);
+        let counts = |word: &String| {
+            baseline.get(word).copied().unwrap_or(0) >= TRUSTED_BASELINE
+                || learned.get(word).copied().unwrap_or(0) >= NEW_WORD_REPEATS
         };
-        count(&self.baseline) > 0 || count(&self.learned) >= NEW_WORD_REPEATS
+        let mut usable = Usable::default();
+        for (context, words) in &self.learned.0 {
+            let kept: BTreeMap<String, i64> = words
+                .iter()
+                .filter(|(w, _)| counts(w))
+                .map(|(w, c)| (w.clone(), *c))
+                .collect();
+            if !kept.is_empty() {
+                usable
+                    .totals
+                    .insert(context.clone(), kept.values().map(|c| *c as f64).sum());
+                usable.counts.0.insert(context.clone(), kept);
+            }
+        }
+        let learned: f64 = learned.values().map(|c| *c as f64).sum();
+        usable.weight = PERSONAL_WEIGHT / (1. + learned / PERSONAL_SATURATION);
+        self.usable = usable;
     }
     pub fn predict(&self, before: &str, prefix: &str, options: Options) -> Vec<Suggestion> {
         let prefix = normalize(prefix);
@@ -491,7 +511,7 @@ impl Predictor {
             .next()
             .unwrap_or("");
         let context = sentences(tail).pop().unwrap_or_default();
-        let personal = self.personal_weight();
+        let personal = self.usable.weight;
         let empty = BTreeMap::new();
         let mut distributions = Vec::new();
         for (n, weight) in [(0, 0.1), (1, 0.3), (2, 0.6)] {
@@ -500,40 +520,32 @@ impl Predictor {
             }
             let key = &context[context.len() - n..];
             let base = self.baseline.0.get(key);
-            let learned = self
-                .learned
-                .0
-                .get(key)
-                .filter(|words| words.keys().any(|w| self.known(w)));
+            let learned = self.usable.counts.0.get(key);
             if base.is_none() && learned.is_none() {
                 continue;
             }
             let base = base.unwrap_or(&empty);
             let mut total: f64 = base.values().map(|c| *c as f64).sum();
-            if let Some(learned) = learned {
-                let own: f64 = learned
-                    .iter()
-                    .filter(|(w, _)| self.known(w))
-                    .map(|(_, c)| *c as f64)
-                    .sum();
-                total += personal * own;
+            if learned.is_some() {
+                total += personal * self.usable.totals[key];
             }
             distributions.push((base, learned, total, weight));
         }
         let weight_sum: f64 = distributions.iter().map(|(_, _, _, w)| w).sum();
-        // Baseline words, and learned words once known, starting with the prefix.
-        let mut words: BTreeSet<&String> = BTreeSet::new();
-        for counts in [&self.baseline, &self.learned] {
-            if let Some(vocabulary) = counts.0.get(&Vec::new()) {
-                words.extend(
-                    vocabulary
-                        .range(prefix.clone()..)
-                        .take_while(|(w, _)| w.starts_with(&prefix))
-                        .map(|(w, _)| w)
-                        .filter(|w| self.known(w)),
-                );
-            }
+        // Baseline words, then learned words the baseline lacks, starting with
+        // the prefix.
+        fn range<'a>(counts: &'a Counts, prefix: &str) -> impl Iterator<Item = &'a String> {
+            counts
+                .0
+                .get(&Vec::new())
+                .into_iter()
+                .flat_map(move |v| v.range(prefix.to_owned()..))
+                .take_while(move |(w, _)| w.starts_with(prefix))
+                .map(|(w, _)| w)
         }
+        let baseline = self.baseline.0.get(&Vec::new()).unwrap_or(&empty);
+        let mut words: Vec<&String> = range(&self.baseline, &prefix).collect();
+        words.extend(range(&self.usable.counts, &prefix).filter(|w| !baseline.contains_key(*w)));
         let mut result: Vec<Suggestion> = words
             .into_iter()
             .map(|word| {
@@ -604,6 +616,7 @@ impl Predictor {
             None if imported => self.learned.merge(&delta, 1),
             None => {}
         }
+        self.rebuild();
         Ok(imported)
     }
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
@@ -641,6 +654,7 @@ impl Predictor {
         }
         self.seen = Some(version);
         self.learned = Counts::default();
+        self.rebuild();
         Ok(())
     }
     /// Approximate bytes of stored UTF-8 keys and counts, excluding allocator/tree overhead.
@@ -685,13 +699,14 @@ mod tests {
         let personal = dir.path().join("personal.sqlite");
         build(&base, "hello water", "fixture").unwrap();
         let mut p = Predictor::open(&base, Some(&personal)).unwrap();
-        assert_eq!(p.personal_weight(), PERSONAL_WEIGHT);
+        assert_eq!(p.usable.weight, PERSONAL_WEIGHT);
         p.learned
             .0
             .entry(vec![])
             .or_default()
             .insert("hello".into(), PERSONAL_SATURATION as i64);
-        assert_eq!(p.personal_weight(), PERSONAL_WEIGHT / 2.);
+        p.rebuild();
+        assert_eq!(p.usable.weight, PERSONAL_WEIGHT / 2.);
     }
 
     #[test]
