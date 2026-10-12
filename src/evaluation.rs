@@ -179,7 +179,7 @@ pub fn score_database(path: &Path, text: &str, hardware: String) -> Result<Score
     let predictor = Predictor::open(path, None)?;
     let cold_load_ms = start.elapsed().as_secs_f64() * 1000.0;
     let vocabulary = predictor
-        .combined
+        .baseline
         .0
         .get(&Vec::new())
         .expect("validated baseline has unigrams");
