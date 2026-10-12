@@ -679,10 +679,27 @@ fn prediction_cost_on_production_baseline() {
         }
     };
     time(&p, "none");
-    let text: String = (0..2000)
-        .map(|i| format!("I need to call friend{i} about the physio. "))
-        .collect();
-    p.learn(&text).unwrap();
-    p.learn(&text).unwrap();
-    time(&p, "learned");
+    // Digits split words, so each new word is spelled in letters.
+    let letters = |mut i: usize| {
+        let mut word = String::from("zq");
+        loop {
+            word.push((b'a' + (i % 26) as u8) as char);
+            i /= 26;
+            if i == 0 {
+                return word;
+            }
+        }
+    };
+    for (count, label) in [(2_000, "2k new words"), (40_000, "40k new words")] {
+        let text: String = (0..count)
+            .map(|i| format!("I need to call {} about the physio. ", letters(i)))
+            .collect();
+        p.learn(&text).unwrap();
+        p.learn(&text).unwrap();
+        let started = std::time::Instant::now();
+        p.learn("I need to call the physio about my hoist.")
+            .unwrap();
+        println!("{label}: one learn {:?}", started.elapsed());
+        time(&p, label);
+    }
 }

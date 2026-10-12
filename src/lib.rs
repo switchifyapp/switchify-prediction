@@ -376,6 +376,8 @@ pub struct Predictor {
 struct Usable {
     counts: Counts,
     totals: BTreeMap<Vec<String>, f64>,
+    /// All learned unigram occurrences, which set the weight.
+    learned: f64,
     weight: f64,
 }
 
@@ -476,30 +478,104 @@ impl Predictor {
     /// Rebuilds what predicting uses after `learned` changes. Summed as
     /// floats: stored counts are bounded one by one, not in total.
     fn rebuild(&mut self) {
+        self.usable = Usable::default();
+        let contexts: Vec<Vec<String>> = self.learned.0.keys().cloned().collect();
+        for context in &contexts {
+            self.rebuild_context(context);
+        }
+        self.usable.learned = self
+            .learned
+            .0
+            .get(&Vec::new())
+            .map_or(0., |w| w.values().map(|c| *c as f64).sum());
+        self.reweigh();
+    }
+    /// Updates what prediction uses after `delta` was added to `learned`:
+    /// its usable counts are added, and a word that has just become usable
+    /// gets all its learned counts. Counts are whole numbers, so adding them
+    /// in place gives the same totals as rebuilding.
+    fn update(&mut self, delta: &Counts) {
         let empty = BTreeMap::new();
+        let added = delta.0.get(&Vec::new()).unwrap_or(&empty);
         let learned = self.learned.0.get(&Vec::new()).unwrap_or(&empty);
-        let baseline = self.baseline.0.get(&Vec::new()).unwrap_or(&empty);
-        let counts = |word: &String| {
-            baseline.get(word).copied().unwrap_or(0) >= TRUSTED_BASELINE
-                || learned.get(word).copied().unwrap_or(0) >= NEW_WORD_REPEATS
-        };
-        let mut usable = Usable::default();
-        for (context, words) in &self.learned.0 {
-            let kept: BTreeMap<String, i64> = words
-                .iter()
-                .filter(|(w, _)| counts(w))
-                .map(|(w, c)| (w.clone(), *c))
-                .collect();
-            if !kept.is_empty() {
-                usable
-                    .totals
-                    .insert(context.clone(), kept.values().map(|c| *c as f64).sum());
-                usable.counts.0.insert(context.clone(), kept);
+        let newly: BTreeSet<&String> = added
+            .iter()
+            .filter(|(word, count)| {
+                let now = learned.get(*word).copied().unwrap_or(0);
+                !self.trusted(word) && now >= NEW_WORD_REPEATS && now - *count < NEW_WORD_REPEATS
+            })
+            .map(|(word, _)| word)
+            .collect();
+        let mut changes: Vec<(Vec<String>, String, i64)> = Vec::new();
+        if !newly.is_empty() {
+            for (context, words) in &self.learned.0 {
+                for (word, count) in words {
+                    if newly.contains(word) {
+                        changes.push((context.clone(), word.clone(), *count));
+                    }
+                }
             }
         }
-        let learned: f64 = learned.values().map(|c| *c as f64).sum();
-        usable.weight = PERSONAL_WEIGHT / (1. + learned / PERSONAL_SATURATION);
-        self.usable = usable;
+        for (context, words) in &delta.0 {
+            for (word, count) in words {
+                if !newly.contains(word) && self.usable_word(word) {
+                    changes.push((context.clone(), word.clone(), *count));
+                }
+            }
+        }
+        for (context, word, count) in changes {
+            *self.usable.totals.entry(context.clone()).or_default() += count as f64;
+            *self
+                .usable
+                .counts
+                .0
+                .entry(context)
+                .or_default()
+                .entry(word)
+                .or_default() += count;
+        }
+        self.usable.learned += added.values().map(|c| *c as f64).sum::<f64>();
+        self.reweigh();
+    }
+    fn trusted(&self, word: &str) -> bool {
+        self.baseline
+            .0
+            .get(&Vec::new())
+            .and_then(|w| w.get(word))
+            .is_some_and(|c| *c >= TRUSTED_BASELINE)
+    }
+    /// Whether learned counts of `word` are used.
+    fn usable_word(&self, word: &str) -> bool {
+        self.trusted(word)
+            || self
+                .learned
+                .0
+                .get(&Vec::new())
+                .and_then(|w| w.get(word))
+                .is_some_and(|c| *c >= NEW_WORD_REPEATS)
+    }
+    fn rebuild_context(&mut self, context: &[String]) {
+        let kept: BTreeMap<String, i64> = self
+            .learned
+            .0
+            .get(context)
+            .into_iter()
+            .flatten()
+            .filter(|(w, _)| self.usable_word(w))
+            .map(|(w, c)| (w.clone(), *c))
+            .collect();
+        if kept.is_empty() {
+            self.usable.totals.remove(context);
+            self.usable.counts.0.remove(context);
+        } else {
+            self.usable
+                .totals
+                .insert(context.to_vec(), kept.values().map(|c| *c as f64).sum());
+            self.usable.counts.0.insert(context.to_vec(), kept);
+        }
+    }
+    fn reweigh(&mut self) {
+        self.usable.weight = PERSONAL_WEIGHT / (1. + self.usable.learned / PERSONAL_SATURATION);
     }
     pub fn predict(&self, before: &str, prefix: &str, options: Options) -> Vec<Suggestion> {
         let prefix = normalize(prefix);
@@ -612,11 +688,16 @@ impl Predictor {
         }
         self.seen = Some(version);
         match reloaded {
-            Some(learned) => self.learned = learned,
-            None if imported => self.learned.merge(&delta, 1),
+            Some(learned) => {
+                self.learned = learned;
+                self.rebuild();
+            }
+            None if imported => {
+                self.learned.merge(&delta, 1);
+                self.update(&delta);
+            }
             None => {}
         }
-        self.rebuild();
         Ok(imported)
     }
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
@@ -690,6 +771,34 @@ mod tests {
     }
     fn reloaded(p: &Predictor, word: &str) -> bool {
         !p.learned.0[&Vec::new()].contains_key(word)
+    }
+
+    #[test]
+    fn updating_in_place_matches_rebuilding() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("base.sqlite");
+        let personal = dir.path().join("personal.sqlite");
+        build(&base, "hello water. i like tea. we like tea.", "fixture").unwrap();
+        let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+        for text in [
+            "Siobhan likes zed water.",
+            "zed Siobhan likes tea.",
+            "hello zed. Siobhan said hello.",
+            "",
+            "we like Siobhan and zed",
+        ] {
+            p.learn(text).unwrap();
+            let (counts, totals, weight) = (
+                p.usable.counts.0.clone(),
+                p.usable.totals.clone(),
+                p.usable.weight,
+            );
+            p.rebuild();
+            assert_eq!(counts, p.usable.counts.0, "{text}");
+            assert_eq!(totals, p.usable.totals, "{text}");
+            assert_eq!(weight.to_bits(), p.usable.weight.to_bits(), "{text}");
+        }
+        assert!(p.usable.counts.0[&Vec::new()].contains_key("siobhan"));
     }
 
     #[test]

@@ -21,12 +21,19 @@ Learned counts are kept apart from the baseline and combined when predicting:
   once or twice: the production baseline has over 9,000 such words, many of
   them misspellings. Words the baseline knows well count from their first use.
   A word learned once still counts as context for the word after it.
-- **Memory and speed.** The baseline is no longer copied. Peak memory of the
-  predictor falls from 362 MiB to 134 MiB, with or without a personal database.
-  What prediction uses of the learned counts is rebuilt when they change, so a
-  prediction costs about the same as before: 5.3 ms instead of 7.5 ms for an
-  empty sentence on the production baseline, and 8.9 ms after 2,000 new words
-  were learned twice.
+- **Memory.** The baseline is no longer copied. Peak memory of the predictor
+  falls from 362 MiB to 134 MiB, with or without a personal database. A second,
+  filtered copy of the usable learned counts is kept for prediction; it is
+  small beside the baseline.
+- **Speed.** What prediction uses of the learned counts, with their totals per
+  context, is updated in place when a sentence is learned and rebuilt only on
+  reload. The ignored test `prediction_cost_on_production_baseline` measures a
+  release build on the production baseline. Without learning, prediction costs
+  the same as #28: 5–8 ms for an empty sentence and about 1 ms after a typed
+  letter. With 2,000 new words learned it is 9–14 ms. With 40,000 new words, an
+  extreme case, it is 30–40 ms, about 1.5× #28. One learn takes 17–19 ms at
+  2,000 new words and 190–270 ms at 40,000, against 15 ms and 180 ms for #28.
+  Most of that is the existing database check.
 - **No learning.** With no personal database, or an empty one, predictions are
   bit-identical to before.
 
@@ -50,7 +57,7 @@ is synthetic text imitating one person's typing; it is not user data.
 - A query is a hit when the word is in any of the six slots: 3 statistical and
   3 generated.
 
-Results from this branch, with v0.2.1 generation:
+Results from this branch's final commit, with v0.2.1 generation:
 
 | Weighting | Top six | Personal words | Misspelling suggested |
 | --- | ---: | ---: | ---: |
