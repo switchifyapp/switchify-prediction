@@ -345,6 +345,10 @@ impl Default for Options {
         }
     }
 }
+/// How many baseline occurrences one learned occurrence counts as. Learned
+/// text is tiny beside the baseline, so a lower weight leaves names and other
+/// personal words almost never suggested; see docs/personal-learning.md.
+const PERSONAL_WEIGHT: i64 = 500;
 pub struct Predictor {
     baseline: Counts,
     combined: Counts,
@@ -434,7 +438,7 @@ impl Predictor {
             if check(&tx)? != "personal" {
                 return Err(Error::Invalid("expected personal database".into()));
             }
-            combined.merge(&load_checked(&tx, "personal")?, 5);
+            combined.merge(&load_checked(&tx, "personal")?, PERSONAL_WEIGHT);
             let version = data_version(&tx)?;
             if let Err(error) = tx.commit() {
                 // The outcome is unknown, so the next write reloads.
@@ -524,7 +528,7 @@ impl Predictor {
             None
         } else {
             let mut combined = self.baseline.clone();
-            combined.merge(&load_checked(&tx, "personal")?, 5);
+            combined.merge(&load_checked(&tx, "personal")?, PERSONAL_WEIGHT);
             Some(combined)
         };
         if let Err(error) = tx.commit() {
@@ -535,7 +539,7 @@ impl Predictor {
         self.seen = Some(version);
         match combined {
             Some(combined) => self.combined = combined,
-            None if imported => self.combined.merge(&delta, 5),
+            None if imported => self.combined.merge(&delta, PERSONAL_WEIGHT),
             None => {}
         }
         Ok(imported)

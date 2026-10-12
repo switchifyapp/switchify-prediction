@@ -240,7 +240,8 @@ fn interpolation_renormalizes_and_personal_counts_are_weighted_before_probabilit
     assert!((backed_off - (0.3 * 0.5 + 0.1 / 9.0) / 0.4).abs() < 1e-12);
     p.learn("i like tea.").unwrap();
     let learned = p.predict("i like ", "tea", opts).remove(0).score;
-    assert!((learned - (0.9 * 6.0 / 7.0 + 0.1 * 6.0 / 24.0)).abs() < 1e-12);
+    // One learned occurrence counts as 500 baseline ones.
+    assert!((learned - (0.9 * 501.0 / 502.0 + 0.1 * 501.0 / 1509.0)).abs() < 1e-12);
     let total: f64 = p.predict("i like ", "", opts).iter().map(|s| s.score).sum();
     assert!((total - 1.0).abs() < 1e-12);
 }
