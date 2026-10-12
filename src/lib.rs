@@ -349,6 +349,34 @@ pub struct Predictor {
     baseline: Counts,
     combined: Counts,
     personal: Option<Connection>,
+    /// The personal database's `data_version` when `combined` last matched it.
+    /// It changes only when another connection commits.
+    seen: Option<i64>,
+}
+
+fn data_version(db: &Connection) -> Result<i64> {
+    Ok(db.query_row("PRAGMA data_version", [], |r| r.get(0))?)
+}
+
+type Schema = Vec<(String, String, String, Option<String>)>;
+fn schema(db: &Connection) -> Result<Schema> {
+    let mut stmt =
+        db.prepare("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name")?;
+    Ok(stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+        .collect::<std::result::Result<_, _>>()?)
+}
+/// Whether the database has exactly the schema `initialize` creates. Other
+/// objects, such as triggers or replacing constraints, can give a write side
+/// effects that only a full reload validates.
+fn standard_schema(db: &Connection) -> Result<bool> {
+    static STANDARD: std::sync::OnceLock<Option<Schema>> = std::sync::OnceLock::new();
+    let standard = STANDARD.get_or_init(|| {
+        let db = Connection::open_in_memory().ok()?;
+        initialize(&db, "personal", "schema").ok()?;
+        schema(&db).ok()
+    });
+    Ok(standard.as_ref() == Some(&schema(db)?))
 }
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
@@ -392,6 +420,7 @@ impl Predictor {
             baseline: counts.clone(),
             combined: counts,
             personal,
+            seen: None,
         };
         result.refresh_personal()?;
         Ok(result)
@@ -406,7 +435,13 @@ impl Predictor {
                 return Err(Error::Invalid("expected personal database".into()));
             }
             combined.merge(&load_checked(&tx, "personal")?, 5);
-            tx.commit()?;
+            let version = data_version(&tx)?;
+            if let Err(error) = tx.commit() {
+                // The outcome is unknown, so the next write reloads.
+                self.seen = None;
+                return Err(error.into());
+            }
+            self.seen = Some(version);
         }
         self.combined = combined;
         Ok(())
@@ -479,10 +514,30 @@ impl Predictor {
         if imported {
             delta.write(&tx)?;
         }
-        let mut combined = self.baseline.clone();
-        combined.merge(&load_checked(&tx, "personal")?, 5);
-        tx.commit()?;
-        self.combined = combined;
+        // While no other connection has written since the snapshot, adding the
+        // new counts to it equals reloading, without copying the baseline.
+        // Otherwise reload and validate everything, including other writes.
+        // A connection's own commits leave its data_version unchanged.
+        let version = data_version(&tx)?;
+        let current = self.seen == Some(version) && standard_schema(&tx)?;
+        let combined = if current {
+            None
+        } else {
+            let mut combined = self.baseline.clone();
+            combined.merge(&load_checked(&tx, "personal")?, 5);
+            Some(combined)
+        };
+        if let Err(error) = tx.commit() {
+            // The outcome is unknown, so the next write reloads.
+            self.seen = None;
+            return Err(error.into());
+        }
+        self.seen = Some(version);
+        match combined {
+            Some(combined) => self.combined = combined,
+            None if imported => self.combined.merge(&delta, 5),
+            None => {}
+        }
         Ok(imported)
     }
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
@@ -513,7 +568,13 @@ impl Predictor {
                 "personal reset did not clear imports".into(),
             ));
         }
-        tx.commit()?;
+        let version = data_version(&tx)?;
+        if let Err(error) = tx.commit() {
+            // The outcome is unknown, so the next write reloads.
+            self.seen = None;
+            return Err(error.into());
+        }
+        self.seen = Some(version);
         self.combined = combined;
         Ok(())
     }
@@ -532,5 +593,53 @@ impl Predictor {
                     .sum::<usize>()
             })
             .sum()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Adds a word to the baseline that only a full reload copies into the
+    /// snapshot.
+    fn mark(p: &mut Predictor, word: &str) {
+        p.baseline
+            .0
+            .entry(vec![])
+            .or_default()
+            .insert(word.into(), 1);
+    }
+    fn reloaded(p: &Predictor, word: &str) -> bool {
+        p.combined.0[&Vec::new()].contains_key(word)
+    }
+
+    #[test]
+    fn own_learning_reloads_only_after_other_writes_or_with_triggers() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("base.sqlite");
+        let personal = dir.path().join("personal.sqlite");
+        build(&base, "hello water", "fixture").unwrap();
+        let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+        mark(&mut p, "first");
+        p.learn("hello walnut").unwrap();
+        p.learn("").unwrap();
+        assert!(!reloaded(&p, "first"), "own learning adds counts in place");
+        let mut other = Predictor::open(&base, Some(&personal)).unwrap();
+        other.learn("hello walrus").unwrap();
+        p.learn("hello wallaby").unwrap();
+        assert!(reloaded(&p, "first"), "another writer forces a reload");
+        let db = Connection::open(&personal).unwrap();
+        db.execute_batch("CREATE TRIGGER t AFTER INSERT ON counts BEGIN SELECT 1; END;")
+            .unwrap();
+        p.learn("hello").unwrap();
+        mark(&mut p, "second");
+        p.learn("hello wombat").unwrap();
+        assert!(reloaded(&p, "second"), "a trigger forces a reload");
+        db.execute_batch("DROP TRIGGER t").unwrap();
+        p.learn("hello").unwrap();
+        p.reset_personal().unwrap();
+        mark(&mut p, "third");
+        p.learn("hello walnut").unwrap();
+        assert!(!reloaded(&p, "third"), "own reset keeps the fast path");
     }
 }
