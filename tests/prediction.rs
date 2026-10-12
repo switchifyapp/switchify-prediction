@@ -520,3 +520,35 @@ fn learning_cost_on_production_baseline() {
     println!("learn median {:?}, max {:?}", times[25], times[49]);
     assert_eq!(words(&p, "I need to call", "si")[0], "siobhan");
 }
+
+#[test]
+fn a_trigger_side_effect_is_still_validated_before_commit() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch(
+        "CREATE TRIGGER ghost AFTER INSERT ON counts WHEN NEW.word='zebra' AND NEW.context='[]' \
+         BEGIN INSERT OR IGNORE INTO counts VALUES('[\"ghost\"]','zebra',1); END;",
+    )
+    .unwrap();
+    p.learn("hello there").unwrap();
+    assert!(p.learn("zebra").is_err());
+    db.execute_batch("DROP TRIGGER ghost").unwrap();
+    assert!(Predictor::open(&base, Some(&personal)).is_ok());
+    assert_matches_reload(&p, &base, &personal);
+}
+
+#[test]
+fn duplicate_imports_and_empty_text_match_a_full_reload() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let input = tmp.path().join("text.txt");
+    fs::write(&input, "Siobhan said the physio is late.").unwrap();
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    assert!(p.import(&input).unwrap());
+    assert!(!p.import(&input).unwrap());
+    p.learn("").unwrap();
+    p.learn("... !!").unwrap();
+    assert_matches_reload(&p, &base, &personal);
+}
