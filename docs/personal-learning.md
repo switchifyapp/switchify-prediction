@@ -57,7 +57,7 @@ is synthetic text imitating one person's typing; it is not user data.
 - A query is a hit when the word is in any of the six slots: 3 statistical and
   3 generated.
 
-Results from this branch's final commit, with v0.2.1 generation:
+Results from #30's final code, with v0.2.1 generation:
 
 | Weighting | Top six | Personal words | Misspelling suggested |
 | --- | ---: | ---: | ---: |
@@ -76,7 +76,7 @@ at 50×, 53.8% at 500×, 60.3% at 2,000× and 65.4% at 5,000×.
 General English must not suffer for someone who has learned text. 600 queries
 from the frozen general workload, with natural context, were run with that
 person's learning present. "Light" is the 40 original sentences learned once;
-"heavy" is the same text learned ten times. On this branch, with v0.2.1
+"heavy" is the same text learned ten times. With #30's code and v0.2.1
 generation: no learning 70.3%, light 70.7%, heavy 70.2%. These differences are
 within noise for 600 queries. The general-workload runs used a separate local
 harness, not this script.
