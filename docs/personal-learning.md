@@ -27,13 +27,13 @@ Learned counts are kept apart from the baseline and combined when predicting:
   small beside the baseline.
 - **Speed.** What prediction uses of the learned counts, with their totals per
   context, is updated in place when a sentence is learned and rebuilt only on
-  reload. The ignored test `prediction_cost_on_production_baseline` measures a
-  release build on the production baseline. Without learning, prediction costs
-  the same as #28: 5–8 ms for an empty sentence and about 1 ms after a typed
-  letter. With 2,000 new words learned it is 9–14 ms. With 40,000 new words, an
-  extreme case, it is 30–40 ms, about 1.5× #28. One learn takes 17–19 ms at
-  2,000 new words and 190–270 ms at 40,000, against 15 ms and 180 ms for #28.
-  Most of that is the existing database check.
+  reload. Measured by the ignored test `prediction_cost_on_production_baseline`
+  in a release build on the production baseline, costs match #28 within noise:
+  about 5 ms for an empty sentence and 1 ms after a typed letter without
+  learning, 9–15 ms with 2,000 new words learned, and 30–40 ms with 40,000, an
+  extreme case. One learn takes 17–23 ms at 2,000 new words and about 190 ms
+  at 40,000, including one that makes a new word usable. Most of that is the
+  existing database check.
 - **No learning.** With no personal database, or an empty one, predictions are
   bit-identical to before.
 

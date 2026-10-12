@@ -50,8 +50,8 @@ Open one long-lived `Predictor` on a worker thread. Reusing it keeps prediction
 entirely in memory; spawning a CLI process or reopening the model for each
 keystroke incurs cold validation/loading. Loading the promoted model takes about
 1.6 seconds on the development M2 Max. Learning writes only learned counts and
-validates the personal database. With a few thousand learned words a sentence
-takes tens of milliseconds, and a few hundred at tens of thousands. It reloads
+validates the personal database: with a few thousand learned words a sentence
+takes tens of milliseconds, and about 200 ms at tens of thousands. It reloads
 the personal database when another connection has changed it. Keep open/import/learn/reset/refresh off the UI thread.
 
 `Predictor` is an owned, mutable learning session. Serialize access in the host

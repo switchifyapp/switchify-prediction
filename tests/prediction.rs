@@ -697,9 +697,17 @@ fn prediction_cost_on_production_baseline() {
         p.learn(&text).unwrap();
         p.learn(&text).unwrap();
         let started = std::time::Instant::now();
-        p.learn("I need to call the physio about my hoist.")
+        p.learn("I need to call the physio about my zzhoist.")
             .unwrap();
         println!("{label}: one learn {:?}", started.elapsed());
+        // A second use makes the new word usable, adding its counts in one pass.
+        let started = std::time::Instant::now();
+        p.learn("I need to call the physio about my zzhoist.")
+            .unwrap();
+        println!(
+            "{label}: learn making a word usable {:?}",
+            started.elapsed()
+        );
         time(&p, label);
     }
 }

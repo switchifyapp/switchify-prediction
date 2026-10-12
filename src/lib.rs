@@ -478,11 +478,21 @@ impl Predictor {
     /// Rebuilds what predicting uses after `learned` changes. Summed as
     /// floats: stored counts are bounded one by one, not in total.
     fn rebuild(&mut self) {
-        self.usable = Usable::default();
-        let contexts: Vec<Vec<String>> = self.learned.0.keys().cloned().collect();
-        for context in &contexts {
-            self.rebuild_context(context);
+        let mut usable = Usable::default();
+        for (context, words) in &self.learned.0 {
+            let kept: BTreeMap<String, i64> = words
+                .iter()
+                .filter(|(w, _)| self.usable_word(w))
+                .map(|(w, c)| (w.clone(), *c))
+                .collect();
+            if !kept.is_empty() {
+                usable
+                    .totals
+                    .insert(context.clone(), kept.values().map(|c| *c as f64).sum());
+                usable.counts.0.insert(context.clone(), kept);
+            }
         }
+        self.usable = usable;
         self.usable.learned = self
             .learned
             .0
@@ -492,7 +502,8 @@ impl Predictor {
     }
     /// Updates what prediction uses after `delta` was added to `learned`:
     /// its usable counts are added, and a word that has just become usable
-    /// gets all its learned counts. Counts are whole numbers, so adding them
+    /// gets all its learned counts. Counts are whole numbers, so while totals
+    /// stay below 2^53, which learning cannot pass, adding them
     /// in place gives the same totals as rebuilding.
     fn update(&mut self, delta: &Counts) {
         let empty = BTreeMap::new();
@@ -553,26 +564,6 @@ impl Predictor {
                 .get(&Vec::new())
                 .and_then(|w| w.get(word))
                 .is_some_and(|c| *c >= NEW_WORD_REPEATS)
-    }
-    fn rebuild_context(&mut self, context: &[String]) {
-        let kept: BTreeMap<String, i64> = self
-            .learned
-            .0
-            .get(context)
-            .into_iter()
-            .flatten()
-            .filter(|(w, _)| self.usable_word(w))
-            .map(|(w, c)| (w.clone(), *c))
-            .collect();
-        if kept.is_empty() {
-            self.usable.totals.remove(context);
-            self.usable.counts.0.remove(context);
-        } else {
-            self.usable
-                .totals
-                .insert(context.to_vec(), kept.values().map(|c| *c as f64).sum());
-            self.usable.counts.0.insert(context.to_vec(), kept);
-        }
     }
     fn reweigh(&mut self) {
         self.usable.weight = PERSONAL_WEIGHT / (1. + self.usable.learned / PERSONAL_SATURATION);
@@ -778,26 +769,44 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let base = dir.path().join("base.sqlite");
         let personal = dir.path().join("personal.sqlite");
-        build(&base, "hello water. i like tea. we like tea.", "fixture").unwrap();
+        // "like" and "tea" are trusted: the baseline has them three times.
+        build(
+            &base,
+            "hello water. i like tea. we like tea. you like tea.",
+            "fixture",
+        )
+        .unwrap();
+        let imported = dir.path().join("imported.txt");
+        fs::write(&imported, "zed likes tea. Aoife likes tea. Aoife said zed.").unwrap();
         let mut p = Predictor::open(&base, Some(&personal)).unwrap();
-        for text in [
-            "Siobhan likes zed water.",
-            "zed Siobhan likes tea.",
-            "hello zed. Siobhan said hello.",
-            "",
-            "we like Siobhan and zed",
-        ] {
-            p.learn(text).unwrap();
+        let check = |p: &mut Predictor, label: &str| {
             let (counts, totals, weight) = (
                 p.usable.counts.0.clone(),
                 p.usable.totals.clone(),
                 p.usable.weight,
             );
             p.rebuild();
-            assert_eq!(counts, p.usable.counts.0, "{text}");
-            assert_eq!(totals, p.usable.totals, "{text}");
-            assert_eq!(weight.to_bits(), p.usable.weight.to_bits(), "{text}");
+            assert_eq!(counts, p.usable.counts.0, "{label}");
+            assert_eq!(totals, p.usable.totals, "{label}");
+            assert_eq!(weight.to_bits(), p.usable.weight.to_bits(), "{label}");
+        };
+        assert!(p.import(&imported).unwrap());
+        check(&mut p, "import");
+        assert!(!p.import(&imported).unwrap());
+        check(&mut p, "duplicate import");
+        for text in [
+            "Siobhan likes zed water.",
+            "zed Siobhan likes tea.",
+            "hello zed. Siobhan said hello.",
+            "",
+            "we like Siobhan and zed",
+            "you like tea.",
+        ] {
+            p.learn(text).unwrap();
+            check(&mut p, text);
         }
+        // Trusted words count from their first use.
+        assert!(p.usable.counts.0[&vec!["you".to_owned()]].contains_key("like"));
         assert!(p.usable.counts.0[&Vec::new()].contains_key("siobhan"));
     }
 
