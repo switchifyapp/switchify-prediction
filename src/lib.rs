@@ -358,13 +358,25 @@ fn data_version(db: &Connection) -> Result<i64> {
     Ok(db.query_row("PRAGMA data_version", [], |r| r.get(0))?)
 }
 
-/// Triggers can give a write side effects that only a full reload sees.
-fn has_triggers(db: &Connection) -> Result<bool> {
-    Ok(db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='trigger')",
-        [],
-        |r| r.get(0),
-    )?)
+type Schema = Vec<(String, String, String, Option<String>)>;
+fn schema(db: &Connection) -> Result<Schema> {
+    let mut stmt =
+        db.prepare("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name")?;
+    Ok(stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+        .collect::<std::result::Result<_, _>>()?)
+}
+/// Whether the database has exactly the schema `initialize` creates. Other
+/// objects, such as triggers or replacing constraints, can give a write side
+/// effects that only a full reload validates.
+fn standard_schema(db: &Connection) -> Result<bool> {
+    static STANDARD: std::sync::OnceLock<Option<Schema>> = std::sync::OnceLock::new();
+    let standard = STANDARD.get_or_init(|| {
+        let db = Connection::open_in_memory().ok()?;
+        initialize(&db, "personal", "schema").ok()?;
+        schema(&db).ok()
+    });
+    Ok(standard.as_ref() == Some(&schema(db)?))
 }
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
@@ -507,7 +519,7 @@ impl Predictor {
         // Otherwise reload and validate everything, including other writes.
         // A connection's own commits leave its data_version unchanged.
         let version = data_version(&tx)?;
-        let current = self.seen == Some(version) && !has_triggers(&tx)?;
+        let current = self.seen == Some(version) && standard_schema(&tx)?;
         let combined = if current {
             None
         } else {

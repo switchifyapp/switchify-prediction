@@ -552,3 +552,21 @@ fn duplicate_imports_and_empty_text_match_a_full_reload() {
     p.learn("... !!").unwrap();
     assert_matches_reload(&p, &base, &personal);
 }
+
+#[test]
+fn a_replacing_constraint_is_still_validated_before_commit() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch(
+        "PRAGMA foreign_keys=OFF; DROP INDEX counts_word; ALTER TABLE counts RENAME TO old; \
+         CREATE TABLE counts(context TEXT NOT NULL,word TEXT NOT NULL REFERENCES vocabulary(word),\
+         count INTEGER NOT NULL,PRIMARY KEY(context,word),UNIQUE(word) ON CONFLICT REPLACE) WITHOUT ROWID; \
+         CREATE INDEX counts_word ON counts(word); DROP TABLE old;",
+    )
+    .unwrap();
+    p.learn("hello").unwrap();
+    assert!(p.learn("say hello").is_err());
+    assert!(Predictor::open(&base, Some(&personal)).is_ok());
+}
