@@ -189,6 +189,7 @@ fn run(
         open: 0.,
     }];
     let mut finished: BTreeMap<String, f64> = BTreeMap::new();
+    let mut batch = Duration::ZERO;
     for depth in 0..TOKENS {
         let mut candidates: Vec<Candidate> = Vec::new();
         for (parent, beam) in beams.iter().enumerate() {
@@ -235,8 +236,9 @@ fn run(
                 }
             }
         }
-        // Reserve time for the final evaluation and reply transport; the parent still enforces 2 s.
-        if started.elapsed() >= Duration::from_millis(1600) {
+        // Reserve time for this batch, estimated by the last one, and reply
+        // transport; the parent still enforces 2 s.
+        if started.elapsed() + batch >= Duration::from_millis(1600) {
             break;
         }
         candidates.truncate(EVALUATIONS.saturating_sub(evaluations));
@@ -245,7 +247,9 @@ fn run(
         }
         let parents: Vec<u32> = candidates.iter().map(|c| c.parent as u32).collect();
         let tokens: Vec<u32> = candidates.iter().map(|c| c.token as u32).collect();
+        let evaluated = Instant::now();
         let rows = forward(&parents, &tokens, depth)?;
+        batch = evaluated.elapsed();
         ensure!(rows.len() == candidates.len(), "logits");
         evaluations += candidates.len();
         let mut next = Vec::new();
@@ -466,7 +470,7 @@ mod tests {
                 let query = GenerationQuery {
                     id: 1,
                     session: 1,
-                    before: "x".into(),
+                    before: if seed % 2 == 0 { "x".into() } else { "".into() },
                     prefix: if seed % 3 == 0 { "b".into() } else { "".into() },
                     exclude: if seed % 5 == 0 {
                         vec!["a".into()]

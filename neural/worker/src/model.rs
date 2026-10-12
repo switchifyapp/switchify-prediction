@@ -211,4 +211,59 @@ mod tests {
         model.reset();
         assert!(!model.rank(2, "please send the", &candidates, 5).unwrap().1);
     }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; never downloads model assets"]
+    fn batched_rows_match_single_row_forwards() {
+        let path =
+            std::env::var_os("SWITCHIFY_SMOL_BUNDLE").expect("explicit model bundle required");
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        for (before, prefix) in [("please send the", ""), ("I would like a", "c"), ("", "")] {
+            let query = switchify_prediction_neural::protocol::GenerationQuery {
+                id: 1,
+                session: 1,
+                before: before.into(),
+                prefix: prefix.into(),
+                exclude: vec![],
+                limit: 3,
+            };
+            model.prepare(1, before).unwrap();
+            let prepared = model.prepared.as_ref().unwrap();
+            let position = prepared.ids.len();
+            let mut batched = prepared.state.clone();
+            let mut single = vec![prepared.state.clone()];
+            let mut compared = 0;
+            crate::generation::search(
+                &query,
+                &model.pieces,
+                prepared.logits.clone(),
+                1,
+                std::time::Instant::now(),
+                |parents, tokens, depth| {
+                    batched.select(parents)?;
+                    let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                    let rows = batched.forward(&ids, position + depth)?;
+                    let mut next = Vec::new();
+                    for ((&parent, &token), row) in parents.iter().zip(tokens).zip(&rows) {
+                        let mut state = single[parent as usize].clone();
+                        let expected = forward(&mut state, &[token], position + depth)?;
+                        let difference = expected
+                            .iter()
+                            .zip(row)
+                            .map(|(a, b)| (a - b).abs())
+                            .fold(0f32, f32::max);
+                        ensure!(difference <= 1e-3, "batched row differs by {difference}");
+                        compared += 1;
+                        next.push(state);
+                    }
+                    single = next;
+                    Ok(rows)
+                },
+            )
+            .unwrap();
+            assert!(compared >= 8);
+        }
+    }
 }

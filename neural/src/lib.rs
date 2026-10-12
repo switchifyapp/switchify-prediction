@@ -130,7 +130,18 @@ pub fn generation_context(before: &str) -> String {
         .replace('\u{2019}', "'");
     let mut text = sentence.split_whitespace().collect::<Vec<_>>().join(" ");
     while let Some(last) = text.chars().last() {
-        let opening = matches!(last, '"' | '\'' | '(' | '[' | '{' | '\u{201C}' | '\u{2018}');
+        let opening = matches!(
+            last,
+            '"' | '\''
+                | '('
+                | '['
+                | '{'
+                | '\u{201C}'
+                | '\u{2018}'
+                | '\u{201E}'
+                | '\u{201A}'
+                | '\u{AB}'
+        );
         let rest = &text[..text.len() - last.len_utf8()];
         if !(opening && (rest.is_empty() || rest.ends_with(' '))) {
             break;

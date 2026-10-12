@@ -259,6 +259,7 @@ fn context_and_bundle_validation() {
         "I can't find the"
     );
     assert_eq!(generation_context("He said \u{201C}"), "He said");
+    assert_eq!(generation_context("Il a dit \u{AB}"), "Il a dit");
     assert_eq!(
         generation_context("Call me (or \"Sam\" "),
         "Call me (or \"Sam\""
