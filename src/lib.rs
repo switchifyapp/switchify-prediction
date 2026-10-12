@@ -804,9 +804,11 @@ mod tests {
         ] {
             p.learn(text).unwrap();
             check(&mut p, text);
+            if text == "we like Siobhan and zed" {
+                // "like" is trusted, so its first learned use counts.
+                assert!(p.usable.counts.0[&vec!["we".to_owned()]].contains_key("like"));
+            }
         }
-        // Trusted words count from their first use.
-        assert!(p.usable.counts.0[&vec!["you".to_owned()]].contains_key("like"));
         assert!(p.usable.counts.0[&Vec::new()].contains_key("siobhan"));
     }
 

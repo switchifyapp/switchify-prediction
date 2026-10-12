@@ -586,16 +586,16 @@ fn a_misspelling_learned_once_is_not_suggested_but_a_new_word_used_twice_is() {
     let (tmp, base) = fixture();
     let personal = tmp.path().join("personal.sqlite");
     let mut p = Predictor::open(&base, Some(&personal)).unwrap();
-    p.learn("I drink teh water.").unwrap();
-    assert!(!words(&p, "I drink ", "t").contains(&"teh".to_string()));
-    assert!(!words(&p, "", "te").contains(&"teh".to_string()));
-    // A word the baseline knows well counts at once; one it has rarely seen,
-    // which may itself be a misspelling, needs a second use.
+    // A word the baseline knows well counts from its first learned use; one
+    // it has rarely seen, which may itself be a misspelling, needs a second.
     assert_eq!(words(&p, "We walk ", "")[0], "home");
     p.learn("We walk wine.").unwrap();
     assert_eq!(words(&p, "We walk ", "")[0], "home");
     p.learn("We walk drink.").unwrap();
     assert_eq!(words(&p, "We walk ", "")[0], "drink");
+    p.learn("I drink teh water.").unwrap();
+    assert!(!words(&p, "I drink ", "t").contains(&"teh".to_string()));
+    assert!(!words(&p, "", "te").contains(&"teh".to_string()));
     p.learn("I drink teh tea.").unwrap();
     assert!(words(&p, "I drink ", "t").contains(&"teh".to_string()));
 }
