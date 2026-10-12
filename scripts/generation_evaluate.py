@@ -13,7 +13,7 @@ import platform
 import sqlite3
 import time
 
-from neural_evaluate import Client, ROOT, sha, timing, workload
+from neural_evaluate import Client, ROOT, natural_workload, sha, timing, workload
 
 
 def generated(client, before, prefix):
@@ -41,6 +41,8 @@ def generated(client, before, prefix):
 
 def evaluate(args):
     queries = workload()
+    if args.natural_context:
+        queries = natural_workload(queries)
     # Cover every corpus partition and prefix length, even in a bounded run.
     if args.samples:
         queries = [queries[i * len(queries) // args.samples % len(queries)]
@@ -113,6 +115,7 @@ def evaluate(args):
                   warmup_failures=warmup_failures, failures=dict(failures),
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
                   peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
+                  natural_context=args.natural_context,
                   cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
                   accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
                   fixture_hashes={n: sha(ROOT / 'neural/fixtures' / n) for n in ['regression.json', 'general-writing.json']},
@@ -128,6 +131,8 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--accelerated-worker', type=Path)
     parser.add_argument('--samples', type=int, default=0, help='0 uses the full frozen workload')
+    parser.add_argument('--natural-context', action='store_true',
+                        help='send preceding text with its original case and punctuation')
     args = parser.parse_args()
     if args.samples < 0:
         parser.error('samples must be nonnegative')

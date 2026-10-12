@@ -118,6 +118,39 @@ pub fn effective_context(before: &str) -> String {
     .join(" ")
 }
 
+/// The current sentence as typed, for generation. Case and punctuation are kept
+/// because the model learned from natural text. Whitespace runs become single
+/// spaces, and trailing opening quotes and brackets are dropped, because the
+/// generated word follows the context after a space.
+pub fn generation_context(before: &str) -> String {
+    let sentence = before
+        .rsplit(['.', '!', '?', '\n', '\r'])
+        .next()
+        .unwrap_or_default()
+        .replace('\u{2019}', "'");
+    let mut text = sentence.split_whitespace().collect::<Vec<_>>().join(" ");
+    while let Some(last) = text.chars().last() {
+        let opening = matches!(
+            last,
+            '"' | '\''
+                | '('
+                | '['
+                | '{'
+                | '\u{201C}'
+                | '\u{2018}'
+                | '\u{201E}'
+                | '\u{201A}'
+                | '\u{AB}'
+        );
+        let rest = &text[..text.len() - last.len_utf8()];
+        if !(opening && (rest.is_empty() || rest.ends_with(' '))) {
+            break;
+        }
+        text = rest.trim_end().to_owned();
+    }
+    text
+}
+
 impl Refiner {
     pub fn new(mut config: Config) -> Result<Self> {
         config.bundle = config.bundle.canonicalize().map_err(|_| Error::Config)?;
@@ -265,7 +298,7 @@ impl Refiner {
             self.reset();
             return Err(Error::Input);
         }
-        query.before = effective_context(before);
+        query.before = generation_context(before);
         let mut shared = self.state.0.lock().unwrap();
         shared.latest = shared.latest.checked_add(1).ok_or(Error::Input)?;
         shared.pending = None;

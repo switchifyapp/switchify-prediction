@@ -78,7 +78,14 @@ The existing submit/reranking API is unchanged. The stream CLI accepts
 Worker protocol 2 is required; protocol 1 workers fail cleanly. Model weights and
 tokenizer hashes are unchanged. The manifest records beam width 8, at most 8 tokens
 per word, at most 64 forward evaluations including uncached context, and a 1600 ms
-search cutoff within the unchanged 2000 ms parent reply deadline. Results are
+search cutoff within the unchanged 2000 ms parent reply deadline. All extensions
+at one depth run as a single batched forward pass. Search stops early once no
+further completion could change the ranked result: every later completion extends
+a live beam by a piece that does not start a word boundary, so each returned word
+must lead the next by more than the beams' remaining continuation probability.
+Stopping early therefore returns the same words as the full search. Generation
+sees the current sentence as typed, with case and punctuation, because the model
+learned from natural text; reranking still uses the normalized sentence. Results are
 ranked by whole-word probability including following boundary mass. A boundary
 probability of at least 0.5 excludes likely unfinished fragments. Search can return
 fewer than three words, including none. This is English-focused and not a spelling
@@ -87,7 +94,9 @@ dictionary; plausible but incorrect words remain possible.
 Run scripts/generation_evaluate.py with explicit --cli, --worker, --baseline,
 --bundle and --output paths. Optional --samples 1000 selects a reproducible spread
 across the existing frozen corpus partitions and zero through four graphemes.
-Omit --samples for the full comparison. Install psutil==7.0.0 and regex==2025.11.3.
+Omit --samples for the full comparison. --natural-context sends each query's
+preceding fixture text with its original case and punctuation, as the desktop does.
+Install psutil==7.0.0 and regex==2025.11.3.
 The report includes top-three/top-six counts, fill, OOV, regressions, latency and
 process-tree RSS. This is a regression comparison, not unseen-data qualification.
 Existing model-quality failures remain; generation has not been promoted to a

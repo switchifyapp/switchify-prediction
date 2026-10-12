@@ -1,27 +1,26 @@
+use crate::llama::Llama;
 use anyhow::{Result, ensure};
 use candle_core::{Device, Tensor};
-use candle_transformers::models::quantized_llama::ModelWeights;
 use switchify_prediction_neural::bundle::Bundle;
 use tokenizers::Tokenizer;
 
 struct Prepared {
     session: u64,
     ids: Vec<u32>,
-    state: ModelWeights,
+    state: Llama,
     logits: Vec<f32>,
 }
 pub struct Model {
-    empty: ModelWeights,
+    empty: Llama,
     tokenizer: Tokenizer,
     boundaries: Vec<usize>,
     pieces: Vec<Vec<u8>>,
     prepared: Option<Prepared>,
 }
-fn forward(state: &mut ModelWeights, ids: &[u32], position: usize) -> Result<Vec<f32>> {
-    Ok(state
-        .forward(&Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?, position)?
-        .squeeze(0)?
-        .to_vec1()?)
+fn forward(state: &mut Llama, ids: &[u32], position: usize) -> Result<Vec<f32>> {
+    let mut rows = state.forward(&Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?, position)?;
+    ensure!(rows.len() == 1, "logits");
+    Ok(rows.remove(0))
 }
 fn log_prob(logits: &[f32], token: usize) -> f64 {
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
@@ -52,7 +51,7 @@ impl Model {
         );
         let mut reader = std::io::Cursor::new(bundle.weights);
         let content = candle_core::quantized::gguf_file::Content::read(&mut reader)?;
-        let empty = ModelWeights::from_gguf(content, &mut reader, &Device::Cpu)?;
+        let empty = Llama::from_gguf(content, &mut reader)?;
         let mut boundaries = vec![0];
         for id in 1..49152 {
             let text = tokenizer.decode(&[id], false).map_err(anyhow::Error::msg)?;
@@ -107,14 +106,19 @@ impl Model {
         let started = std::time::Instant::now();
         let hit = self.prepare(query.session, &query.before)?;
         let prepared = self.prepared.as_ref().unwrap();
+        // Rows of `state` are the current beams; the context cache has one row.
+        let mut state = prepared.state.clone();
         let words = crate::generation::search(
             query,
             &self.pieces,
-            prepared.state.clone(),
             prepared.logits.clone(),
             usize::from(!hit),
             started,
-            |state, token, depth| forward(state, &[token], prepared.ids.len() + depth),
+            |parents, tokens, depth| {
+                state.select(parents)?;
+                let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                state.forward(&ids, prepared.ids.len() + depth)
+            },
         )?;
         Ok((words, hit))
     }
@@ -206,5 +210,60 @@ mod tests {
         assert!(!model.rank(2, "please send the", &candidates, 5).unwrap().1);
         model.reset();
         assert!(!model.rank(2, "please send the", &candidates, 5).unwrap().1);
+    }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; never downloads model assets"]
+    fn batched_rows_match_single_row_forwards() {
+        let path =
+            std::env::var_os("SWITCHIFY_SMOL_BUNDLE").expect("explicit model bundle required");
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        for (before, prefix) in [("please send the", ""), ("I would like a", "c"), ("", "")] {
+            let query = switchify_prediction_neural::protocol::GenerationQuery {
+                id: 1,
+                session: 1,
+                before: before.into(),
+                prefix: prefix.into(),
+                exclude: vec![],
+                limit: 3,
+            };
+            model.prepare(1, before).unwrap();
+            let prepared = model.prepared.as_ref().unwrap();
+            let position = prepared.ids.len();
+            let mut batched = prepared.state.clone();
+            let mut single = vec![prepared.state.clone()];
+            let mut compared = 0;
+            crate::generation::search(
+                &query,
+                &model.pieces,
+                prepared.logits.clone(),
+                1,
+                std::time::Instant::now(),
+                |parents, tokens, depth| {
+                    batched.select(parents)?;
+                    let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                    let rows = batched.forward(&ids, position + depth)?;
+                    let mut next = Vec::new();
+                    for ((&parent, &token), row) in parents.iter().zip(tokens).zip(&rows) {
+                        let mut state = single[parent as usize].clone();
+                        let expected = forward(&mut state, &[token], position + depth)?;
+                        let difference = expected
+                            .iter()
+                            .zip(row)
+                            .map(|(a, b)| (a - b).abs())
+                            .fold(0f32, f32::max);
+                        ensure!(difference <= 1e-3, "batched row differs by {difference}");
+                        compared += 1;
+                        next.push(state);
+                    }
+                    single = next;
+                    Ok(rows)
+                },
+            )
+            .unwrap();
+            assert!(compared >= 8);
+        }
     }
 }

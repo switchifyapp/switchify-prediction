@@ -3,7 +3,9 @@ use std::{
     time::{Duration, Instant},
 };
 use switchify_prediction::{Options, Predictor, build};
-use switchify_prediction_neural::{Config, Refiner, Status, bundle, effective_context};
+use switchify_prediction_neural::{
+    Config, Refiner, Status, bundle, effective_context, generation_context,
+};
 use tempfile::TempDir;
 fn fixture(mode: &str) -> (TempDir, Predictor, Refiner) {
     let temp = tempfile::tempdir().unwrap();
@@ -252,6 +254,22 @@ fn context_and_bundle_validation() {
     );
     assert_eq!(effective_context("last sentence."), "");
     assert_eq!(effective_context("first\nsecond line"), "second line");
+    assert_eq!(
+        generation_context("Ignore me! I can\u{2019}t  find the  "),
+        "I can't find the"
+    );
+    assert_eq!(generation_context("He said \u{201C}"), "He said");
+    assert_eq!(generation_context("Il a dit \u{AB}"), "Il a dit");
+    assert_eq!(
+        generation_context("Call me (or \"Sam\" "),
+        "Call me (or \"Sam\""
+    );
+    assert_eq!(generation_context("the students' "), "the students'");
+    assert_eq!(generation_context("last sentence."), "");
+    assert_eq!(
+        generation_context("first\nSecond line, then "),
+        "Second line, then"
+    );
     let temp = tempfile::tempdir().unwrap();
     assert!(bundle::load(temp.path()).is_err());
     std::fs::write(temp.path().join("model-bundle.json"), "{}").unwrap();

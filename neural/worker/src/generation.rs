@@ -97,11 +97,13 @@ fn completed(bytes: &[u8], query: &GenerationQuery) -> Option<String> {
     (valid_word(&word) && query.accepts(std::slice::from_ref(&word))).then_some(word)
 }
 
-struct Beam<S> {
-    state: S,
+struct Beam {
     logits: Vec<f32>,
     bytes: Vec<u8>,
     score: f64,
+    /// Upper bound on the log probability of every later completion through
+    /// this beam.
+    open: f64,
 }
 struct Candidate {
     parent: usize,
@@ -110,24 +112,84 @@ struct Candidate {
     score: f64,
 }
 
+fn log_sum_exp(a: f64, b: f64) -> f64 {
+    let high = a.max(b);
+    if high == f64::NEG_INFINITY {
+        return high;
+    }
+    high + ((a - high).exp() + (b - high).exp()).ln()
+}
+
+/// Fraction of the next-token distribution on word boundaries.
+fn boundary_mass(logits: &[f32], boundaries: &[usize]) -> f64 {
+    let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
+    let all: f64 = logits.iter().map(|v| (*v as f64 - max).exp()).sum();
+    let mass: f64 = boundaries
+        .iter()
+        .map(|&id| (logits[id] as f64 - max).exp())
+        .sum();
+    mass / all
+}
+
+/// Whether further search can no longer change the ranked result. Every later
+/// completion extends a live beam by a piece that does not begin with a word
+/// boundary, since such a piece never continues a word, so all later
+/// probability mass, for any word, is at most the beams' combined `open` bound.
+/// Each returned word must lead the next ranked word, or an unseen word, by
+/// more than that mass.
+fn settled(finished: &BTreeMap<String, f64>, beams: &[Beam], limit: usize) -> bool {
+    if finished.len() < limit {
+        return false;
+    }
+    let remaining = beams
+        .iter()
+        .fold(f64::NEG_INFINITY, |total, beam| {
+            log_sum_exp(total, beam.open)
+        })
+        .exp();
+    let mut scores: Vec<f64> = finished.values().map(|s| s.exp()).collect();
+    scores.sort_by(|a, b| b.total_cmp(a));
+    (0..limit).all(|i| scores[i] > scores.get(i + 1).copied().unwrap_or(0.) + remaining)
+}
+
 /// The caller accounts for the context forward pass. Each selected extension
 /// costs one evaluation; terminal boundary mass costs none. Scores stay private.
-pub fn search<S: Clone>(
+///
+/// `forward(parents, tokens, depth)` extends, for each `i`, the beam at
+/// `parents[i]` by `tokens[i]`, and returns one logit row per extension. The
+/// extensions become the next beams in the same order. One call evaluates every
+/// extension at a depth, which the caller may batch.
+pub fn search(
     query: &GenerationQuery,
     pieces: &[Vec<u8>],
-    state: S,
+    logits: Vec<f32>,
+    evaluations: usize,
+    started: Instant,
+    forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
+) -> Result<Vec<String>> {
+    run(query, pieces, logits, evaluations, started, forward, true)
+}
+
+fn run(
+    query: &GenerationQuery,
+    pieces: &[Vec<u8>],
     logits: Vec<f32>,
     mut evaluations: usize,
     started: Instant,
-    mut forward: impl FnMut(&mut S, u32, usize) -> Result<Vec<f32>>,
+    mut forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
+    stop_when_settled: bool,
 ) -> Result<Vec<String>> {
+    let boundaries: Vec<usize> = (0..pieces.len())
+        .filter(|&id| boundary(&pieces[id], id))
+        .collect();
     let mut beams = vec![Beam {
-        state,
         logits,
         bytes: Vec::new(),
         score: 0.,
+        open: 0.,
     }];
     let mut finished: BTreeMap<String, f64> = BTreeMap::new();
+    let mut batch = Duration::ZERO;
     for depth in 0..TOKENS {
         let mut candidates: Vec<Candidate> = Vec::new();
         for (parent, beam) in beams.iter().enumerate() {
@@ -174,66 +236,51 @@ pub fn search<S: Clone>(
                 }
             }
         }
-        candidates.sort_by(|a, b| {
-            b.score
-                .total_cmp(&a.score)
-                .then(a.parent.cmp(&b.parent))
-                .then(a.token.cmp(&b.token))
-        });
+        // Reserve time for this batch, estimated by the last one, and reply
+        // transport; the parent still enforces 2 s.
+        if started.elapsed() + batch >= Duration::from_millis(1600) {
+            break;
+        }
+        candidates.truncate(EVALUATIONS.saturating_sub(evaluations));
+        if candidates.is_empty() {
+            break;
+        }
+        let parents: Vec<u32> = candidates.iter().map(|c| c.parent as u32).collect();
+        let tokens: Vec<u32> = candidates.iter().map(|c| c.token as u32).collect();
+        let evaluated = Instant::now();
+        let rows = forward(&parents, &tokens, depth)?;
+        batch = evaluated.elapsed();
+        ensure!(rows.len() == candidates.len(), "logits");
+        evaluations += candidates.len();
         let mut next = Vec::new();
-        for candidate in candidates.into_iter().take(WIDTH) {
-            // Reserve time for the final evaluation and reply transport; the parent still enforces 2 s.
-            if evaluations >= EVALUATIONS || started.elapsed() >= Duration::from_millis(1600) {
-                break;
-            }
-            let mut state = beams[candidate.parent].state.clone();
-            let logits = forward(&mut state, candidate.token as u32, depth)?;
-            evaluations += 1;
+        for (candidate, logits) in candidates.into_iter().zip(rows) {
             ensure!(
                 logits.len() == pieces.len() && logits.iter().all(|v| v.is_finite()),
                 "logits"
             );
+            let mass = boundary_mass(&logits, &boundaries);
             if let Some(word) = completed(&candidate.bytes, query) {
-                let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
-                let all: f64 = logits.iter().map(|v| (*v as f64 - max).exp()).sum();
-                let mass: f64 = logits
-                    .iter()
-                    .enumerate()
-                    .filter(|(id, _)| boundary(&pieces[*id], *id))
-                    .map(|(_, v)| (*v as f64 - max).exp())
-                    .sum();
-                let score = candidate.score + (mass / all).ln();
                 // A token fragment is not a completed word merely because EOS
                 // has nonzero probability. Require a probable word boundary.
-                if mass / all < 0.5 {
-                    next.push(Beam {
-                        state,
-                        logits,
-                        bytes: candidate.bytes,
-                        score: candidate.score,
-                    });
-                    continue;
+                if mass >= 0.5 {
+                    let score = candidate.score + mass.ln();
+                    // Different tokenizations/case variants represent disjoint paths.
+                    finished
+                        .entry(word)
+                        .and_modify(|old| *old = log_sum_exp(*old, score))
+                        .or_insert(score);
                 }
-                // Different tokenizations/case variants represent disjoint paths.
-                finished
-                    .entry(word)
-                    .and_modify(|old| {
-                        let high = old.max(score);
-                        *old = high + ((*old - high).exp() + (score - high).exp()).ln();
-                    })
-                    .or_insert(score);
             }
             next.push(Beam {
-                state,
                 logits,
                 bytes: candidate.bytes,
                 score: candidate.score,
+                open: candidate.score + (1. - mass).max(0.).ln(),
             });
         }
         beams = next;
-        if beams.is_empty()
-            || evaluations >= EVALUATIONS
-            || started.elapsed() >= Duration::from_millis(1600)
+        if evaluations >= EVALUATIONS
+            || (stop_when_settled && settled(&finished, &beams, query.limit))
         {
             break;
         }
@@ -281,17 +328,21 @@ mod tests {
         let words = search(
             &query,
             &pieces,
-            (),
             vec![-10., 5., 4., -10., 0.],
             1,
             Instant::now(),
-            |_, token, _| {
-                calls += 1;
-                Ok(if token == 2 {
-                    vec![-20., -20., -20., 10., -20.]
-                } else {
-                    vec![10., -20., -20., -20., -20.]
-                })
+            |_, tokens, _| {
+                calls += tokens.len();
+                Ok(tokens
+                    .iter()
+                    .map(|&token| {
+                        if token == 2 {
+                            vec![-20., -20., -20., 10., -20.]
+                        } else {
+                            vec![10., -20., -20., -20., -20.]
+                        }
+                    })
+                    .collect())
             },
         )
         .unwrap();
@@ -318,16 +369,20 @@ mod tests {
             let result = search(
                 &query,
                 &pieces,
-                (),
                 vec![-20., 10., -20.],
                 1,
                 Instant::now(),
-                |_, token, _| {
-                    Ok(if token == 1 {
-                        vec![-20., -20., 10.]
-                    } else {
-                        vec![10., -20., -20.]
-                    })
+                |_, tokens, _| {
+                    Ok(tokens
+                        .iter()
+                        .map(|&token| {
+                            if token == 1 {
+                                vec![-20., -20., 10.]
+                            } else {
+                                vec![10., -20., -20.]
+                            }
+                        })
+                        .collect())
                 },
             )
             .unwrap();
@@ -353,13 +408,12 @@ mod tests {
         let result = search(
             &query,
             &pieces,
-            (),
             vec![0.; 9],
             1,
             Instant::now(),
-            |_, _, _| {
-                calls += 1;
-                Ok(vec![0.; 9])
+            |_, tokens, _| {
+                calls += tokens.len();
+                Ok(vec![vec![0.; 9]; tokens.len()])
             },
         )
         .unwrap();
@@ -369,5 +423,92 @@ mod tests {
             "continuations are more probable than boundaries"
         );
         assert!(!partial(&[b'a'; 129], false, ""));
+    }
+
+    #[test]
+    fn settled_requires_each_rank_to_lead_by_the_open_mass() {
+        let finished: BTreeMap<String, f64> = [("a", 0.5), ("b", 0.3), ("c", 0.1)]
+            .into_iter()
+            .map(|(w, p)| (w.to_owned(), f64::ln(p)))
+            .collect();
+        let beam = |open: f64| Beam {
+            logits: vec![],
+            bytes: vec![],
+            score: 0.,
+            open: open.ln(),
+        };
+        assert!(settled(&finished, &[beam(0.04), beam(0.05)], 3));
+        assert!(!settled(&finished, &[beam(0.1)], 3));
+        assert!(!settled(&finished, &[beam(0.25)], 2));
+        assert!(settled(&finished, &[], 2));
+        assert!(!settled(&finished, &[], 4));
+    }
+
+    #[test]
+    fn stopping_when_settled_returns_the_full_search_result() {
+        let pieces: Vec<Vec<u8>> = [
+            "", " a", " b", " c", " d", " be", "e", "f", "g", "'", ".", " ",
+        ]
+        .iter()
+        .map(|p| p.as_bytes().to_vec())
+        .collect();
+        let row = |path: u64| -> Vec<f32> {
+            let mut state = path;
+            (0..pieces.len())
+                .map(|_| {
+                    state = state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
+                    ((state >> 40) as f32 / (1u64 << 24) as f32) * 12. - 6.
+                })
+                .collect()
+        };
+        let mut stopped_early = 0;
+        for seed in 0..400u64 {
+            let mut results = Vec::new();
+            for stop in [false, true] {
+                let query = GenerationQuery {
+                    id: 1,
+                    session: 1,
+                    before: if seed % 2 == 0 { "x".into() } else { "".into() },
+                    prefix: if seed % 3 == 0 { "b".into() } else { "".into() },
+                    exclude: if seed % 5 == 0 {
+                        vec!["a".into()]
+                    } else {
+                        vec![]
+                    },
+                    limit: 3,
+                };
+                let mut paths = vec![seed];
+                let mut calls = 0;
+                let words = run(
+                    &query,
+                    &pieces,
+                    row(seed),
+                    1,
+                    Instant::now(),
+                    |parents, tokens, _| {
+                        calls += tokens.len();
+                        paths = parents
+                            .iter()
+                            .zip(tokens)
+                            .map(|(&p, &t)| {
+                                paths[p as usize]
+                                    .wrapping_mul(31)
+                                    .wrapping_add(t as u64 + 1)
+                            })
+                            .collect();
+                        Ok(paths.iter().map(|&p| row(p)).collect())
+                    },
+                    stop,
+                )
+                .unwrap();
+                results.push((words, calls));
+            }
+            assert_eq!(results[0].0, results[1].0, "seed {seed}");
+            assert!(results[1].1 <= results[0].1);
+            stopped_early += usize::from(results[1].1 < results[0].1);
+        }
+        assert!(stopped_early > 0);
     }
 }
