@@ -543,6 +543,34 @@ impl Predictor {
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
         self.learn_inner(completed_text, None).map(|_| ())
     }
+    /// Up to `limit` learned words starting with `prefix`, most distinctive
+    /// first: those used often here relative to the baseline, such as names,
+    /// rather than common words. Empty without a personal database.
+    pub fn personal_words(&self, prefix: &str, limit: usize) -> Vec<String> {
+        if self.personal.is_none() || limit == 0 {
+            return vec![];
+        }
+        let prefix = normalize(prefix);
+        let empty = BTreeMap::new();
+        let combined = self.combined.0.get(&Vec::new()).unwrap_or(&empty);
+        let baseline = self.baseline.0.get(&Vec::new()).unwrap_or(&empty);
+        let mut words: Vec<(f64, i64, &String)> = combined
+            .range(prefix.clone()..)
+            .take_while(|(word, _)| word.starts_with(&prefix))
+            .filter_map(|(word, count)| {
+                let base = baseline.get(word).copied().unwrap_or(0);
+                // Combined counts weight personal counts five times.
+                let own = (count - base) / 5;
+                (own > 0).then(|| (own as f64 / (base as f64 + 1.), own, word))
+            })
+            .collect();
+        words.sort_by(|a, b| b.0.total_cmp(&a.0).then(b.1.cmp(&a.1)).then(a.2.cmp(b.2)));
+        words
+            .into_iter()
+            .take(limit)
+            .map(|(_, _, word)| word.clone())
+            .collect()
+    }
     pub fn import(&mut self, path: &Path) -> Result<bool> {
         let text = fs::read_to_string(path)?;
         self.learn_inner(&text, Some(&digest(text.as_bytes())))

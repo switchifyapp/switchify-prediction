@@ -570,3 +570,22 @@ fn a_replacing_constraint_is_still_validated_before_commit() {
     assert!(p.learn("say hello").is_err());
     assert!(Predictor::open(&base, Some(&personal)).is_ok());
 }
+
+#[test]
+fn personal_words_rank_distinctive_learned_words_first() {
+    let (tmp, base) = fixture();
+    let without = Predictor::open(&base, None).unwrap();
+    assert!(without.personal_words("", 8).is_empty());
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    assert!(p.personal_words("", 8).is_empty());
+    p.learn("I drink water with Siobhan. Siobhan likes walnut water.")
+        .unwrap();
+    // Names the baseline lacks come before words it already knows well.
+    let all = p.personal_words("", 8);
+    assert_eq!(all[0], "siobhan");
+    assert!(all.iter().position(|w| w == "walnut") < all.iter().position(|w| w == "water"));
+    assert_eq!(p.personal_words("Wa", 8), ["walnut", "water"]);
+    assert_eq!(p.personal_words("s", 1), ["siobhan"]);
+    assert!(p.personal_words("z", 8).is_empty());
+}

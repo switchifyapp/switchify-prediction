@@ -2,7 +2,9 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::io::{self, Read, Write};
 
-pub const VERSION: u32 = 2;
+pub const VERSION: u32 = 3;
+/// Protocol 2 workers lack `GenerationQuery::prefer` and still serve generation.
+pub const MIN_VERSION: u32 = 2;
 pub const MAX_FRAME: usize = 65_536;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,6 +26,10 @@ pub struct GenerationQuery {
     pub prefix: String,
     pub exclude: Vec<String>,
     pub limit: usize,
+    /// Learned words also scored as candidates, with a bonus. Protocol 3;
+    /// omitted when empty, so protocol 2 workers accept the query.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prefer: Vec<String>,
 }
 
 impl GenerationQuery {
@@ -33,6 +39,8 @@ impl GenerationQuery {
             && self.limit <= 3
             && self.exclude.len() <= 3
             && self.exclude.iter().all(|w| w.len() <= 128)
+            && self.prefer.len() <= 8
+            && self.prefer.iter().all(|w| valid_word(w))
     }
     pub fn accepts(&self, words: &[String]) -> bool {
         let prefix = switchify_prediction::normalize(&self.prefix);

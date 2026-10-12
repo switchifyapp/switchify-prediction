@@ -17,7 +17,11 @@ fn main() {
     protocol::write_frame(
         &mut out,
         &Reply::Ready {
-            version: if mode == "old" { 1 } else { protocol::VERSION },
+            version: match mode.as_str() {
+                "old" => 1,
+                "v2" => 2,
+                _ => protocol::VERSION,
+            },
             accelerated: false,
         },
     )
@@ -42,8 +46,15 @@ fn main() {
                     "delay" => thread::sleep(Duration::from_millis(100)),
                     _ => {}
                 }
-                let mut words: Vec<String> = ["hello", "help", "helium", "café", "can't"]
-                    .into_iter()
+                // A protocol 2 worker cannot read `prefer`.
+                if mode == "v2" && !query.prefer.is_empty() {
+                    return;
+                }
+                let mut words: Vec<String> = query
+                    .prefer
+                    .iter()
+                    .map(String::as_str)
+                    .chain(["hello", "help", "helium", "café", "can't"])
                     .map(String::from)
                     .filter(|w| query.accepts(std::slice::from_ref(w)))
                     .take(query.limit)

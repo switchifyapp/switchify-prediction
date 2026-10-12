@@ -37,6 +37,14 @@ fn until(mut check: impl FnMut() -> bool) {
         thread::sleep(Duration::from_millis(2));
     }
 }
+fn poll_result(engine: &mut Refiner) -> switchify_prediction_neural::Refined {
+    let mut result = None;
+    until(|| {
+        result = engine.poll();
+        result.is_some()
+    });
+    result.unwrap()
+}
 fn options() -> Options {
     Options {
         min_chars: 0,
@@ -412,3 +420,30 @@ fn generation_rejects_old_protocol_without_retry_loop() {
     until(|| matches!(engine.status(), Status::Unavailable(_)));
     assert_eq!(engine.generate("", "", 1, &[], 3).unwrap(), None);
 }
+
+#[test]
+fn preferred_words_reach_new_workers_normalized_and_filtered() {
+    let (_temp, _predictor, mut engine) = fixture("normal");
+    until(|| engine.status() == Status::Ready);
+    let prefer = ["HELIX", "zebra", "hello", "two words", "helix"].map(String::from);
+    let id = engine
+        .generate_preferring("say", "He", 1, &["HELLO".into()], &prefer, 3)
+        .unwrap()
+        .unwrap();
+    let result = poll_result(&mut engine);
+    assert_eq!(result.request_id, id);
+    assert_eq!(result.words, ["helix", "help", "helium"]);
+}
+
+#[test]
+fn protocol_two_workers_generate_without_preferred_words() {
+    let (_temp, _predictor, mut engine) = fixture("v2");
+    until(|| engine.status() == Status::Ready);
+    engine
+        .generate_preferring("say", "he", 1, &[], &["helix".into()], 3)
+        .unwrap()
+        .unwrap();
+    assert_eq!(poll_result(&mut engine).words, ["hello", "help", "helium"]);
+    assert_eq!(engine.status(), Status::Ready);
+}
+

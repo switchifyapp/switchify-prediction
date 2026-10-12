@@ -153,7 +153,8 @@ fn settled(finished: &BTreeMap<String, f64>, beams: &[Beam], limit: usize) -> bo
 }
 
 /// The caller accounts for the context forward pass. Each selected extension
-/// costs one evaluation; terminal boundary mass costs none. Scores stay private.
+/// costs one evaluation; terminal boundary mass costs none. Returns ranked
+/// words with their log probabilities, which stay inside the worker.
 ///
 /// `forward(parents, tokens, depth)` extends, for each `i`, the beam at
 /// `parents[i]` by `tokens[i]`, and returns one logit row per extension. The
@@ -166,7 +167,7 @@ pub fn search(
     evaluations: usize,
     started: Instant,
     forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
-) -> Result<Vec<String>> {
+) -> Result<Vec<(String, f64)>> {
     run(query, pieces, logits, evaluations, started, forward, true)
 }
 
@@ -178,7 +179,7 @@ fn run(
     started: Instant,
     mut forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
     stop_when_settled: bool,
-) -> Result<Vec<String>> {
+) -> Result<Vec<(String, f64)>> {
     let boundaries: Vec<usize> = (0..pieces.len())
         .filter(|&id| boundary(&pieces[id], id))
         .collect();
@@ -287,11 +288,8 @@ fn run(
     }
     let mut words: Vec<_> = finished.into_iter().collect();
     words.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-    Ok(words
-        .into_iter()
-        .take(query.limit)
-        .map(|(word, _)| word)
-        .collect())
+    words.truncate(query.limit);
+    Ok(words)
 }
 
 #[cfg(test)]
@@ -316,6 +314,7 @@ mod tests {
             prefix: "he".into(),
             exclude: vec!["hello".into()],
             limit: 3,
+            prefer: vec![],
         };
         let pieces = vec![
             vec![],
@@ -346,6 +345,7 @@ mod tests {
             },
         )
         .unwrap();
+        let words: Vec<String> = words.into_iter().map(|w| w.0).collect();
         assert_eq!(words[0], "helium");
         assert!(!words.contains(&"hello".into()));
         assert!(calls <= 63);
@@ -364,6 +364,7 @@ mod tests {
                 prefix: "café".into(),
                 exclude: vec![],
                 limit: 3,
+                prefer: vec![],
             };
             let pieces = vec![vec![], first, second];
             let result = search(
@@ -386,6 +387,7 @@ mod tests {
                 },
             )
             .unwrap();
+            let result: Vec<String> = result.into_iter().map(|w| w.0).collect();
             assert_eq!(result[0], "café");
             assert!(result.iter().all(|w| !w.contains('\u{FFFD}')));
         }
@@ -400,6 +402,7 @@ mod tests {
             prefix: "".into(),
             exclude: vec![],
             limit: 3,
+            prefer: vec![],
         };
         let pieces = std::iter::once(vec![])
             .chain((b'a'..=b'h').map(|b| vec![b]))
@@ -478,6 +481,7 @@ mod tests {
                         vec![]
                     },
                     limit: 3,
+                    prefer: vec![],
                 };
                 let mut paths = vec![seed];
                 let mut calls = 0;
@@ -505,7 +509,8 @@ mod tests {
                 .unwrap();
                 results.push((words, calls));
             }
-            assert_eq!(results[0].0, results[1].0, "seed {seed}");
+            let ranked = |r: &Vec<(String, f64)>| r.iter().map(|w| w.0.clone()).collect::<Vec<_>>();
+            assert_eq!(ranked(&results[0].0), ranked(&results[1].0), "seed {seed}");
             assert!(results[1].1 <= results[0].1);
             stopped_early += usize::from(results[1].1 < results[0].1);
         }

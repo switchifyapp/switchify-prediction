@@ -43,6 +43,9 @@ struct Run {
     accelerated_worker: Option<PathBuf>,
     #[arg(long, default_value_t = 4)]
     threads: usize,
+    /// Learned words offered to generation as candidates; 0 offers none.
+    #[arg(long, default_value_t = 8)]
+    prefer: usize,
 }
 #[derive(Deserialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
@@ -166,8 +169,9 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
                     .map(|s| s.word)
                     .collect();
                 let words: Vec<String> = statistical.iter().take(3).cloned().collect();
+                let prefer = predictor.personal_words(&prefix, args.prefer);
                 let id = engine
-                    .generate(&before, &prefix, session, &words, 3)
+                    .generate_preferring(&before, &prefix, session, &words, &prefer, 3)
                     .map_err(|_| ())?;
                 outstanding = id.is_some();
                 emit(json!({"type":"immediate", "result": {

@@ -32,6 +32,17 @@ fn log_prob(logits: &[f32], token: usize) -> f64 {
             .sum::<f64>()
             .ln()
 }
+/// The bonus, in log probability, for a preferred word: one that has been
+/// learned from this person's typing.
+const PREFERENCE: f64 = std::f64::consts::LN_2 * 2.;
+
+fn log_sum_exp(a: f64, b: f64) -> f64 {
+    let high = a.max(b);
+    if high == f64::NEG_INFINITY {
+        return high;
+    }
+    high + ((a - high).exp() + (b - high).exp()).ln()
+}
 fn log_boundary(logits: &[f32], ids: &[usize]) -> f64 {
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
     let all = logits.iter().map(|x| (*x as f64 - max).exp()).sum::<f64>();
@@ -105,10 +116,19 @@ impl Model {
     ) -> Result<(Vec<String>, bool)> {
         let started = std::time::Instant::now();
         let hit = self.prepare(query.session, &query.before)?;
+        let prefix = switchify_prediction::normalize(&query.prefix);
+        let preferred: Vec<String> = query
+            .prefer
+            .iter()
+            .filter(|w| w.starts_with(&prefix) && query.accepts(std::slice::from_ref(w)))
+            .cloned()
+            .collect();
+        // Scored first, so the search's time limit includes them.
+        let scores = self.score_words(!query.before.is_empty(), &preferred)?;
         let prepared = self.prepared.as_ref().unwrap();
         // Rows of `state` are the current beams; the context cache has one row.
         let mut state = prepared.state.clone();
-        let words = crate::generation::search(
+        let generated = crate::generation::search(
             query,
             &self.pieces,
             prepared.logits.clone(),
@@ -120,7 +140,89 @@ impl Model {
                 state.forward(&ids, prepared.ids.len() + depth)
             },
         )?;
-        Ok((words, hit))
+        if preferred.is_empty() {
+            return Ok((generated.into_iter().map(|(w, _)| w).collect(), hit));
+        }
+        // A preferred word takes the better of its generated and scored
+        // probability, plus the bonus.
+        let mut ranked: Vec<(String, f64)> = generated
+            .into_iter()
+            .filter(|(w, _)| !preferred.contains(w))
+            .collect();
+        for (word, score) in preferred.iter().zip(scores) {
+            ranked.push((word.clone(), score + PREFERENCE));
+        }
+        ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        ranked.truncate(query.limit);
+        Ok((ranked.into_iter().map(|(w, _)| w).collect(), hit))
+    }
+
+    /// Log probability of each word following the prepared context, with a
+    /// following word boundary, over its lowercase and capitalised forms.
+    /// Every form advances one token per batched forward pass.
+    fn score_words(&mut self, separated: bool, words: &[String]) -> Result<Vec<f64>> {
+        let mut forms: Vec<(usize, Vec<u32>)> = Vec::new();
+        for (index, word) in words.iter().enumerate() {
+            let mut chars = word.chars();
+            let capital: String = chars
+                .next()
+                .map(|c| c.to_uppercase().chain(chars).collect())
+                .unwrap_or_default();
+            let mut variants = vec![word.clone()];
+            if capital != *word {
+                variants.push(capital);
+            }
+            for variant in variants {
+                let text = if separated {
+                    format!(" {variant}")
+                } else {
+                    variant
+                };
+                let encoded = self
+                    .tokenizer
+                    .encode(text, false)
+                    .map_err(anyhow::Error::msg)?;
+                ensure!(!encoded.get_ids().is_empty(), "candidate");
+                forms.push((index, encoded.get_ids().to_vec()));
+            }
+        }
+        let mut result = vec![f64::NEG_INFINITY; words.len()];
+        let Some(prepared) = self.prepared.as_ref().filter(|_| !forms.is_empty()) else {
+            return Ok(result);
+        };
+        let mut scores = vec![0f64; forms.len()];
+        let mut logits = vec![prepared.logits.clone(); forms.len()];
+        let mut state = prepared.state.clone();
+        let mut active: Vec<usize> = (0..forms.len()).collect();
+        let mut rows: Vec<u32> = vec![0; forms.len()];
+        for step in 0.. {
+            for &form in &active {
+                scores[form] += log_prob(&logits[form], forms[form].1[step] as usize);
+            }
+            state.select(&rows)?;
+            let tokens: Vec<u32> = active.iter().map(|&f| forms[f].1[step]).collect();
+            let ids = Tensor::new(tokens.as_slice(), &Device::Cpu)?.unsqueeze(1)?;
+            let out = state.forward(&ids, prepared.ids.len() + step)?;
+            let (mut next, mut next_rows) = (Vec::new(), Vec::new());
+            for (row, (&form, row_logits)) in active.iter().zip(out).enumerate() {
+                if forms[form].1.len() == step + 1 {
+                    scores[form] += log_boundary(&row_logits, &self.boundaries);
+                } else {
+                    next.push(form);
+                    next_rows.push(row as u32);
+                }
+                logits[form] = row_logits;
+            }
+            if next.is_empty() {
+                break;
+            }
+            (active, rows) = (next, next_rows);
+        }
+        for ((index, _), score) in forms.iter().zip(scores) {
+            ensure!(score.is_finite(), "score");
+            result[*index] = log_sum_exp(result[*index], score);
+        }
+        Ok(result)
     }
 
     pub fn rank(
@@ -228,6 +330,7 @@ mod tests {
                 prefix: prefix.into(),
                 exclude: vec![],
                 limit: 3,
+                prefer: vec![],
             };
             model.prepare(1, before).unwrap();
             let prepared = model.prepared.as_ref().unwrap();

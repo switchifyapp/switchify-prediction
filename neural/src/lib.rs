@@ -286,15 +286,45 @@ impl Refiner {
         exclude: &[String],
         limit: usize,
     ) -> Result<Option<u64>> {
+        self.generate_preferring(before, prefix, session, exclude, &[], limit)
+    }
+
+    /// Like `generate`, also scoring up to eight `prefer` words, such as
+    /// `Predictor::personal_words`, as candidates with a bonus. Words that do
+    /// not fit the prefix, are excluded, or are not single words are skipped.
+    /// Protocol 2 workers ignore them.
+    pub fn generate_preferring(
+        &mut self,
+        before: &str,
+        prefix: &str,
+        session: u64,
+        exclude: &[String],
+        prefer: &[String],
+        limit: usize,
+    ) -> Result<Option<u64>> {
+        let exclude: Vec<String> = exclude.iter().map(|s| normalize(s)).collect();
+        let prefix = normalize(prefix);
+        let mut preferred: Vec<String> = Vec::new();
+        for word in prefer.iter().map(|w| normalize(w)) {
+            if preferred.len() < 8
+                && protocol::valid_word(&word)
+                && word.starts_with(&prefix)
+                && !exclude.contains(&word)
+                && !preferred.contains(&word)
+            {
+                preferred.push(word);
+            }
+        }
         let mut query = GenerationQuery {
             id: 0,
             session,
             before: before.to_owned(),
-            prefix: normalize(prefix),
-            exclude: exclude.iter().map(|s| normalize(s)).collect(),
+            prefix,
+            exclude,
             limit,
+            prefer: preferred,
         };
-        if before.len() > 16_384 || prefix.len() > 256 || !query.valid() {
+        if before.len() > 16_384 || query.prefix.len() > 256 || !query.valid() {
             self.reset();
             return Err(Error::Input);
         }

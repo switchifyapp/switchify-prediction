@@ -116,6 +116,7 @@ impl Drop for Worker {
 
 pub(super) fn run(config: Config, accelerated: bool, state: State) {
     let mut worker: Option<Worker> = None;
+    let mut version = 0;
     loop {
         let (stop, retry, reset, query) = {
             let mut s = state.0.lock().unwrap();
@@ -138,9 +139,12 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     .receive(&state, Duration::from_secs(30))?
                 {
                     Reply::Ready {
-                        version: protocol::VERSION,
+                        version: actual_version,
                         accelerated: actual,
-                    } if actual == accelerated => {
+                    } if actual == accelerated
+                        && (protocol::MIN_VERSION..=protocol::VERSION).contains(&actual_version) =>
+                    {
+                        version = actual_version;
                         state.0.lock().unwrap().status = Status::Ready;
                     }
                     _ => return Err(Failure::Load),
@@ -164,6 +168,12 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     };
                     if state.0.lock().unwrap().latest != id {
                         return Ok(());
+                    }
+                    let mut query = query;
+                    if let Command::Generate(q) = &mut query
+                        && version < 3
+                    {
+                        q.prefer.clear();
                     }
                     w.send(query.clone())?;
                     let reply = w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))?;
