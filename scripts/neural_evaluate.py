@@ -73,6 +73,23 @@ def workload():
     return result
 
 
+def natural_workload(queries):
+    """Give each query its fixture text before the target as typed, with original
+    case and punctuation, as the desktop sends it. Targets and prefixes are unchanged."""
+    import regex
+    index = {}
+    for name in ['regression.json', 'general-writing.json']:
+        for texts in json.loads((ROOT / 'neural/fixtures' / name).read_bytes()).values():
+            for text in texts:
+                text = unicodedata.normalize('NFC', text.replace('’', "'"))
+                matches = list(regex.finditer(r"\p{L}[\p{L}\p{M}]*(?:'\p{L}[\p{L}\p{M}]*)*", text.lower()))
+                tokens = [m.group() for m in matches]
+                assert tokens == words(text)
+                for i, match in enumerate(matches):
+                    index.setdefault((' '.join(tokens[:i]), tokens[i]), text[:match.start()])
+    return [tuple(q[:4]) + (index[(q[4], q[6])],) + tuple(q[5:]) for q in queries]
+
+
 def timing(values):
     values = sorted(values)
     if not values:

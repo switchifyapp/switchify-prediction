@@ -1,27 +1,26 @@
+use crate::llama::Llama;
 use anyhow::{Result, ensure};
 use candle_core::{Device, Tensor};
-use candle_transformers::models::quantized_llama::ModelWeights;
 use switchify_prediction_neural::bundle::Bundle;
 use tokenizers::Tokenizer;
 
 struct Prepared {
     session: u64,
     ids: Vec<u32>,
-    state: ModelWeights,
+    state: Llama,
     logits: Vec<f32>,
 }
 pub struct Model {
-    empty: ModelWeights,
+    empty: Llama,
     tokenizer: Tokenizer,
     boundaries: Vec<usize>,
     pieces: Vec<Vec<u8>>,
     prepared: Option<Prepared>,
 }
-fn forward(state: &mut ModelWeights, ids: &[u32], position: usize) -> Result<Vec<f32>> {
-    Ok(state
-        .forward(&Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?, position)?
-        .squeeze(0)?
-        .to_vec1()?)
+fn forward(state: &mut Llama, ids: &[u32], position: usize) -> Result<Vec<f32>> {
+    let mut rows = state.forward(&Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?, position)?;
+    ensure!(rows.len() == 1, "logits");
+    Ok(rows.remove(0))
 }
 fn log_prob(logits: &[f32], token: usize) -> f64 {
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
@@ -52,7 +51,7 @@ impl Model {
         );
         let mut reader = std::io::Cursor::new(bundle.weights);
         let content = candle_core::quantized::gguf_file::Content::read(&mut reader)?;
-        let empty = ModelWeights::from_gguf(content, &mut reader, &Device::Cpu)?;
+        let empty = Llama::from_gguf(content, &mut reader)?;
         let mut boundaries = vec![0];
         for id in 1..49152 {
             let text = tokenizer.decode(&[id], false).map_err(anyhow::Error::msg)?;
@@ -107,14 +106,19 @@ impl Model {
         let started = std::time::Instant::now();
         let hit = self.prepare(query.session, &query.before)?;
         let prepared = self.prepared.as_ref().unwrap();
+        // Rows of `state` are the current beams; the context cache has one row.
+        let mut state = prepared.state.clone();
         let words = crate::generation::search(
             query,
             &self.pieces,
-            prepared.state.clone(),
             prepared.logits.clone(),
             usize::from(!hit),
             started,
-            |state, token, depth| forward(state, &[token], prepared.ids.len() + depth),
+            |parents, tokens, depth| {
+                state.select(parents)?;
+                let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                state.forward(&ids, prepared.ids.len() + depth)
+            },
         )?;
         Ok((words, hit))
     }

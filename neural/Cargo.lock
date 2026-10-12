@@ -1433,6 +1433,7 @@ version = "0.2.1"
 dependencies = [
  "anyhow",
  "candle-core",
+ "candle-nn",
  "candle-transformers",
  "serde_json",
  "switchify-prediction",
