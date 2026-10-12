@@ -97,7 +97,9 @@ are rejected. Writes are transactional, including validation of the new in-memor
 state before commit. Multiple writers serialize through SQLite with a five-second
 busy timeout. Each predictor uses a snapshot; call `refresh_personal()` to see
 another instance's updates. Successful writes and duplicate imports refresh the
-calling instance. Errors preserve its previous snapshot.
+calling instance. When no other connection has written since its snapshot, a write
+adds only its own counts, which costs milliseconds rather than a full reload.
+Otherwise it reloads and validates everything. Errors preserve its previous snapshot.
 
 Personal n-grams can reveal sensitive content and are stored unencrypted. Keep
 these files in an access-controlled application data directory, outside source

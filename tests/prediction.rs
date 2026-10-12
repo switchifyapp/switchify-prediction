@@ -425,3 +425,148 @@ fn simultaneous_personal_creation_and_writes_preserve_all_segments() {
     validate(&personal).unwrap();
     assert_eq!(digest(&fs::read(&base).unwrap()), baseline_hash);
 }
+
+fn ranked(p: &Predictor, context: &str, prefix: &str) -> Vec<(String, u64)> {
+    p.predict(
+        context,
+        prefix,
+        Options {
+            limit: 20,
+            min_chars: 0,
+            unigram_only: false,
+        },
+    )
+    .into_iter()
+    .map(|s| (s.word, s.score.to_bits()))
+    .collect()
+}
+
+fn assert_matches_reload(p: &Predictor, base: &Path, personal: &Path) {
+    let reloaded = Predictor::open(base, Some(personal)).unwrap();
+    for (context, prefix) in [
+        ("", ""),
+        ("", "w"),
+        ("I drink", ""),
+        ("I drink", "wa"),
+        ("we walk", "h"),
+        ("Siobhan said", ""),
+        ("the physio", "a"),
+    ] {
+        assert_eq!(
+            ranked(p, context, prefix),
+            ranked(&reloaded, context, prefix),
+            "{context:?} {prefix:?}"
+        );
+    }
+}
+
+#[test]
+fn incremental_learning_matches_a_full_reload() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    for text in [
+        "I drink walnut milk.",
+        "Siobhan said the physio is at Ballymena. I drink water!",
+        "We walk home with Siobhan",
+        "the physio appointment",
+    ] {
+        p.learn(text).unwrap();
+        assert_matches_reload(&p, &base, &personal);
+    }
+    assert_eq!(words(&p, "Siobhan said the", "p"), ["physio"]);
+}
+
+#[test]
+fn learning_after_another_writer_includes_its_counts() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut first = Predictor::open(&base, Some(&personal)).unwrap();
+    let mut second = Predictor::open(&base, Some(&personal)).unwrap();
+    first
+        .learn("I drink walnut milk. I drink walnut milk.")
+        .unwrap();
+    second.learn("I drink walrus milk.").unwrap();
+    assert!(words(&second, "I drink", "wal").starts_with(&["walnut".into(), "walrus".into()]));
+    assert_matches_reload(&second, &base, &personal);
+    second.learn("We walk home.").unwrap();
+    assert_matches_reload(&second, &base, &personal);
+    first.reset_personal().unwrap();
+    second.learn("apple pie").unwrap();
+    assert_eq!(words(&second, "I drink", "wal"), ["walk"]);
+    assert_matches_reload(&second, &base, &personal);
+}
+
+/// Run with SWITCHIFY_BASELINE pointing at the production english.sqlite.
+#[test]
+#[ignore = "requires explicit SWITCHIFY_BASELINE"]
+fn learning_cost_on_production_baseline() {
+    let base = std::path::PathBuf::from(std::env::var_os("SWITCHIFY_BASELINE").unwrap());
+    let tmp = tempfile::tempdir().unwrap();
+    let personal = tmp.path().join("personal.sqlite");
+    let started = std::time::Instant::now();
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    println!("open: {:?}", started.elapsed());
+    let mut times = Vec::new();
+    for i in 0..50 {
+        let started = std::time::Instant::now();
+        p.learn(&format!(
+            "I need to call Siobhan about the physio appointment number {i}."
+        ))
+        .unwrap();
+        times.push(started.elapsed());
+    }
+    times.sort();
+    println!("learn median {:?}, max {:?}", times[25], times[49]);
+    assert_eq!(words(&p, "I need to call", "si")[0], "siobhan");
+}
+
+#[test]
+fn a_trigger_side_effect_is_still_validated_before_commit() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch(
+        "CREATE TRIGGER ghost AFTER INSERT ON counts WHEN NEW.word='zebra' AND NEW.context='[]' \
+         BEGIN INSERT OR IGNORE INTO counts VALUES('[\"ghost\"]','zebra',1); END;",
+    )
+    .unwrap();
+    p.learn("hello there").unwrap();
+    assert!(p.learn("zebra").is_err());
+    db.execute_batch("DROP TRIGGER ghost").unwrap();
+    assert!(Predictor::open(&base, Some(&personal)).is_ok());
+    assert_matches_reload(&p, &base, &personal);
+}
+
+#[test]
+fn duplicate_imports_and_empty_text_match_a_full_reload() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let input = tmp.path().join("text.txt");
+    fs::write(&input, "Siobhan said the physio is late.").unwrap();
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    assert!(p.import(&input).unwrap());
+    assert!(!p.import(&input).unwrap());
+    p.learn("").unwrap();
+    p.learn("... !!").unwrap();
+    assert_matches_reload(&p, &base, &personal);
+}
+
+#[test]
+fn a_replacing_constraint_is_still_validated_before_commit() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute_batch(
+        "PRAGMA foreign_keys=OFF; DROP INDEX counts_word; ALTER TABLE counts RENAME TO old; \
+         CREATE TABLE counts(context TEXT NOT NULL,word TEXT NOT NULL REFERENCES vocabulary(word),\
+         count INTEGER NOT NULL,PRIMARY KEY(context,word),UNIQUE(word) ON CONFLICT REPLACE) WITHOUT ROWID; \
+         CREATE INDEX counts_word ON counts(word); DROP TABLE old;",
+    )
+    .unwrap();
+    p.learn("hello").unwrap();
+    assert!(p.learn("say hello").is_err());
+    assert!(Predictor::open(&base, Some(&personal)).is_ok());
+}
