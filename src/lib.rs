@@ -349,6 +349,13 @@ pub struct Predictor {
     baseline: Counts,
     combined: Counts,
     personal: Option<Connection>,
+    /// The personal database's `data_version` when `combined` last matched it.
+    /// It changes only when another connection commits.
+    seen: Option<i64>,
+}
+
+fn data_version(db: &Connection) -> Result<i64> {
+    Ok(db.query_row("PRAGMA data_version", [], |r| r.get(0))?)
 }
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
@@ -392,6 +399,7 @@ impl Predictor {
             baseline: counts.clone(),
             combined: counts,
             personal,
+            seen: None,
         };
         result.refresh_personal()?;
         Ok(result)
@@ -406,7 +414,9 @@ impl Predictor {
                 return Err(Error::Invalid("expected personal database".into()));
             }
             combined.merge(&load_checked(&tx, "personal")?, 5);
+            let version = data_version(&tx)?;
             tx.commit()?;
+            self.seen = Some(version);
         }
         self.combined = combined;
         Ok(())
@@ -479,10 +489,26 @@ impl Predictor {
         if imported {
             delta.write(&tx)?;
         }
-        let mut combined = self.baseline.clone();
-        combined.merge(&load_checked(&tx, "personal")?, 5);
+        // While no other connection has written since the snapshot, adding the
+        // new counts to it equals reloading, without copying the baseline.
+        // Otherwise reload and validate everything, including other writes.
+        // A connection's own commits leave its data_version unchanged.
+        let version = data_version(&tx)?;
+        let current = self.seen == Some(version);
+        let combined = if current {
+            None
+        } else {
+            let mut combined = self.baseline.clone();
+            combined.merge(&load_checked(&tx, "personal")?, 5);
+            Some(combined)
+        };
         tx.commit()?;
-        self.combined = combined;
+        self.seen = Some(version);
+        match combined {
+            Some(combined) => self.combined = combined,
+            None if imported => self.combined.merge(&delta, 5),
+            None => {}
+        }
         Ok(imported)
     }
     pub fn learn(&mut self, completed_text: &str) -> Result<()> {
@@ -513,7 +539,9 @@ impl Predictor {
                 "personal reset did not clear imports".into(),
             ));
         }
+        let version = data_version(&tx)?;
         tx.commit()?;
+        self.seen = Some(version);
         self.combined = combined;
         Ok(())
     }
