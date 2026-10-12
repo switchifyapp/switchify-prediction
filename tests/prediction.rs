@@ -85,12 +85,12 @@ fn learning_persistence_import_dedup_reset_and_baseline_immutability() {
     let original = fs::read(&path).unwrap();
     let personal = tmp.path().join("personal.sqlite");
     let text = tmp.path().join("training.txt");
-    fs::write(&text, "I drink watermelon.").unwrap();
+    fs::write(&text, "I drink watermelon. I like watermelon.").unwrap();
     let mut p = Predictor::open(&path, Some(&personal)).unwrap();
     assert!(p.import(&text).unwrap());
     assert!(!p.import(&text).unwrap());
     assert_eq!(words(&p, "I drink ", "wa")[0], "watermelon");
-    p.learn("I drink walnut.").unwrap();
+    p.learn("I drink walnut. I drink walnut.").unwrap();
     drop(p);
     let mut p = Predictor::open(&path, Some(&personal)).unwrap();
     assert!(words(&p, "I drink ", "wa").contains(&"walnut".to_string()));
@@ -197,7 +197,7 @@ fn cli_build_predict_learn_validate() {
         .stdin
         .take()
         .unwrap()
-        .write_all(b"hello walnut")
+        .write_all(b"hello walnut. hello walnut")
         .unwrap();
     assert!(child.wait().unwrap().success());
     let output = Command::new(exe)
@@ -240,8 +240,11 @@ fn interpolation_renormalizes_and_personal_counts_are_weighted_before_probabilit
     assert!((backed_off - (0.3 * 0.5 + 0.1 / 9.0) / 0.4).abs() < 1e-12);
     p.learn("i like tea.").unwrap();
     let learned = p.predict("i like ", "tea", opts).remove(0).score;
-    // One learned occurrence counts as 500 baseline ones.
-    assert!((learned - (0.9 * 501.0 / 502.0 + 0.1 * 501.0 / 1509.0)).abs() < 1e-12);
+    // One learned occurrence counts as 500 baseline ones, less as more is
+    // learned: here three words.
+    let w = 500.0 / (1.0 + 3.0 / 2000.0);
+    let expected = 0.9 * (1.0 + w) / (2.0 + w) + 0.1 * (1.0 + w) / (9.0 + 3.0 * w);
+    assert!((learned - expected).abs() < 1e-12);
     let total: f64 = p.predict("i like ", "", opts).iter().map(|s| s.score).sum();
     assert!((total - 1.0).abs() < 1e-12);
 }
@@ -346,7 +349,7 @@ fn validation_failure_rolls_back_disk_and_keeps_prediction_snapshot() {
     assert_eq!(predictor.predict("hello", "wa", Options::default()), before);
     assert_eq!(validate(&personal).unwrap().ngrams, 0);
     db.execute_batch("DROP TRIGGER poison").unwrap();
-    predictor.learn("hello walnut").unwrap();
+    predictor.learn("hello walnut. hello walnut").unwrap();
     assert_eq!(
         predictor.predict("hello", "wa", Options::default())[0].word,
         "walnut"
@@ -361,7 +364,7 @@ fn multiple_predictors_refresh_duplicate_imports_and_reset() {
     let personal = dir.path().join("personal.sqlite");
     let training = dir.path().join("fixture.txt");
     build(&base, "hello water", "fixture").unwrap();
-    fs::write(&training, "hello walnut").unwrap();
+    fs::write(&training, "hello walnut. hello walnut").unwrap();
     let mut first = Predictor::open(&base, Some(&personal)).unwrap();
     let mut second = Predictor::open(&base, Some(&personal)).unwrap();
     assert!(first.import(&training).unwrap());
@@ -487,7 +490,9 @@ fn learning_after_another_writer_includes_its_counts() {
     first
         .learn("I drink walnut milk. I drink walnut milk.")
         .unwrap();
-    second.learn("I drink walrus milk.").unwrap();
+    second
+        .learn("I drink walrus milk. I drink walrus milk.")
+        .unwrap();
     assert!(words(&second, "I drink", "wal").starts_with(&["walnut".into(), "walrus".into()]));
     assert_matches_reload(&second, &base, &personal);
     second.learn("We walk home.").unwrap();
@@ -570,4 +575,58 @@ fn a_replacing_constraint_is_still_validated_before_commit() {
     p.learn("hello").unwrap();
     assert!(p.learn("say hello").is_err());
     assert!(Predictor::open(&base, Some(&personal)).is_ok());
+}
+
+#[test]
+fn a_misspelling_learned_once_is_not_suggested_but_a_new_word_used_twice_is() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    p.learn("I drink teh water.").unwrap();
+    assert!(!words(&p, "I drink ", "t").contains(&"teh".to_string()));
+    assert!(!words(&p, "", "te").contains(&"teh".to_string()));
+    // A word the baseline knows counts at once.
+    p.learn("We walk apple.").unwrap();
+    assert_eq!(words(&p, "We walk ", "a")[0], "apple");
+    p.learn("I drink teh tea.").unwrap();
+    assert!(words(&p, "I drink ", "t").contains(&"teh".to_string()));
+}
+
+#[test]
+fn an_empty_personal_database_predicts_exactly_like_none() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let with = Predictor::open(&base, Some(&personal)).unwrap();
+    let without = Predictor::open(&base, None).unwrap();
+    for (context, prefix) in [("", ""), ("I drink", ""), ("I drink", "wa"), ("we", "w")] {
+        assert_eq!(
+            ranked(&with, context, prefix),
+            ranked(&without, context, prefix)
+        );
+    }
+}
+
+#[test]
+fn huge_stored_personal_counts_do_not_overflow() {
+    let (tmp, base) = fixture();
+    let personal = tmp.path().join("personal.sqlite");
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    p.learn("I drink water. I drink tea.").unwrap();
+    drop(p);
+    let db = rusqlite::Connection::open(&personal).unwrap();
+    db.execute("UPDATE counts SET count = 922337203685477580", [])
+        .unwrap();
+    validate(&personal).unwrap();
+    let p = Predictor::open(&base, Some(&personal)).unwrap();
+    let ranked = p.predict(
+        "I drink ",
+        "",
+        Options {
+            limit: 20,
+            min_chars: 0,
+            unigram_only: false,
+        },
+    );
+    assert!(!ranked.is_empty());
+    assert!(ranked.iter().all(|s| s.score.is_finite()));
 }

@@ -345,15 +345,23 @@ impl Default for Options {
         }
     }
 }
-/// How many baseline occurrences one learned occurrence counts as. Learned
-/// text is tiny beside the baseline, so a lower weight leaves names and other
-/// personal words almost never suggested; see docs/personal-learning.md.
-const PERSONAL_WEIGHT: i64 = 500;
+/// How many baseline occurrences one learned occurrence counts as while little
+/// has been learned. Learned text is tiny beside the baseline, so a low weight
+/// leaves personal words almost never suggested; see docs/personal-learning.md.
+const PERSONAL_WEIGHT: f64 = 500.;
+/// Learned words at which the weight has halved. However much is learned,
+/// learned counts approach a bounded share of the baseline rather than
+/// outgrowing it.
+const PERSONAL_SATURATION: f64 = 2000.;
+/// Times a word the baseline lacks must be learned before it is suggested, so
+/// a single misspelling is not.
+const NEW_WORD_REPEATS: i64 = 2;
 pub struct Predictor {
     baseline: Counts,
-    combined: Counts,
+    /// Learned counts, combined with the baseline when predicting.
+    learned: Counts,
     personal: Option<Connection>,
-    /// The personal database's `data_version` when `combined` last matched it.
+    /// The personal database's `data_version` when `learned` last matched it.
     /// It changes only when another connection commits.
     seen: Option<i64>,
 }
@@ -421,8 +429,8 @@ impl Predictor {
             None
         };
         let mut result = Self {
-            baseline: counts.clone(),
-            combined: counts,
+            baseline: counts,
+            learned: Counts::default(),
             personal,
             seen: None,
         };
@@ -432,13 +440,13 @@ impl Predictor {
     /// Refresh the in-memory snapshot after another process changes personal learning.
     /// On failure the previous prediction snapshot is retained.
     pub fn refresh_personal(&mut self) -> Result<()> {
-        let mut combined = self.baseline.clone();
+        let mut learned = Counts::default();
         if let Some(db) = &mut self.personal {
             let tx = db.transaction()?;
             if check(&tx)? != "personal" {
                 return Err(Error::Invalid("expected personal database".into()));
             }
-            combined.merge(&load_checked(&tx, "personal")?, PERSONAL_WEIGHT);
+            learned = load_checked(&tx, "personal")?;
             let version = data_version(&tx)?;
             if let Err(error) = tx.commit() {
                 // The outcome is unknown, so the next write reloads.
@@ -447,8 +455,31 @@ impl Predictor {
             }
             self.seen = Some(version);
         }
-        self.combined = combined;
+        self.learned = learned;
         Ok(())
+    }
+    /// The current weight of one learned occurrence.
+    fn personal_weight(&self) -> f64 {
+        // Summed as floats: stored counts are bounded one by one, not in total.
+        let learned: f64 = self
+            .learned
+            .0
+            .get(&Vec::new())
+            .map_or(0., |w| w.values().map(|c| *c as f64).sum());
+        PERSONAL_WEIGHT / (1. + learned / PERSONAL_SATURATION)
+    }
+    /// Whether learned counts of `word` are used: always for words the
+    /// baseline knows, and for others once learned `NEW_WORD_REPEATS` times.
+    fn known(&self, word: &str) -> bool {
+        let count = |counts: &Counts| {
+            counts
+                .0
+                .get(&Vec::new())
+                .and_then(|w| w.get(word))
+                .copied()
+                .unwrap_or(0)
+        };
+        count(&self.baseline) > 0 || count(&self.learned) >= NEW_WORD_REPEATS
     }
     pub fn predict(&self, before: &str, prefix: &str, options: Options) -> Vec<Suggestion> {
         let prefix = normalize(prefix);
@@ -460,35 +491,68 @@ impl Predictor {
             .next()
             .unwrap_or("");
         let context = sentences(tail).pop().unwrap_or_default();
+        let personal = self.personal_weight();
+        let empty = BTreeMap::new();
         let mut distributions = Vec::new();
         for (n, weight) in [(0, 0.1), (1, 0.3), (2, 0.6)] {
             if n > context.len() || (options.unigram_only && n != 0) {
                 continue;
             }
-            if let Some(words) = self.combined.0.get(&context[context.len() - n..]) {
-                let total: f64 = words.values().map(|c| *c as f64).sum();
-                distributions.push((words, total, weight));
+            let key = &context[context.len() - n..];
+            let base = self.baseline.0.get(key);
+            let learned = self
+                .learned
+                .0
+                .get(key)
+                .filter(|words| words.keys().any(|w| self.known(w)));
+            if base.is_none() && learned.is_none() {
+                continue;
+            }
+            let base = base.unwrap_or(&empty);
+            let mut total: f64 = base.values().map(|c| *c as f64).sum();
+            if let Some(learned) = learned {
+                let own: f64 = learned
+                    .iter()
+                    .filter(|(w, _)| self.known(w))
+                    .map(|(_, c)| *c as f64)
+                    .sum();
+                total += personal * own;
+            }
+            distributions.push((base, learned, total, weight));
+        }
+        let weight_sum: f64 = distributions.iter().map(|(_, _, _, w)| w).sum();
+        // Baseline words, and learned words once known, starting with the prefix.
+        let mut words: BTreeSet<&String> = BTreeSet::new();
+        for counts in [&self.baseline, &self.learned] {
+            if let Some(vocabulary) = counts.0.get(&Vec::new()) {
+                words.extend(
+                    vocabulary
+                        .range(prefix.clone()..)
+                        .take_while(|(w, _)| w.starts_with(&prefix))
+                        .map(|(w, _)| w)
+                        .filter(|w| self.known(w)),
+                );
             }
         }
-        let weight_sum: f64 = distributions.iter().map(|(_, _, w)| w).sum();
-        let mut result = Vec::new();
-        if let Some(vocabulary) = self.combined.0.get(&Vec::new()) {
-            for (word, _) in vocabulary.range(prefix.clone()..) {
-                if !word.starts_with(&prefix) {
-                    break;
-                }
+        let mut result: Vec<Suggestion> = words
+            .into_iter()
+            .map(|word| {
                 let score = distributions
                     .iter()
-                    .map(|(words, total, w)| {
-                        words.get(word).copied().unwrap_or(0) as f64 / total * w / weight_sum
+                    .map(|(base, learned, total, w)| {
+                        let own = learned.and_then(|l| l.get(word)).copied().unwrap_or(0);
+                        (base.get(word).copied().unwrap_or(0) as f64 + personal * own as f64)
+                            / total
+                            * w
+                            / weight_sum
                     })
                     .sum();
-                result.push(Suggestion {
+                Suggestion {
                     word: word.clone(),
                     score,
-                });
-            }
-        }
+                }
+            })
+            .collect();
         result.sort_unstable_by(|a, b| {
             b.score
                 .total_cmp(&a.score)
@@ -524,12 +588,10 @@ impl Predictor {
         // A connection's own commits leave its data_version unchanged.
         let version = data_version(&tx)?;
         let current = self.seen == Some(version) && standard_schema(&tx)?;
-        let combined = if current {
+        let reloaded = if current {
             None
         } else {
-            let mut combined = self.baseline.clone();
-            combined.merge(&load_checked(&tx, "personal")?, PERSONAL_WEIGHT);
-            Some(combined)
+            Some(load_checked(&tx, "personal")?)
         };
         if let Err(error) = tx.commit() {
             // The outcome is unknown, so the next write reloads.
@@ -537,9 +599,9 @@ impl Predictor {
             return Err(error.into());
         }
         self.seen = Some(version);
-        match combined {
-            Some(combined) => self.combined = combined,
-            None if imported => self.combined.merge(&delta, PERSONAL_WEIGHT),
+        match reloaded {
+            Some(learned) => self.learned = learned,
+            None if imported => self.learned.merge(&delta, 1),
             None => {}
         }
         Ok(imported)
@@ -556,7 +618,6 @@ impl Predictor {
             .personal
             .as_mut()
             .ok_or_else(|| Error::Invalid("personal database required".into()))?;
-        let combined = self.baseline.clone();
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
         if check(&tx)? != "personal" {
             return Err(Error::Invalid("expected personal database".into()));
@@ -579,12 +640,12 @@ impl Predictor {
             return Err(error.into());
         }
         self.seen = Some(version);
-        self.combined = combined;
+        self.learned = Counts::default();
         Ok(())
     }
     /// Approximate bytes of stored UTF-8 keys and counts, excluding allocator/tree overhead.
     pub fn model_payload_bytes(&self) -> usize {
-        [&self.baseline, &self.combined]
+        [&self.baseline, &self.learned]
             .iter()
             .map(|counts| {
                 counts
@@ -604,17 +665,33 @@ impl Predictor {
 mod tests {
     use super::*;
 
-    /// Adds a word to the baseline that only a full reload copies into the
-    /// snapshot.
+    /// Adds a learned count only memory has, which a reload from the
+    /// database removes and adding counts in place keeps.
     fn mark(p: &mut Predictor, word: &str) {
-        p.baseline
+        p.learned
             .0
             .entry(vec![])
             .or_default()
             .insert(word.into(), 1);
     }
     fn reloaded(p: &Predictor, word: &str) -> bool {
-        p.combined.0[&Vec::new()].contains_key(word)
+        !p.learned.0[&Vec::new()].contains_key(word)
+    }
+
+    #[test]
+    fn the_learned_weight_halves_as_much_is_learned() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("base.sqlite");
+        let personal = dir.path().join("personal.sqlite");
+        build(&base, "hello water", "fixture").unwrap();
+        let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+        assert_eq!(p.personal_weight(), PERSONAL_WEIGHT);
+        p.learned
+            .0
+            .entry(vec![])
+            .or_default()
+            .insert("hello".into(), PERSONAL_SATURATION as i64);
+        assert_eq!(p.personal_weight(), PERSONAL_WEIGHT / 2.);
     }
 
     #[test]

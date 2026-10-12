@@ -128,10 +128,10 @@ fn example() -> Result<()> {
 Fallible operations return typed `Error` values. Reuse a long-lived predictor;
 keep loading, imports, learning, refresh and resets on a worker thread. Prediction
 uses memory only. The model uses unigram/bigram/trigram weights **0.1/0.3/0.6**,
-renormalized over available contexts, and combines baseline counts with **500×**
-personal counts before probability calculation. Learned text is tiny beside the
-baseline, so a lower weight leaves personal words almost never suggested; see
-[personal learning](docs/personal-learning.md). Prefix matches rank by score,
+renormalized over available contexts. Learned counts are kept apart from the
+baseline and added to it when predicting, one learned occurrence counting as up to
+**500** baseline ones, less as more is learned. A word the baseline lacks is
+suggested once learned twice. See [personal learning](docs/personal-learning.md). Prefix matches rank by score,
 then alphabetically. Schema v1 and existing personal databases remain compatible.
 
 ## Validation and model selection

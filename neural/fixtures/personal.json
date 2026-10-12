@@ -1,5 +1,5 @@
 {
-  "note": "Synthetic text written for this evaluation, imitating one person's typing with their own names, places, care words and interests. It is not real user data. `learn` is learned into a personal database; `test` is held out and reuses the same vocabulary in new sentences.",
+  "note": "Synthetic text written for this evaluation, imitating one person's typing with their own names, places, care words and interests. It is not real user data. `learn` is learned into a personal database; `test` is held out and reuses the same vocabulary in new sentences. Four learn sentences each contain one misspelling, listed in `misspellings`, to check that a word typed wrongly once is not suggested.",
   "learn": [
     "Siobhan is coming at ten to help with the hoist.",
     "Can you ask Siobhan to bring my blue cardigan?",
@@ -40,7 +40,11 @@
     "Can you open the curtains please?",
     "I am too warm, can you turn the heating down?",
     "Thank you, that is much better.",
-    "I love you all very much."
+    "I love you all very much.",
+    "I hav a sore throat today.",
+    "Can you open teh window please?",
+    "I am tired becuase I slept badly.",
+    "Siobahn said she will be late."
   ],
   "test": [
     "Is Siobhan working this weekend?",
@@ -68,5 +72,11 @@
     "Can you get the suction ready please?",
     "Aoife says the physio is cancelled.",
     "I am tired, can I go to bed?"
+  ],
+  "misspellings": [
+    "hav",
+    "teh",
+    "becuase",
+    "siobahn"
   ]
 }

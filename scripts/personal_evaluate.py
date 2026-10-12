@@ -44,8 +44,10 @@ def run(args, personal, items):
     if personal:
         command += ['--personal', str(personal)]
     client = Client(command)
-    hits = dict(all=0, personal=0, generated=0)
+    hits = dict(all=0, personal=0, generated=0, misspelled=0)
+    misspellings = set(json.loads(FIXTURE.read_bytes())['misspellings'])
     times = []
+    failures = 0
     try:
         for before, prefix, target, own in items:
             client.process.stdin.write('{"command":"reset"}\n')
@@ -56,23 +58,31 @@ def run(args, personal, items):
                                                        prefix=prefix, session=1)) + '\n')
             client.process.stdin.flush()
             immediate = client.receive()
+            assert immediate['type'] == 'immediate', immediate['type']
             instant = immediate['result']['words']
             generated = []
             if immediate['result']['refinement_requested']:
                 reply = client.receive()
                 if reply['type'] == 'refined':
+                    assert reply['result']['request_id'] == immediate['result']['request_id']
                     generated = reply['result']['words']
                     times.append((time.perf_counter() - start) * 1000)
+                else:
+                    failures += 1
+                    client.retry()
             hit = target in instant + generated
             hits['all'] += hit
             hits['personal'] += hit and own
             hits['generated'] += target in generated
+            hits['misspelled'] += bool(misspellings.intersection(instant + generated))
     finally:
         client.close()
     count = len(items)
     own = sum(item[3] for item in items)
     return dict(top6=hits['all'] / count, personal_top6=hits['personal'] / own,
-                generated_hits=hits['generated'] / count, latency=timing(times))
+                generated_hits=hits['generated'] / count,
+                misspelling_in_slots=hits['misspelled'] / count,
+                generation_failures=failures, latency=timing(times))
 
 
 def main():
@@ -91,7 +101,7 @@ def main():
         # Newlines separate context exactly as separate learn calls would.
         text = '\n'.join(json.loads(FIXTURE.read_bytes())['learn'])
         subprocess.run([str(args.learner), 'learn', '--baseline', str(args.baseline),
-                        '--personal', str(personal)], input=text, text=True,
+                        '--personal', str(personal)], input=text, text=True, encoding='utf-8',
                        check=True, capture_output=True)
         report = dict(
             queries=len(items), personal_queries=sum(item[3] for item in items),
