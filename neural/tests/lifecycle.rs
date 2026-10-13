@@ -412,3 +412,134 @@ fn generation_rejects_old_protocol_without_retry_loop() {
     until(|| matches!(engine.status(), Status::Unavailable(_)));
     assert_eq!(engine.generate("", "", 1, &[], 3).unwrap(), None);
 }
+
+fn phrase(a: &str, b: &str) -> Vec<String> {
+    vec![a.to_owned(), b.to_owned()]
+}
+
+#[test]
+fn phrase_generation_is_async_normalized_and_latest_only() {
+    let (_temp, predictor, mut engine) = fixture("delay");
+    until(|| engine.status() == Status::Ready);
+    let start = Instant::now();
+    let first = engine
+        .generate_phrases("old. say", "he", 1, &[phrase("HELLO", "There")], 3)
+        .unwrap()
+        .unwrap();
+    assert!(start.elapsed() < Duration::from_millis(50));
+    let latest = engine
+        .generate_phrases("say", "HE", 2, &[phrase("hello", "there")], 2)
+        .unwrap()
+        .unwrap();
+    assert_ne!(first, latest);
+    let mut result = None;
+    until(|| {
+        result = engine.poll();
+        result.is_some()
+    });
+    let result = result.unwrap();
+    assert_eq!(result.request_id, latest);
+    assert!(result.words.is_empty());
+    assert_eq!(
+        result.phrases,
+        [phrase("help", "me"), phrase("helium", "balloon")]
+    );
+    // A word request after a phrase request replaces it, and vice versa.
+    engine.generate_phrases("", "", 2, &[], 3).unwrap();
+    let word = engine.generate("", "he", 2, &[], 1).unwrap().unwrap();
+    let mut result = None;
+    until(|| {
+        result = engine.poll();
+        result.is_some()
+    });
+    let result = result.unwrap();
+    assert_eq!(result.request_id, word);
+    assert_eq!(result.words, ["hello"]);
+    assert!(result.phrases.is_empty());
+    engine.generate_phrases("", "", 2, &[], 3).unwrap();
+    engine.reset();
+    thread::sleep(Duration::from_millis(150));
+    assert!(engine.poll().is_none());
+    for exclude in [
+        vec![phrase("a", "b"); 4],
+        vec![vec!["a".to_owned()]],
+        vec![vec!["a".to_owned(); 3]],
+    ] {
+        assert!(engine.generate_phrases("", "", 2, &exclude, 3).is_err());
+    }
+    assert!(engine.generate_phrases("", "", 2, &[], 4).is_err());
+    assert_eq!(engine.generate_phrases("", "", 2, &[], 0).unwrap(), None);
+    drop(predictor);
+}
+
+#[test]
+fn phrase_generation_rejects_invalid_workers_and_requires_retry() {
+    for mode in ["foreign", "duplicate", "single", "id", "stall", "crash"] {
+        let (temp, _predictor, mut engine) = fixture(mode);
+        until(|| engine.status() == Status::Ready);
+        engine.generate_phrases("", "", 1, &[], 3).unwrap();
+        until(|| matches!(engine.status(), Status::Unavailable(_)));
+        assert!(engine.poll().is_none());
+        assert_eq!(engine.generate_phrases("", "", 1, &[], 3).unwrap(), None);
+        std::fs::write(temp.path().join("mode"), "delay").unwrap();
+        engine.retry();
+        until(|| engine.status() == Status::Ready);
+        let id = engine
+            .generate_phrases("", "he", 2, &[phrase("HELLO", "there")], 3)
+            .unwrap()
+            .unwrap();
+        let mut result = None;
+        until(|| {
+            result = engine.poll();
+            result.is_some()
+        });
+        let result = result.unwrap();
+        assert_eq!(result.request_id, id);
+        assert_eq!(
+            result.phrases,
+            [phrase("help", "me"), phrase("helium", "balloon")]
+        );
+    }
+}
+
+#[test]
+fn cli_generates_statistical_then_neural_phrases() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let (temp, _predictor, mut engine) = fixture("delay");
+    engine.shutdown();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_switchify-prediction-neural"))
+        .arg("once")
+        .arg("--baseline")
+        .arg(temp.path().join("baseline.sqlite"))
+        .arg("--bundle")
+        .arg(temp.path())
+        .arg("--worker")
+        .arg(env!("CARGO_BIN_EXE_fake-worker"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"{\"command\":\"generate_phrases\",\"before\":\"alpha \",\"prefix\":\"be\",\"session\":1}\n")
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    let lines: Vec<serde_json::Value> = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let immediate = lines.iter().find(|l| l["type"] == "immediate").unwrap();
+    assert_eq!(
+        immediate["result"]["phrases"],
+        serde_json::json!([["beta", "gamma"]])
+    );
+    let refined = lines.iter().find(|l| l["type"] == "refined").unwrap();
+    assert_eq!(refined["result"]["phrases"], serde_json::json!([]));
+    assert_eq!(refined["result"]["words"], serde_json::json!([]));
+}

@@ -54,6 +54,16 @@ fn run() -> anyhow::Result<()> {
                     cache_hit,
                 }
             }
+            Command::GeneratePhrases(query) => {
+                anyhow::ensure!(query.valid(), "query");
+                let (phrases, cache_hit) = model.generate_phrases(&query)?;
+                anyhow::ensure!(query.accepts(&phrases), "generation");
+                Reply::GeneratedPhrases {
+                    id: query.id,
+                    phrases,
+                    cache_hit,
+                }
+            }
             Command::Predict(query) => {
                 anyhow::ensure!(
                     query.before.len() <= 16_384

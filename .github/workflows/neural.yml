@@ -82,6 +82,12 @@ jobs:
           ext=""
           if [ "$RUNNER_OS" = "Windows" ]; then ext=".exe"; fi
           python scripts/generation_evaluate.py --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-${{ runner.os }}.json"
+      - name: Measure 1000 warmed two-word phrase queries
+        shell: bash
+        run: |
+          ext=""
+          if [ "$RUNNER_OS" = "Windows" ]; then ext=".exe"; fi
+          python scripts/generation_evaluate.py --phrases --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-phrases-${{ runner.os }}.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

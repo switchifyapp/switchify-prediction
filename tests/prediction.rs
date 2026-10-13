@@ -5,7 +5,7 @@ use std::{
     process::{Command, Stdio},
 };
 use switchify_prediction::{
-    Options, Predictor, build, digest, evaluation, normalize, sentences, validate,
+    Options, Phrase, Predictor, build, digest, evaluation, normalize, sentences, validate,
 };
 
 fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -200,6 +200,17 @@ fn cli_build_predict_learn_validate() {
         .write_all(b"hello walnut. hello walnut")
         .unwrap();
     assert!(child.wait().unwrap().success());
+    let output = Command::new(exe)
+        .args(["predict", "--phrases", "--baseline"])
+        .arg(&db)
+        .arg("--personal")
+        .arg(&personal)
+        .args(["--before", "", "--prefix", "he"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value[0]["words"], serde_json::json!(["hello", "walnut"]));
     let output = Command::new(exe)
         .args(["predict", "--baseline"])
         .arg(&db)
@@ -676,6 +687,14 @@ fn prediction_cost_on_production_baseline() {
                 "{label} {before:?} {prefix:?}: {:?}",
                 started.elapsed() / 50
             );
+            let started = std::time::Instant::now();
+            for _ in 0..50 {
+                p.predict_phrases(before, prefix, options);
+            }
+            println!(
+                "{label} phrases {before:?} {prefix:?}: {:?}",
+                started.elapsed() / 50
+            );
         }
     };
     time(&p, "none");
@@ -710,4 +729,108 @@ fn prediction_cost_on_production_baseline() {
         );
         time(&p, label);
     }
+}
+
+fn phrases(p: &Predictor, context: &str, prefix: &str) -> Vec<Vec<String>> {
+    p.predict_phrases(
+        context,
+        prefix,
+        Options {
+            min_chars: 0,
+            ..Options::default()
+        },
+    )
+    .into_iter()
+    .map(|s| s.words)
+    .collect()
+}
+
+#[test]
+fn phrases_complete_the_prefix_then_follow_observed_words() {
+    let (_tmp, path) = fixture();
+    let p = Predictor::open(&path, None).unwrap();
+    assert_eq!(
+        phrases(&p, "I ", "dr"),
+        [vec!["drink", "water"], vec!["drink", "wine"]]
+    );
+    assert_eq!(phrases(&p, "We ", "")[0], ["walk", "home"]);
+    // Every phrase continues the prefix with a word seen after the first word.
+    for phrase in phrases(&p, "", "") {
+        assert_eq!(phrase.len(), 2);
+        assert!(phrase[0] != "home" && phrase[0] != "apricot");
+    }
+    // A sentence never continues across its punctuation, so "home" and
+    // "apricot" end sentences and start no phrase.
+    assert!(phrases(&p, "We walk ", "ho").is_empty());
+    assert!(phrases(&p, "", "apr").is_empty());
+    assert!(phrases(&p, "", "zzzz").is_empty());
+    assert!(p.predict_phrases("", "d", Options::default()).is_empty());
+    for options in [
+        Options {
+            limit: 0,
+            min_chars: 0,
+            unigram_only: false,
+        },
+        Options {
+            limit: 5,
+            min_chars: 0,
+            unigram_only: true,
+        },
+    ] {
+        assert!(p.predict_phrases("I ", "dr", options).is_empty());
+    }
+    let limited = p.predict_phrases(
+        "",
+        "",
+        Options {
+            limit: 2,
+            min_chars: 0,
+            unigram_only: false,
+        },
+    );
+    assert_eq!(limited.len(), 2);
+}
+
+#[test]
+fn phrase_scores_are_the_product_of_both_word_scores() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = tmp.path().join("baseline.sqlite");
+    let personal = tmp.path().join("personal.sqlite");
+    build(&base, "i like tea. i like coffee. we drink coffee.", "test").unwrap();
+    let mut p = Predictor::open(&base, Some(&personal)).unwrap();
+    let opts = Options {
+        limit: 100,
+        min_chars: 0,
+        unigram_only: false,
+    };
+    let like = p.predict("i ", "like", opts).remove(0).score;
+    let tea = p.predict("i like ", "tea", opts).remove(0).score;
+    let coffee = p.predict("i like ", "coffee", opts).remove(0).score;
+    let result = p.predict_phrases("i ", "li", opts);
+    assert_eq!(
+        result,
+        [
+            Phrase {
+                words: vec!["like".into(), "coffee".into()],
+                score: like * coffee,
+            },
+            Phrase {
+                words: vec!["like".into(), "tea".into()],
+                score: like * tea,
+            },
+        ]
+    );
+    // A follower learned twice joins the phrases with its learned weight.
+    p.learn("i like walnuts. i like walnuts.").unwrap();
+    let walnuts = p.predict("i like ", "walnuts", opts).remove(0).score;
+    let like = p.predict("i ", "like", opts).remove(0).score;
+    let result = p.predict_phrases("i ", "li", opts);
+    assert_eq!(result[0].words, ["like", "walnuts"]);
+    assert!((result[0].score - like * walnuts).abs() < 1e-15);
+    let total: f64 = p
+        .predict_phrases("i ", "", opts)
+        .iter()
+        .map(|s| s.score)
+        .sum();
+    assert!(total <= 1.0 + 1e-12);
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Compare six reserved slots against reranking and six statistical suggestions.
+"""Compare six reserved slots against reranking and six statistical suggestions,
+or, with --phrases, two-word phrases from both engines.
 
 Only frozen synthetic corpus text is submitted. Reports contain aggregate counts,
 timing, hashes and process-tree RSS, never words or prompts. No desktop input.
@@ -10,20 +11,21 @@ import collections
 import json
 from pathlib import Path
 import platform
+import re
 import sqlite3
 import time
 
-from neural_evaluate import Client, ROOT, natural_workload, sha, timing, workload
+from neural_evaluate import Client, ROOT, natural_workload, sha, timing, words, workload
 
 
-def generated(client, before, prefix):
+def generated(client, before, prefix, command='generate'):
     # Match the desktop's changed-context reset. The comparison mode must not
     # prefill generation's context cache before the measured request.
     client.process.stdin.write('{"command":"reset"}\n')
     client.process.stdin.flush()
     assert client.receive()['type'] == 'reset'
     started = time.perf_counter()
-    client.process.stdin.write(json.dumps(dict(command='generate', before=before,
+    client.process.stdin.write(json.dumps(dict(command=command, before=before,
                                               prefix=prefix, session=1)) + '\n')
     client.process.stdin.flush()
     immediate = client.receive()
@@ -39,14 +41,122 @@ def generated(client, before, prefix):
     return immediate, reply, elapsed, total
 
 
+def sample(queries, samples):
+    # Cover every corpus partition and prefix length, even in a bounded run.
+    if not samples:
+        return queries
+    return [queries[i * len(queries) // samples % len(queries)] for i in range(samples)]
+
+
+def following():
+    """The word after each fixture position in the same sentence, keyed as the
+    workload keys queries. Phrases never cross sentence punctuation."""
+    result = {}
+    for name in ['regression.json', 'general-writing.json']:
+        for texts in json.loads((ROOT / 'neural/fixtures' / name).read_bytes()).values():
+            for text in texts:
+                tokens = words(text)
+                start = 0
+                for sentence in re.split(r'[.!?\n\r]', text):
+                    count = len(words(sentence))
+                    for i in range(start, start + count - 1):
+                        result.setdefault((' '.join(tokens[:i]), tokens[i]), tokens[i + 1])
+                    start += count
+                assert start == len(tokens)
+    return result
+
+
+def evaluate_phrases(args, queries):
+    """Each query whose target has a following word in its sentence asks both
+    engines for phrases. The target phrase is the target and that word.
+    Sampling follows that filter, so a bounded run measures `samples` queries."""
+    after = following()
+    targets = [(q, after.get((q[4], q[6]))) for q in queries]
+    targets = [(q, [q[6], nxt]) for q, nxt in targets if nxt]
+    targets = sample(targets, args.samples)
+    if args.natural_context:
+        natural = natural_workload([q for q, _ in targets])
+        targets = [(n, phrase) for n, (_, phrase) in zip(natural, targets)]
+    command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
+               '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
+    if args.accelerated_worker:
+        command += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
+    client = Client(command)
+    times = collections.defaultdict(list)
+    cells = collections.defaultdict(collections.Counter)
+    failures = collections.Counter()
+    warmup_failures = 0
+    try:
+        for query, _ in targets[:20]:
+            _, reply, _, _ = generated(client, query[4], query[5], 'generate_phrases')
+            if reply is None:
+                warmup_failures += 1
+                client.retry()
+        for index, ((_, part, domain, n, before, prefix, _), target) in enumerate(targets):
+            immediate, reply, latency, total = generated(client, before, prefix, 'generate_phrases')
+            statistical = immediate['result']['phrases']
+            neural = reply['result']['phrases'] if reply else []
+            for phrases in [statistical, neural]:
+                assert len(phrases) <= 3 and all(len(p) == 2 for p in phrases)
+                assert len({tuple(p) for p in phrases}) == len(phrases)
+                assert all(p[0].startswith(prefix) for p in phrases)
+            assert not {tuple(p) for p in neural} & {tuple(p) for p in statistical}
+            times['immediate_with_ipc'].append(latency)
+            if reply:
+                times['generation_with_ipc'].append(total)
+            else:
+                failures['generation'] += 1
+            cell = cells[f'{part}/{domain}/{n}']
+            cell['queries'] += 1
+            cell['statistical_phrases'] += len(statistical)
+            cell['generated_phrases'] += len(neural)
+            cell['filled_neural_queries'] += bool(neural)
+            cell['generation_failures'] += reply is None
+            cell['generation_context_hits'] += bool(reply and reply['result']['cache_hit'])
+            for mode, phrases in [('statistical', statistical), ('neural', neural),
+                                  ('six_slots', statistical + neural)]:
+                cell[mode + '_phrase_hits'] += target in phrases
+                cell[mode + '_first_word_hits'] += any(p[0] == target[0] for p in phrases)
+            cell['gains_vs_statistical'] += target not in statistical and target in neural
+            if reply is None:
+                client.retry()  # Explicit benchmark recovery, not production policy.
+            if (index + 1) % 100 == 0:
+                print(json.dumps({'completed': index + 1, 'failures': dict(failures)}), flush=True)
+    finally:
+        client.close()
+    for cell in cells.values():
+        for mode in ['statistical', 'neural', 'six_slots']:
+            cell[mode + '_phrase_accuracy'] = cell[mode + '_phrase_hits'] / cell['queries']
+            cell[mode + '_first_word_accuracy'] = cell[mode + '_first_word_hits'] / cell['queries']
+        cell['neural_slot_fill_rate'] = cell['generated_phrases'] / (cell['queries'] * 3)
+    totals = collections.Counter()
+    for cell in cells.values():
+        totals.update({k: v for k, v in cell.items() if isinstance(v, int)})
+    summary = {mode + '_phrase_accuracy': totals[mode + '_phrase_hits'] / max(totals['queries'], 1)
+               for mode in ['statistical', 'neural', 'six_slots']}
+    report = dict(schema=1, mode='phrases',
+                  policy=json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy'],
+                  platform=platform.platform(), queries=len(targets), warmup_queries=min(20, len(targets)),
+                  warmup_failures=warmup_failures, failures=dict(failures), summary=summary,
+                  latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
+                  peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
+                  natural_context=args.natural_context,
+                  cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
+                  accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
+                  fixture_hashes={n: sha(ROOT / 'neural/fixtures' / n) for n in ['regression.json', 'general-writing.json']},
+                  note='A hit needs both words. Fixture overlap with model pretraining is unknown. Explicit benchmark retries counted; production never retries automatically.',
+                  production_qualified=False)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+
+
 def evaluate(args):
     queries = workload()
+    if args.phrases:
+        return evaluate_phrases(args, queries)
     if args.natural_context:
         queries = natural_workload(queries)
-    # Cover every corpus partition and prefix length, even in a bounded run.
-    if args.samples:
-        queries = [queries[i * len(queries) // args.samples % len(queries)]
-                   for i in range(args.samples)]
+    queries = sample(queries, args.samples)
     db = sqlite3.connect(args.baseline.resolve().as_uri() + '?mode=ro', uri=True)
     vocabulary = {row[0] for row in db.execute('SELECT word FROM vocabulary')}
     db.close()
@@ -133,6 +243,8 @@ def main():
     parser.add_argument('--samples', type=int, default=0, help='0 uses the full frozen workload')
     parser.add_argument('--natural-context', action='store_true',
                         help='send preceding text with its original case and punctuation')
+    parser.add_argument('--phrases', action='store_true',
+                        help='measure two-word phrases instead of six word slots')
     args = parser.parse_args()
     if args.samples < 0:
         parser.error('samples must be nonnegative')

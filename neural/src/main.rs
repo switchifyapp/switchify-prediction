@@ -52,6 +52,11 @@ enum Input {
         prefix: String,
         session: u64,
     },
+    GeneratePhrases {
+        before: String,
+        prefix: String,
+        session: u64,
+    },
     Predict {
         before: String,
         prefix: String,
@@ -172,6 +177,38 @@ fn run(args: Run, once: bool) -> Result<(), ()> {
                 outstanding = id.is_some();
                 emit(json!({"type":"immediate", "result": {
                     "request_id":id, "words":words, "statistical_six":statistical,
+                    "status":engine.status(), "refinement_requested":outstanding
+                }, "elapsed_ms":started.elapsed().as_secs_f64()*1000.}))?;
+                if once {
+                    eof = true;
+                }
+            }
+            Ok(Ok(Input::GeneratePhrases {
+                before,
+                prefix,
+                session,
+            })) => {
+                started = Instant::now();
+                predicted = true;
+                let statistical: Vec<Vec<String>> = predictor
+                    .predict_phrases(
+                        &before,
+                        &prefix,
+                        Options {
+                            limit: 3,
+                            min_chars: 0,
+                            unigram_only: false,
+                        },
+                    )
+                    .into_iter()
+                    .map(|s| s.words)
+                    .collect();
+                let id = engine
+                    .generate_phrases(&before, &prefix, session, &statistical, 3)
+                    .map_err(|_| ())?;
+                outstanding = id.is_some();
+                emit(json!({"type":"immediate", "result": {
+                    "request_id":id, "phrases":statistical,
                     "status":engine.status(), "refinement_requested":outstanding
                 }, "elapsed_ms":started.elapsed().as_secs_f64()*1000.}))?;
                 if once {
