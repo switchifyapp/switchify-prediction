@@ -71,9 +71,38 @@ foreign, duplicate, single-word, wrong-ID, stalled and crashed replies.
 
 `scripts/generation_evaluate.py --phrases` measures phrase generation on the
 frozen fixtures, for each query whose target has a following word in the same
-sentence. A hit needs both words. Sampling follows that filter. It reports statistical, generated and combined phrase accuracy,
-first-word accuracy, fill rate, failures and latency. CI runs 1,000 queries on
-Windows and macOS.
+sentence. A hit needs both words. Sampling follows that filter. It reports
+statistical, generated and combined phrase accuracy, first-word accuracy, fill
+rate, failures and latency. CI runs 1,000 queries on Windows and macOS.
+
+### Results
+
+The first CI runs used the portable worker and the production baseline, with
+three statistical and three generated phrases. Neither platform had a failure.
+
+| Phrase accuracy (both words) | macOS ARM | Windows x64 |
+|---|---|---|
+| Statistical, three phrases | 5.4% | 5.4% |
+| Generated, three phrases | 19.9% | 19.8% |
+| All six | 25.3% | 25.2% |
+| Generation median / p95 | 208 / 505 ms | 1,329 / 1,582 ms |
+
+All six phrases hit 5% of queries with no typed letters, 26% to 27% after two
+letters and about 40% after four. On the same runs, single-word generation took
+a median of 170 ms on macOS and 1,270 ms on Windows, so phrases cost little more
+than words. The Windows runner is slow for both; its search more often reaches
+the cutoff, and its generated slots fill less often (89% after four letters,
+against 94% on macOS). The fixtures' overlap with model pretraining is unknown,
+so these are regression measurements, not estimates of accuracy for users.
+
+The statistical engine's phrases are weak because its second word depends only
+on the two words before it. Its three phrases often share a first word, such as
+"like to", "like a" and "like the". On the fixtures with prefixes of up to four
+letters, offering only the best phrase for each first word raised first-word
+accuracy, for example from 35% to 41% after two letters. It lowered
+whole-phrase accuracy from 5.7% to 4.5%. Taking first words in `predict` order
+did the same. Since a phrase helps only when both words are right, the joint
+ranking stays.
 
 On a Windows x64 development machine, eight hand-written queries with the
 release CLI generated phrases in at most 563 ms with the portable worker and
