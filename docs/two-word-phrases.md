@@ -99,9 +99,10 @@ The statistical engine's phrases are weak because its second word depends only
 on the two words before it. Its three phrases often share a first word, such as
 "like to", "like a" and "like the". On the fixtures with prefixes of up to four
 letters, offering only the best phrase for each first word raised first-word
-accuracy, for example from 35% to 41% after two letters. It lowered
-whole-phrase accuracy from 5.7% to 4.5%. Taking first words in `predict` order
-did the same. Since a phrase helps only when both words are right, the joint
+accuracy at every prefix length, for example from 35% to 41% after two letters.
+It lowered whole-phrase accuracy at every length from one letter, for example
+from 5.7% to 4.5% after two letters. Taking first words in `predict` order did
+the same. Since a phrase helps only when both words are right, the joint
 ranking stays.
 
 On a Windows x64 development machine, eight hand-written queries with the
