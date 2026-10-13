@@ -49,9 +49,9 @@ The worker runs one beam search over both words, not two searches.
   after the second is at least 0.5, as for single words. Its score is the joint
   probability of the whole byte sequence, so it includes the first word's
   boundary.
-- Each word may take up to eight tokens. The budget stays at 64 forward
-  evaluations including uncached context, and the search cutoff stays at
-  1,600 ms.
+- A phrase may take up to 16 tokens in total, twice the single-word depth, shared
+  between its words. The budget stays at 64 forward evaluations including
+  uncached context, and the search cutoff stays at 1,600 ms.
 - Early stopping keeps its guarantee. Within the second word, later completions
   continue the word, as before. A beam still in its first word may complete
   through a following space, so all its probability stays open. A test compares
@@ -70,8 +70,8 @@ budget, protocol limits, and the phrase lifecycle with fake workers, including
 foreign, duplicate, single-word, wrong-ID, stalled and crashed replies.
 
 `scripts/generation_evaluate.py --phrases` measures phrase generation on the
-frozen fixtures, for each query whose target has a following word. A hit needs
-both words. It reports statistical, generated and combined phrase accuracy,
+frozen fixtures, for each query whose target has a following word in the same
+sentence. A hit needs both words. Sampling follows that filter. It reports statistical, generated and combined phrase accuracy,
 first-word accuracy, fill rate, failures and latency. CI runs 1,000 queries on
 Windows and macOS.
 

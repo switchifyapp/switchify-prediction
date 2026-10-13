@@ -24,7 +24,7 @@
     "phrases": {
       "words": 2,
       "max_results": 3,
-      "max_tokens_per_word": 8,
+      "max_tokens_per_phrase": 16,
       "max_forward_evaluations": 64,
       "scoring": "joint probability of both whole words including the boundary after the second; the first word completes the prefix; normalized duplicates and exclusions removed",
       "minimum_boundary_probability": 0.5,

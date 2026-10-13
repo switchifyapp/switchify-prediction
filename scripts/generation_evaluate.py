@@ -11,6 +11,7 @@ import collections
 import json
 from pathlib import Path
 import platform
+import re
 import sqlite3
 import time
 
@@ -48,23 +49,31 @@ def sample(queries, samples):
 
 
 def following():
-    """The word after each fixture position, keyed as the workload keys queries."""
+    """The word after each fixture position in the same sentence, keyed as the
+    workload keys queries. Phrases never cross sentence punctuation."""
     result = {}
     for name in ['regression.json', 'general-writing.json']:
         for texts in json.loads((ROOT / 'neural/fixtures' / name).read_bytes()).values():
             for text in texts:
                 tokens = words(text)
-                for i in range(len(tokens) - 1):
-                    result.setdefault((' '.join(tokens[:i]), tokens[i]), tokens[i + 1])
+                start = 0
+                for sentence in re.split(r'[.!?\n\r]', text):
+                    count = len(words(sentence))
+                    for i in range(start, start + count - 1):
+                        result.setdefault((' '.join(tokens[:i]), tokens[i]), tokens[i + 1])
+                    start += count
+                assert start == len(tokens)
     return result
 
 
 def evaluate_phrases(args, queries):
     """Each query whose target has a following word in its sentence asks both
-    engines for phrases. The target phrase is the target and that word."""
+    engines for phrases. The target phrase is the target and that word.
+    Sampling follows that filter, so a bounded run measures `samples` queries."""
     after = following()
     targets = [(q, after.get((q[4], q[6]))) for q in queries]
     targets = [(q, [q[6], nxt]) for q, nxt in targets if nxt]
+    targets = sample(targets, args.samples)
     if args.natural_context:
         natural = natural_workload([q for q, _ in targets])
         targets = [(n, phrase) for n, (_, phrase) in zip(natural, targets)]
@@ -138,14 +147,13 @@ def evaluate_phrases(args, queries):
                   note='A hit needs both words. Fixture overlap with model pretraining is unknown. Explicit benchmark retries counted; production never retries automatically.',
                   production_qualified=False)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2) + '
-', encoding='utf-8')
+    args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 
 
 def evaluate(args):
     queries = workload()
     if args.phrases:
-        return evaluate_phrases(args, sample(queries, args.samples))
+        return evaluate_phrases(args, queries)
     if args.natural_context:
         queries = natural_workload(queries)
     queries = sample(queries, args.samples)

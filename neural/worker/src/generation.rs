@@ -9,7 +9,7 @@ use switchify_prediction_neural::protocol::{GenerationQuery, PhraseQuery, valid_
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 
 const WIDTH: usize = 8;
-/// Tokens per word; a phrase may use this many for each of its words.
+/// Search depth per word; a phrase shares this many per word between its words.
 const TOKENS: usize = 8;
 const EVALUATIONS: usize = 64;
 
