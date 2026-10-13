@@ -160,6 +160,7 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     let id = match &query {
                         Command::Predict(q) => q.id,
                         Command::Generate(q) => q.id,
+                        Command::GeneratePhrases(q) => q.id,
                         Command::Reset => return Err(Failure::Protocol),
                     };
                     if state.0.lock().unwrap().latest != id {
@@ -167,7 +168,7 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                     }
                     w.send(query.clone())?;
                     let reply = w.receive(&state, Duration::from_millis(REPLY_DEADLINE_MS))?;
-                    let (words, cache_hit) = match (query, reply) {
+                    let (words, phrases, cache_hit) = match (query, reply) {
                         (
                             Command::Predict(q),
                             Reply::Ranked {
@@ -184,7 +185,7 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                                 .len()
                                 == words.len() =>
                         {
-                            (words, cache_hit)
+                            (words, vec![], cache_hit)
                         }
                         (
                             Command::Generate(q),
@@ -193,7 +194,15 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                                 words,
                                 cache_hit,
                             },
-                        ) if actual == id && q.accepts(&words) => (words, cache_hit),
+                        ) if actual == id && q.accepts(&words) => (words, vec![], cache_hit),
+                        (
+                            Command::GeneratePhrases(q),
+                            Reply::GeneratedPhrases {
+                                id: actual,
+                                phrases,
+                                cache_hit,
+                            },
+                        ) if actual == id && q.accepts(&phrases) => (vec![], phrases, cache_hit),
                         _ => return Err(Failure::Protocol),
                     };
                     let mut s = state.0.lock().unwrap();
@@ -201,6 +210,7 @@ pub(super) fn run(config: Config, accelerated: bool, state: State) {
                         s.result = Some(Refined {
                             request_id: id,
                             words,
+                            phrases,
                             cache_hit,
                         });
                     }

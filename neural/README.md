@@ -75,7 +75,12 @@ returned request ID. A subsequent submit, generate or reset invalidates old resu
 The existing submit/reranking API is unchanged. The stream CLI accepts
 {"command":"generate","before":"please send the","prefix":"","session":1} on stdin.
 
-Worker protocol 2 is required; protocol 1 workers fail cleanly. Model weights and
+Refiner::generate_phrases(before, prefix, session, instant_phrases, 3) returns up
+to three two-word phrases the same way, in `Refined::phrases`; see
+[two-word phrases](../docs/two-word-phrases.md). The stream CLI accepts
+{"command":"generate_phrases","before":"I would","prefix":"","session":1}.
+
+Worker protocol 3 is required; older workers fail cleanly. Model weights and
 tokenizer hashes are unchanged. The manifest records beam width 8, at most 8 tokens
 per word, at most 64 forward evaluations including uncached context, and a 1600 ms
 search cutoff within the unchanged 2000 ms parent reply deadline. All extensions

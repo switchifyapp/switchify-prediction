@@ -123,6 +123,29 @@ impl Model {
         Ok((words, hit))
     }
 
+    pub fn generate_phrases(
+        &mut self,
+        query: &switchify_prediction_neural::protocol::PhraseQuery,
+    ) -> Result<(Vec<Vec<String>>, bool)> {
+        let started = std::time::Instant::now();
+        let hit = self.prepare(query.session, &query.before)?;
+        let prepared = self.prepared.as_ref().unwrap();
+        let mut state = prepared.state.clone();
+        let phrases = crate::generation::search_phrases(
+            query,
+            &self.pieces,
+            prepared.logits.clone(),
+            usize::from(!hit),
+            started,
+            |parents, tokens, depth| {
+                state.select(parents)?;
+                let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                state.forward(&ids, prepared.ids.len() + depth)
+            },
+        )?;
+        Ok((phrases, hit))
+    }
+
     pub fn rank(
         &mut self,
         session: u64,

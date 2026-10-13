@@ -42,6 +42,10 @@ are lowercase; insertion and capitalization are the application's responsibility
 Scores are interpolated probabilities before prefix filtering, not renormalized
 over the returned suggestions or calibrated confidence estimates.
 
+Add `--phrases` to suggest the next two words instead, as JSON with `words` and
+`score`: the current word completed from the prefix, then a word seen after it.
+See [two-word phrases](docs/two-word-phrases.md).
+
 ## Build reproducibly
 
 Requires Rust **1.97.1**, a C compiler for bundled SQLite, Python 3.9+ and curl.
@@ -116,9 +120,11 @@ fn example() -> Result<()> {
     let mut predictor = Predictor::open(
         Path::new("english.sqlite"), Some(Path::new("personal.sqlite")))?;
     let suggestions = predictor.predict("I would like ", "wa", Options::default());
+    let phrases = predictor.predict_phrases("I would ", "li", Options::default());
     predictor.learn("I would like watermelon.")?;
     predictor.refresh_personal()?;
     assert!(suggestions.len() <= 5);
+    assert!(phrases.iter().all(|p| p.words.len() == 2));
     Ok(())
 }
 ```

@@ -5,12 +5,43 @@ use std::{
     time::{Duration, Instant},
 };
 use switchify_prediction::normalize;
-use switchify_prediction_neural::protocol::{GenerationQuery, valid_word};
+use switchify_prediction_neural::protocol::{GenerationQuery, PhraseQuery, valid_word};
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 
 const WIDTH: usize = 8;
+/// Tokens per word; a phrase may use this many for each of its words.
 const TOKENS: usize = 8;
 const EVALUATIONS: usize = 64;
+
+/// What a search completes: `words` whole words separated by single spaces,
+/// the first constrained by `prefix`, each result checked by `accepts`.
+pub struct Target<'a> {
+    pub before: &'a str,
+    pub prefix: &'a str,
+    pub words: usize,
+    pub limit: usize,
+    pub accepts: &'a dyn Fn(&[String]) -> bool,
+}
+impl<'a> Target<'a> {
+    pub fn word(query: &'a GenerationQuery, accepts: &'a dyn Fn(&[String]) -> bool) -> Self {
+        Self {
+            before: &query.before,
+            prefix: &query.prefix,
+            words: 1,
+            limit: query.limit,
+            accepts,
+        }
+    }
+    pub fn phrase(query: &'a PhraseQuery, accepts: &'a dyn Fn(&[String]) -> bool) -> Self {
+        Self {
+            before: &query.before,
+            prefix: &query.prefix,
+            words: switchify_prediction_neural::protocol::PHRASE_WORDS,
+            limit: query.limit,
+            accepts,
+        }
+    }
+}
 
 /// Reverse the tokenizer's GPT-2 byte alphabet without replacing partial UTF-8.
 pub fn pieces(tokenizer: &tokenizers::Tokenizer) -> Result<Vec<Vec<u8>>> {
@@ -52,8 +83,10 @@ fn boundary(piece: &[u8], id: usize) -> bool {
         })
 }
 
-/// A trailing incomplete code point may become valid on the next token.
-fn partial(bytes: &[u8], separated: bool, prefix: &str) -> bool {
+/// A trailing incomplete code point may become valid on the next token. Up to
+/// `words` words separated by single spaces; every word but the last is whole,
+/// and the first is constrained by the prefix.
+fn partial(bytes: &[u8], separated: bool, prefix: &str, words: usize) -> bool {
     let bytes = if separated {
         if bytes.first() != Some(&b' ') {
             return false;
@@ -62,7 +95,7 @@ fn partial(bytes: &[u8], separated: bool, prefix: &str) -> bool {
     } else {
         bytes.strip_prefix(b" ").unwrap_or(bytes)
     };
-    if bytes.len() > 128 {
+    if bytes.len() > 129 * words - 1 {
         return false;
     }
     let text = match std::str::from_utf8(bytes) {
@@ -73,9 +106,17 @@ fn partial(bytes: &[u8], separated: bool, prefix: &str) -> bool {
         Err(_) => return false,
     };
     let normalized = normalize(text);
+    let parts: Vec<&str> = normalized.split(' ').collect();
+    if parts.len() > words {
+        return false;
+    }
+    let last = parts.len() - 1;
+    if parts[..last].iter().any(|w| !valid_word(w)) || parts[last].len() > 128 {
+        return false;
+    }
     let mut letter = false;
     let mut apostrophe = false;
-    for c in normalized.chars() {
+    for c in parts[last].chars() {
         if c.is_alphabetic() {
             letter = true;
             apostrophe = false;
@@ -86,15 +127,25 @@ fn partial(bytes: &[u8], separated: bool, prefix: &str) -> bool {
             return false;
         }
     }
-    let text: String = normalized.nfd().collect();
+    let first: String = parts[0].nfd().collect();
     let prefix: String = prefix.nfd().collect();
-    text.starts_with(&prefix) || prefix.starts_with(&text)
+    first.starts_with(&prefix) || (last == 0 && prefix.starts_with(&first))
 }
 
-fn completed(bytes: &[u8], query: &GenerationQuery) -> Option<String> {
+/// Words begun in `bytes`, counting a trailing space as beginning one.
+fn begun(bytes: &[u8]) -> usize {
+    let bytes = bytes.strip_prefix(b" ").unwrap_or(bytes);
+    1 + bytes.iter().filter(|&&b| b == b' ').count()
+}
+
+fn completed(bytes: &[u8], target: &Target) -> Option<Vec<String>> {
     let text = std::str::from_utf8(bytes).ok()?;
-    let word = normalize(text.strip_prefix(' ').unwrap_or(text));
-    (valid_word(&word) && query.accepts(std::slice::from_ref(&word))).then_some(word)
+    let words: Vec<String> = normalize(text.strip_prefix(' ').unwrap_or(text))
+        .split(' ')
+        .map(String::from)
+        .collect();
+    (words.len() == target.words && words.iter().all(|w| valid_word(w)) && (target.accepts)(&words))
+        .then_some(words)
 }
 
 struct Beam {
@@ -131,13 +182,11 @@ fn boundary_mass(logits: &[f32], boundaries: &[usize]) -> f64 {
     mass / all
 }
 
-/// Whether further search can no longer change the ranked result. Every later
-/// completion extends a live beam by a piece that does not begin with a word
-/// boundary, since such a piece never continues a word, so all later
-/// probability mass, for any word, is at most the beams' combined `open` bound.
-/// Each returned word must lead the next ranked word, or an unseen word, by
-/// more than that mass.
-fn settled(finished: &BTreeMap<String, f64>, beams: &[Beam], limit: usize) -> bool {
+/// Whether further search can no longer change the ranked result. All later
+/// probability mass, for any result, is at most the beams' combined `open`
+/// bound. Each returned result must lead the next ranked one, or an unseen one,
+/// by more than that mass.
+fn settled<K>(finished: &BTreeMap<K, f64>, beams: &[Beam], limit: usize) -> bool {
     if finished.len() < limit {
         return false;
     }
@@ -167,18 +216,35 @@ pub fn search(
     started: Instant,
     forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
 ) -> Result<Vec<String>> {
-    run(query, pieces, logits, evaluations, started, forward, true)
+    let accepts = |words: &[String]| query.accepts(words);
+    let target = Target::word(query, &accepts);
+    let found = run(&target, pieces, logits, evaluations, started, forward, true)?;
+    Ok(found.into_iter().flatten().collect())
+}
+
+/// Like `search`, completing whole phrases within the same budget.
+pub fn search_phrases(
+    query: &PhraseQuery,
+    pieces: &[Vec<u8>],
+    logits: Vec<f32>,
+    evaluations: usize,
+    started: Instant,
+    forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
+) -> Result<Vec<Vec<String>>> {
+    let accepts = |phrase: &[String]| query.accepts(&[phrase.to_vec()]);
+    let target = Target::phrase(query, &accepts);
+    run(&target, pieces, logits, evaluations, started, forward, true)
 }
 
 fn run(
-    query: &GenerationQuery,
+    target: &Target,
     pieces: &[Vec<u8>],
     logits: Vec<f32>,
     mut evaluations: usize,
     started: Instant,
     mut forward: impl FnMut(&[u32], &[u32], usize) -> Result<Vec<Vec<f32>>>,
     stop_when_settled: bool,
-) -> Result<Vec<String>> {
+) -> Result<Vec<Vec<String>>> {
     let boundaries: Vec<usize> = (0..pieces.len())
         .filter(|&id| boundary(&pieces[id], id))
         .collect();
@@ -188,9 +254,9 @@ fn run(
         score: 0.,
         open: 0.,
     }];
-    let mut finished: BTreeMap<String, f64> = BTreeMap::new();
+    let mut finished: BTreeMap<Vec<String>, f64> = BTreeMap::new();
     let mut batch = Duration::ZERO;
-    for depth in 0..TOKENS {
+    for depth in 0..TOKENS * target.words {
         let mut candidates: Vec<Candidate> = Vec::new();
         for (parent, beam) in beams.iter().enumerate() {
             ensure!(
@@ -219,7 +285,12 @@ fn run(
                 }
                 let mut bytes = beam.bytes.clone();
                 bytes.extend_from_slice(piece);
-                if partial(&bytes, !query.before.is_empty(), &query.prefix) {
+                if partial(
+                    &bytes,
+                    !target.before.is_empty(),
+                    target.prefix,
+                    target.words,
+                ) {
                     candidates.push(Candidate {
                         parent,
                         token,
@@ -259,38 +330,46 @@ fn run(
                 "logits"
             );
             let mass = boundary_mass(&logits, &boundaries);
-            if let Some(word) = completed(&candidate.bytes, query) {
+            if let Some(words) = completed(&candidate.bytes, target) {
                 // A token fragment is not a completed word merely because EOS
                 // has nonzero probability. Require a probable word boundary.
                 if mass >= 0.5 {
                     let score = candidate.score + mass.ln();
                     // Different tokenizations/case variants represent disjoint paths.
                     finished
-                        .entry(word)
+                        .entry(words)
                         .and_modify(|old| *old = log_sum_exp(*old, score))
                         .or_insert(score);
                 }
             }
+            // Within the last word, every later completion continues it with a
+            // piece that does not begin with a word boundary. Before the last
+            // word, a boundary may begin the next word, so all mass stays open.
+            let open = if begun(&candidate.bytes) < target.words {
+                candidate.score
+            } else {
+                candidate.score + (1. - mass).max(0.).ln()
+            };
             next.push(Beam {
                 logits,
                 bytes: candidate.bytes,
                 score: candidate.score,
-                open: candidate.score + (1. - mass).max(0.).ln(),
+                open,
             });
         }
         beams = next;
         if evaluations >= EVALUATIONS
-            || (stop_when_settled && settled(&finished, &beams, query.limit))
+            || (stop_when_settled && settled(&finished, &beams, target.limit))
         {
             break;
         }
     }
-    let mut words: Vec<_> = finished.into_iter().collect();
-    words.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-    Ok(words
+    let mut found: Vec<_> = finished.into_iter().collect();
+    found.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+    Ok(found
         .into_iter()
-        .take(query.limit)
-        .map(|(word, _)| word)
+        .take(target.limit)
+        .map(|(words, _)| words)
         .collect())
 }
 
@@ -299,13 +378,97 @@ mod tests {
     use super::*;
     #[test]
     fn byte_prefix_and_word_shapes() {
-        assert!(partial(b" caf\xc3", true, "café"));
-        assert!(partial(" cafe\u{301}".as_bytes(), true, "café"));
-        assert!(partial(b" can't", true, "can'"));
-        assert!(!partial(b" two words", true, ""));
-        assert!(!partial(b" help", true, "z"));
-        assert!(!partial(b" \xff", true, ""));
-        assert!(!partial(b" ''", true, ""));
+        assert!(partial(b" caf\xc3", true, "café", 1));
+        assert!(partial(" cafe\u{301}".as_bytes(), true, "café", 1));
+        assert!(partial(b" can't", true, "can'", 1));
+        assert!(!partial(b" two words", true, "", 1));
+        assert!(!partial(b" help", true, "z", 1));
+        assert!(!partial(b" \xff", true, "", 1));
+        assert!(!partial(b" ''", true, "", 1));
+    }
+    #[test]
+    fn phrase_shapes_complete_earlier_words_and_constrain_the_first() {
+        assert!(partial(b" two words", true, "", 2));
+        assert!(partial(b" would like", true, "wo", 2));
+        assert!(partial(b" would", true, "wo", 2));
+        assert!(partial(b" would ", true, "wo", 2));
+        assert!(partial(b" wo", true, "would", 2));
+        assert!(partial(b"would l", false, "", 2));
+        assert!(partial(b" caf\xc3", true, "café", 2));
+        assert!(partial(" café au".as_bytes(), true, "caf", 2));
+        // A completed first word must itself complete the prefix.
+        assert!(!partial(b" wo like", true, "would", 2));
+        assert!(!partial(b" would like", true, "z", 2));
+        assert!(!partial(b" would  like", true, "", 2));
+        assert!(!partial(b" would like you", true, "", 2));
+        assert!(!partial(b" would like ", true, "", 2));
+        assert!(!partial(b" can' t", true, "", 2));
+        assert!(!partial(b" would, like", true, "", 2));
+        assert!(!partial(b"would like", true, "", 2));
+        assert!(!partial(&[b'a'; 129], false, "", 2));
+        let mut long = vec![b'a'; 128];
+        long.push(b' ');
+        long.extend([b'b'; 128]);
+        assert!(partial(&long, false, "", 2));
+        long.push(b'b');
+        assert!(!partial(&long, false, "", 2));
+        assert_eq!(begun(b" would"), 1);
+        assert_eq!(begun(b" would "), 2);
+        assert_eq!(begun(b"would like"), 2);
+    }
+    #[test]
+    fn phrase_search_completes_two_words_within_budget() {
+        let query = PhraseQuery {
+            id: 1,
+            session: 1,
+            before: "i".into(),
+            prefix: "wo".into(),
+            exclude: vec![vec!["would".into(), "love".into()]],
+            limit: 3,
+        };
+        let pieces: Vec<Vec<u8>> = ["", " would", " like", " love", " wo", "rk", ".", " it"]
+            .iter()
+            .map(|p| p.as_bytes().to_vec())
+            .collect();
+        // After the context: " would" or " wo"; "rk" completes "work"; after a
+        // first word: " like", " love" or " it"; after a second word: ".".
+        let row = |path: &[u32]| -> Vec<f32> {
+            match path {
+                [] => vec![-20., 4., -20., -20., 3., -20., -20., -20.],
+                [4] => vec![-20., -20., -20., -20., -20., 10., -20., -20.],
+                [1] | [4, 5] => vec![-20., -20., 5., 4., -20., -20., -20., 3.],
+                _ => vec![-20., -20., -20., -20., -20., -20., 10., -20.],
+            }
+        };
+        let mut paths: Vec<Vec<u32>> = vec![vec![]];
+        let mut calls = 0;
+        let phrases = search_phrases(
+            &query,
+            &pieces,
+            row(&[]),
+            1,
+            Instant::now(),
+            |parents, tokens, _| {
+                calls += tokens.len();
+                paths = parents
+                    .iter()
+                    .zip(tokens)
+                    .map(|(&p, &t)| {
+                        let mut path = paths[p as usize].clone();
+                        path.push(t);
+                        path
+                    })
+                    .collect();
+                Ok(paths.iter().map(|p| row(p)).collect())
+            },
+        )
+        .unwrap();
+        let phrase = |a: &str, b: &str| vec![a.to_owned(), b.to_owned()];
+        assert_eq!(phrases[0], phrase("would", "like"));
+        assert!(phrases.contains(&phrase("work", "like")));
+        assert!(!phrases.contains(&phrase("would", "love")));
+        assert!(phrases.len() <= 3);
+        assert!(calls <= 63);
     }
     #[test]
     fn constrained_search_spans_prefix_and_respects_budget() {
@@ -422,7 +585,7 @@ mod tests {
             result.is_empty(),
             "continuations are more probable than boundaries"
         );
-        assert!(!partial(&[b'a'; 129], false, ""));
+        assert!(!partial(&[b'a'; 129], false, "", 1));
     }
 
     #[test]
@@ -463,52 +626,79 @@ mod tests {
                 })
                 .collect()
         };
-        let mut stopped_early = 0;
-        for seed in 0..400u64 {
-            let mut results = Vec::new();
-            for stop in [false, true] {
-                let query = GenerationQuery {
-                    id: 1,
-                    session: 1,
-                    before: if seed % 2 == 0 { "x".into() } else { "".into() },
-                    prefix: if seed % 3 == 0 { "b".into() } else { "".into() },
-                    exclude: if seed % 5 == 0 {
-                        vec!["a".into()]
+        let mut stopped_early = [0, 0];
+        let mut found = [0, 0];
+        for words in [1, 2] {
+            for seed in 0..400u64 {
+                let mut results = Vec::new();
+                for stop in [false, true] {
+                    let before = if seed % 2 == 0 { "x" } else { "" };
+                    let prefix = if seed % 3 == 0 { "b" } else { "" };
+                    let word = GenerationQuery {
+                        id: 1,
+                        session: 1,
+                        before: before.into(),
+                        prefix: prefix.into(),
+                        exclude: if seed % 5 == 0 {
+                            vec!["a".into()]
+                        } else {
+                            vec![]
+                        },
+                        limit: 3,
+                    };
+                    let phrase = PhraseQuery {
+                        id: 1,
+                        session: 1,
+                        before: before.into(),
+                        prefix: prefix.into(),
+                        exclude: if seed % 5 == 0 {
+                            vec![vec!["b".into(), "a".into()]]
+                        } else {
+                            vec![]
+                        },
+                        limit: 3,
+                    };
+                    let accepts_word = |w: &[String]| word.accepts(w);
+                    let accepts_phrase = |p: &[String]| phrase.accepts(&[p.to_vec()]);
+                    let target = if words == 1 {
+                        Target::word(&word, &accepts_word)
                     } else {
-                        vec![]
-                    },
-                    limit: 3,
-                };
-                let mut paths = vec![seed];
-                let mut calls = 0;
-                let words = run(
-                    &query,
-                    &pieces,
-                    row(seed),
-                    1,
-                    Instant::now(),
-                    |parents, tokens, _| {
-                        calls += tokens.len();
-                        paths = parents
-                            .iter()
-                            .zip(tokens)
-                            .map(|(&p, &t)| {
-                                paths[p as usize]
-                                    .wrapping_mul(31)
-                                    .wrapping_add(t as u64 + 1)
-                            })
-                            .collect();
-                        Ok(paths.iter().map(|&p| row(p)).collect())
-                    },
-                    stop,
-                )
-                .unwrap();
-                results.push((words, calls));
+                        Target::phrase(&phrase, &accepts_phrase)
+                    };
+                    let mut paths = vec![seed];
+                    let mut calls = 0;
+                    let result = run(
+                        &target,
+                        &pieces,
+                        row(seed),
+                        1,
+                        Instant::now(),
+                        |parents, tokens, _| {
+                            calls += tokens.len();
+                            paths = parents
+                                .iter()
+                                .zip(tokens)
+                                .map(|(&p, &t)| {
+                                    paths[p as usize]
+                                        .wrapping_mul(31)
+                                        .wrapping_add(t as u64 + 1)
+                                })
+                                .collect();
+                            Ok(paths.iter().map(|&p| row(p)).collect())
+                        },
+                        stop,
+                    )
+                    .unwrap();
+                    assert!(result.iter().all(|r| r.len() == words));
+                    results.push((result, calls));
+                }
+                assert_eq!(results[0].0, results[1].0, "words {words} seed {seed}");
+                assert!(results[1].1 <= results[0].1);
+                stopped_early[words - 1] += usize::from(results[1].1 < results[0].1);
+                found[words - 1] += usize::from(!results[0].0.is_empty());
             }
-            assert_eq!(results[0].0, results[1].0, "seed {seed}");
-            assert!(results[1].1 <= results[0].1);
-            stopped_early += usize::from(results[1].1 < results[0].1);
         }
-        assert!(stopped_early > 0);
+        assert!(stopped_early.iter().all(|&n| n > 0), "{stopped_early:?}");
+        assert!(found.iter().all(|&n| n > 0), "{found:?}");
     }
 }

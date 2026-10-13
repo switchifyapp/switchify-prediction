@@ -4,7 +4,7 @@ pub mod bundle;
 mod process;
 pub mod protocol;
 
-use protocol::{Command, GenerationQuery, Query};
+use protocol::{Command, GenerationQuery, PhraseQuery, Query};
 use serde::Serialize;
 use std::{
     path::PathBuf,
@@ -67,7 +67,10 @@ pub struct Immediate {
 #[derive(Serialize)]
 pub struct Refined {
     pub request_id: u64,
+    /// Ranked or generated words; empty for a phrase request.
     pub words: Vec<String>,
+    /// Generated phrases; empty for a word request.
+    pub phrases: Vec<Vec<String>>,
     pub cache_hit: bool,
 }
 
@@ -299,6 +302,53 @@ impl Refiner {
             return Err(Error::Input);
         }
         query.before = generation_context(before);
+        self.queue(session, limit, |id| {
+            query.id = id;
+            Command::Generate(query)
+        })
+    }
+
+    /// Generate two-word phrases, the first word completing `prefix`, none in
+    /// `exclude`. Results arrive through `poll` in `Refined::phrases`, under the
+    /// same deadline and latest-only rules as `generate`.
+    pub fn generate_phrases(
+        &mut self,
+        before: &str,
+        prefix: &str,
+        session: u64,
+        exclude: &[Vec<String>],
+        limit: usize,
+    ) -> Result<Option<u64>> {
+        let mut query = PhraseQuery {
+            id: 0,
+            session,
+            before: before.to_owned(),
+            prefix: normalize(prefix),
+            exclude: exclude
+                .iter()
+                .map(|p| p.iter().map(|w| normalize(w)).collect())
+                .collect(),
+            limit,
+        };
+        if before.len() > 16_384 || prefix.len() > 256 || !query.valid() {
+            self.reset();
+            return Err(Error::Input);
+        }
+        query.before = generation_context(before);
+        self.queue(session, limit, |id| {
+            query.id = id;
+            Command::GeneratePhrases(query)
+        })
+    }
+
+    /// Replace any pending work with a generation request, unless generation
+    /// is unavailable or `limit` is zero.
+    fn queue(
+        &mut self,
+        session: u64,
+        limit: usize,
+        command: impl FnOnce(u64) -> Command,
+    ) -> Result<Option<u64>> {
         let mut shared = self.state.0.lock().unwrap();
         shared.latest = shared.latest.checked_add(1).ok_or(Error::Input)?;
         shared.pending = None;
@@ -310,8 +360,7 @@ impl Refiner {
         let id = shared.latest;
         let requested = limit > 0 && matches!(shared.status, Status::Loading | Status::Ready);
         if requested {
-            query.id = id;
-            shared.pending = Some(Command::Generate(query));
+            shared.pending = Some(command(id));
         }
         self.state.1.notify_one();
         Ok(requested.then_some(id))

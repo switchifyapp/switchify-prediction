@@ -60,6 +60,40 @@ fn main() {
                     cache_hit: false,
                 }
             }
+            Command::GeneratePhrases(query) => {
+                match mode.as_str() {
+                    "crash" => return,
+                    "stall" => thread::sleep(Duration::from_secs(30)),
+                    "delay" => thread::sleep(Duration::from_millis(100)),
+                    _ => {}
+                }
+                let phrase = |a: &str, b: &str| vec![a.to_owned(), b.to_owned()];
+                let mut phrases: Vec<Vec<String>> = [
+                    phrase("hello", "there"),
+                    phrase("help", "me"),
+                    phrase("helium", "balloon"),
+                    phrase("café", "au"),
+                    phrase("can't", "wait"),
+                ]
+                .into_iter()
+                .filter(|p| query.accepts(std::slice::from_ref(p)))
+                .take(query.limit)
+                .collect();
+                if mode == "foreign" {
+                    phrases = vec![phrase("hello", "two words")];
+                }
+                if mode == "duplicate" {
+                    phrases = vec![phrase("hello", "there"), phrase("hello", "there")];
+                }
+                if mode == "single" {
+                    phrases = vec![vec!["hello".into()]];
+                }
+                Reply::GeneratedPhrases {
+                    id: query.id + u64::from(mode == "id"),
+                    phrases,
+                    cache_hit: false,
+                }
+            }
             Command::Predict(mut query) => {
                 match mode.as_str() {
                     "crash" => return,

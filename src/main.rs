@@ -57,6 +57,9 @@ enum Command {
         limit: usize,
         #[arg(long, default_value_t = 2)]
         min_chars: usize,
+        /// Suggest two-word phrases instead of single words.
+        #[arg(long)]
+        phrases: bool,
     },
     Import {
         #[arg(long)]
@@ -164,17 +167,19 @@ fn run() -> Result<()> {
             prefix,
             limit,
             min_chars,
+            phrases,
         } => {
             let predictor = Predictor::open(&baseline, personal.as_deref())?;
-            print(predictor.predict(
-                &before,
-                &prefix,
-                Options {
-                    limit,
-                    min_chars,
-                    unigram_only: false,
-                },
-            ))
+            let options = Options {
+                limit,
+                min_chars,
+                unigram_only: false,
+            };
+            if phrases {
+                print(predictor.predict_phrases(&before, &prefix, options))
+            } else {
+                print(predictor.predict(&before, &prefix, options))
+            }
         }
         Command::Import {
             baseline,

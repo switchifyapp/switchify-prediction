@@ -330,6 +330,40 @@ pub struct Suggestion {
     pub word: String,
     pub score: f64,
 }
+/// Two whole words, the first completing the prefix.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct Phrase {
+    pub words: Vec<String>,
+    pub score: f64,
+}
+/// First words considered for phrases before ranking by joint probability.
+const PHRASE_FIRST_WORDS: usize = 8;
+/// Baseline and usable learned counts after one context, their weighted total,
+/// and the interpolation weight.
+type Part<'a> = (
+    &'a BTreeMap<String, i64>,
+    Option<&'a BTreeMap<String, i64>>,
+    f64,
+    f64,
+);
+struct Distributions<'a> {
+    parts: Vec<Part<'a>>,
+    weight_sum: f64,
+    personal: f64,
+}
+impl Distributions<'_> {
+    fn score(&self, word: &str) -> f64 {
+        self.parts
+            .iter()
+            .map(|(base, learned, total, w)| {
+                let own = learned.and_then(|l| l.get(word)).copied().unwrap_or(0);
+                (base.get(word).copied().unwrap_or(0) as f64 + self.personal * own as f64) / total
+                    * w
+                    / self.weight_sum
+            })
+            .sum()
+    }
+}
 #[derive(Clone, Copy)]
 pub struct Options {
     pub limit: usize,
@@ -568,21 +602,24 @@ impl Predictor {
     fn reweigh(&mut self) {
         self.usable.weight = PERSONAL_WEIGHT / (1. + self.usable.learned / PERSONAL_SATURATION);
     }
-    pub fn predict(&self, before: &str, prefix: &str, options: Options) -> Vec<Suggestion> {
-        let prefix = normalize(prefix);
-        if prefix.graphemes(true).count() < options.min_chars || options.limit == 0 {
-            return vec![];
-        }
+    /// The current sentence's words before the word in progress.
+    fn context(before: &str) -> Vec<String> {
         let tail = before
             .rsplit(['.', '!', '?', '\n', '\r'])
             .next()
             .unwrap_or("");
-        let context = sentences(tail).pop().unwrap_or_default();
-        let personal = self.usable.weight;
-        let empty = BTreeMap::new();
-        let mut distributions = Vec::new();
+        sentences(tail).pop().unwrap_or_default()
+    }
+    /// Interpolated trigram/bigram/unigram distributions of the word after `context`.
+    fn distributions<'a>(
+        &'a self,
+        context: &[String],
+        unigram_only: bool,
+        empty: &'a BTreeMap<String, i64>,
+    ) -> Distributions<'a> {
+        let mut parts = Vec::new();
         for (n, weight) in [(0, 0.1), (1, 0.3), (2, 0.6)] {
-            if n > context.len() || (options.unigram_only && n != 0) {
+            if n > context.len() || (unigram_only && n != 0) {
                 continue;
             }
             let key = &context[context.len() - n..];
@@ -591,14 +628,27 @@ impl Predictor {
             if base.is_none() && learned.is_none() {
                 continue;
             }
-            let base = base.unwrap_or(&empty);
+            let base = base.unwrap_or(empty);
             let mut total: f64 = base.values().map(|c| *c as f64).sum();
             if learned.is_some() {
-                total += personal * self.usable.totals[key];
+                total += self.usable.weight * self.usable.totals[key];
             }
-            distributions.push((base, learned, total, weight));
+            parts.push((base, learned, total, weight));
         }
-        let weight_sum: f64 = distributions.iter().map(|(_, _, _, w)| w).sum();
+        Distributions {
+            weight_sum: parts.iter().map(|(_, _, _, w)| w).sum(),
+            parts,
+            personal: self.usable.weight,
+        }
+    }
+    pub fn predict(&self, before: &str, prefix: &str, options: Options) -> Vec<Suggestion> {
+        let prefix = normalize(prefix);
+        if prefix.graphemes(true).count() < options.min_chars || options.limit == 0 {
+            return vec![];
+        }
+        let empty = BTreeMap::new();
+        let distributions =
+            self.distributions(&Self::context(before), options.unigram_only, &empty);
         // Baseline words, then learned words the baseline lacks, starting with
         // the prefix.
         fn range<'a>(counts: &'a Counts, prefix: &str) -> impl Iterator<Item = &'a String> {
@@ -615,27 +665,65 @@ impl Predictor {
         words.extend(range(&self.usable.counts, &prefix).filter(|w| !baseline.contains_key(*w)));
         let mut result: Vec<Suggestion> = words
             .into_iter()
-            .map(|word| {
-                let score = distributions
-                    .iter()
-                    .map(|(base, learned, total, w)| {
-                        let own = learned.and_then(|l| l.get(word)).copied().unwrap_or(0);
-                        (base.get(word).copied().unwrap_or(0) as f64 + personal * own as f64)
-                            / total
-                            * w
-                            / weight_sum
-                    })
-                    .sum();
-                Suggestion {
-                    word: word.clone(),
-                    score,
-                }
+            .map(|word| Suggestion {
+                word: word.clone(),
+                score: distributions.score(word),
             })
             .collect();
         result.sort_unstable_by(|a, b| {
             b.score
                 .total_cmp(&a.score)
                 .then_with(|| a.word.cmp(&b.word))
+        });
+        result.truncate(options.limit);
+        result
+    }
+    /// Two-word phrases: a first word chosen by the `predict` rules, then a word
+    /// observed after it, in the baseline or usable learned counts. A phrase
+    /// scores the product of both words' interpolated probabilities. First words
+    /// never observed with a following word yield no phrase, and `unigram_only`
+    /// yields none, since the second word needs the first as context.
+    pub fn predict_phrases(&self, before: &str, prefix: &str, options: Options) -> Vec<Phrase> {
+        if options.unigram_only || options.limit == 0 {
+            return vec![];
+        }
+        let context = Self::context(before);
+        let empty = BTreeMap::new();
+        let mut result = Vec::new();
+        let firsts = self.predict(
+            before,
+            prefix,
+            Options {
+                limit: PHRASE_FIRST_WORDS,
+                ..options
+            },
+        );
+        for first in firsts.into_iter().filter(|s| s.score > 0.) {
+            let key = std::slice::from_ref(&first.word);
+            let mut followers: BTreeSet<&String> = BTreeSet::new();
+            followers.extend(self.baseline.0.get(key).into_iter().flat_map(|w| w.keys()));
+            followers.extend(
+                self.usable
+                    .counts
+                    .0
+                    .get(key)
+                    .into_iter()
+                    .flat_map(|w| w.keys()),
+            );
+            let mut extended = context.clone();
+            extended.push(first.word.clone());
+            let distributions = self.distributions(&extended, false, &empty);
+            for second in followers {
+                result.push(Phrase {
+                    words: vec![first.word.clone(), second.clone()],
+                    score: first.score * distributions.score(second),
+                });
+            }
+        }
+        result.sort_unstable_by(|a, b| {
+            b.score
+                .total_cmp(&a.score)
+                .then_with(|| a.words.cmp(&b.words))
         });
         result.truncate(options.limit);
         result
