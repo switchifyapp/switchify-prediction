@@ -5,6 +5,10 @@
 //! values. Only dense Llama layers with interleaved RoPE are supported. Rows of
 //! the attention cache can be selected, so beam extensions sharing a length run
 //! as one batched forward pass.
+//!
+//! The experimental `metal` feature runs the same operations on an Apple GPU.
+//! It is untested on hardware, and like the explicit ISA builds it is not
+//! expected to match the CPU kernels bitwise.
 use anyhow::{Result, ensure};
 use candle_core::{
     DType, Device, IndexOp, Module, Tensor,
@@ -14,6 +18,15 @@ use candle_nn::Embedding;
 use candle_transformers::{quantized_nn::RmsNorm, utils};
 
 const MAX_SEQ_LEN: usize = 4096;
+
+/// The CPU, or the first Metal GPU in the experimental `metal` build.
+fn device() -> Result<Device> {
+    #[cfg(feature = "metal")]
+    let device = Device::new_metal(0)?;
+    #[cfg(not(feature = "metal"))]
+    let device = Device::Cpu;
+    Ok(device)
+}
 
 #[derive(Clone)]
 struct Layer {
@@ -41,6 +54,7 @@ pub struct Llama {
     cos: Tensor,
     sin: Tensor,
     neg_inf: Tensor,
+    device: Device,
 }
 
 impl Llama {
@@ -48,7 +62,7 @@ impl Llama {
         ct: gguf_file::Content,
         reader: &mut R,
     ) -> Result<Self> {
-        let device = &Device::Cpu;
+        let device = &device()?;
         let get = |key: &str| {
             ct.metadata
                 .get(key)
@@ -112,12 +126,17 @@ impl Llama {
             cos: angles.cos()?,
             sin: angles.sin()?,
             neg_inf: Tensor::new(f32::NEG_INFINITY, device)?,
+            device: device.clone(),
         })
+    }
+
+    pub fn device(&self) -> &Device {
+        &self.device
     }
 
     /// Keep cache rows `rows`, in that order, possibly repeating rows.
     pub fn select(&mut self, rows: &[u32]) -> Result<()> {
-        let rows = Tensor::new(rows, &Device::Cpu)?;
+        let rows = Tensor::new(rows, &self.device)?;
         for layer in &mut self.layers {
             if let Some((k, v)) = &layer.kv_cache {
                 layer.kv_cache = Some((k.index_select(&rows, 0)?, v.index_select(&rows, 0)?));
@@ -132,7 +151,7 @@ impl Llama {
         let mask = if seq_len == 1 {
             None
         } else {
-            Some(utils::build_causal_mask(seq_len, index_pos, &Device::Cpu)?)
+            Some(utils::build_causal_mask(seq_len, index_pos, &self.device)?)
         };
         let mut x = self.embeddings.forward(ids)?;
         for i in 0..self.layers.len() {

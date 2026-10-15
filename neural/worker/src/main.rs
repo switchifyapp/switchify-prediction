@@ -18,10 +18,21 @@ use switchify_prediction_neural::{
     ))
 ))]
 compile_error!("accelerated workers require x86_64 +avx2,+fma,+f16c");
+#[cfg(all(feature = "metal", not(target_os = "macos")))]
+compile_error!("the experimental metal worker requires macOS");
 
 fn run() -> anyhow::Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     anyhow::ensure!(args.len() == 1, "configuration");
+    #[cfg(feature = "experiment")]
+    {
+        // Lets the benchmark confirm an experiment build and its limits.
+        let (width, evaluations) = generation::configure()?;
+        if args[0] == "--experiment-limits" {
+            println!("{{\"beam_width\":{width},\"max_forward_evaluations\":{evaluations}}}");
+            return Ok(());
+        }
+    }
     let bundle = bundle::load(&PathBuf::from(&args[0]))?;
     let mut model = model::Model::load(bundle)?;
     let mut input = io::stdin().lock();

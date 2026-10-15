@@ -34,6 +34,14 @@ jobs:
       - run: cargo fmt --manifest-path neural/Cargo.toml --all -- --check
       - run: cargo clippy --manifest-path neural/Cargo.toml --workspace --all-targets --features test-support --locked -- -D warnings
       - run: cargo test --manifest-path neural/Cargo.toml --workspace --features test-support --locked
+      # Benchmark-only builds for issue #39. They are never packaged.
+      - name: Check experiment worker
+        run: |
+          cargo clippy --manifest-path neural/Cargo.toml -p switchify-smol-worker --all-targets --features experiment --locked -- -D warnings
+          cargo test --manifest-path neural/Cargo.toml -p switchify-smol-worker --features experiment --locked
+      - name: Check experimental Metal worker (compile only, untested on hardware)
+        if: runner.os == 'macOS' && runner.arch == 'ARM64'
+        run: cargo clippy --manifest-path neural/Cargo.toml -p switchify-smol-worker --all-targets --features metal --locked -- -D warnings
       - run: python -m unittest discover -s scripts -p "test_neural*.py"
       - run: cargo build --manifest-path neural/Cargo.toml --workspace --release --locked --target-dir target/smol-portable
       - name: Build explicit x64 ISA worker

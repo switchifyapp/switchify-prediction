@@ -1,6 +1,6 @@
 use crate::llama::Llama;
 use anyhow::{Result, ensure};
-use candle_core::{Device, Tensor};
+use candle_core::Tensor;
 use switchify_prediction_neural::bundle::Bundle;
 use tokenizers::Tokenizer;
 
@@ -18,7 +18,8 @@ pub struct Model {
     prepared: Option<Prepared>,
 }
 fn forward(state: &mut Llama, ids: &[u32], position: usize) -> Result<Vec<f32>> {
-    let mut rows = state.forward(&Tensor::new(ids, &Device::Cpu)?.unsqueeze(0)?, position)?;
+    let ids = Tensor::new(ids, state.device())?.unsqueeze(0)?;
+    let mut rows = state.forward(&ids, position)?;
     ensure!(rows.len() == 1, "logits");
     Ok(rows.remove(0))
 }
@@ -116,7 +117,7 @@ impl Model {
             started,
             |parents, tokens, depth| {
                 state.select(parents)?;
-                let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                let ids = Tensor::new(tokens, state.device())?.unsqueeze(1)?;
                 state.forward(&ids, prepared.ids.len() + depth)
             },
         )?;
@@ -139,7 +140,7 @@ impl Model {
             started,
             |parents, tokens, depth| {
                 state.select(parents)?;
-                let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                let ids = Tensor::new(tokens, state.device())?.unsqueeze(1)?;
                 state.forward(&ids, prepared.ids.len() + depth)
             },
         )?;
@@ -266,7 +267,7 @@ mod tests {
                 std::time::Instant::now(),
                 |parents, tokens, depth| {
                     batched.select(parents)?;
-                    let ids = Tensor::new(tokens, &Device::Cpu)?.unsqueeze(1)?;
+                    let ids = Tensor::new(tokens, batched.device())?.unsqueeze(1)?;
                     let rows = batched.forward(&ids, position + depth)?;
                     let mut next = Vec::new();
                     for ((&parent, &token), row) in parents.iter().zip(tokens).zip(&rows) {
