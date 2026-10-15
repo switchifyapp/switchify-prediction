@@ -55,9 +55,27 @@ group, up to the desktop's 512-character buffer.
 | 512-character history, before | 307 ms | 545 ms | 1,019 ms | 0 | 72.6% |
 | 512-character history, after | 1,261 ms | 1,600 ms | 1,838 ms | 3 | 78.9% |
 
+| Other runs, 512-character history | Median | p95 | Max | Failures | Six-slot top six |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Portable, 96 tokens | 1,274 ms | 1,580 ms | 1,644 ms | 0 | 79.0% |
+| AVX2, before | 137 ms | 340 ms | 1,946 ms | 2 (and 15 rerank) | 72.6% |
+| AVX2, 128 tokens | 502 ms | 881 ms | 2,027 ms | 41 (and 19 rerank) | 76.6% |
+| AVX2, 96 tokens | 476 ms | 782 ms | 1,760 ms | 0 | 78.9% |
+
+`--typing` times 1,000 requests while each fixture group is typed in order
+without resets, so the worker can extend its context:
+
+| Portable, typing | Median | p95 | Max | Failures | Exact context hits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Before | 264 ms | 1,236 ms | 1,681 ms | 0 | 648 |
+| 128 tokens | 247 ms | 490 ms | 1,982 ms | 10 | 640 |
+| 96 tokens | 273 ms | 1,194 ms | 2,043 ms | 17 | 633 |
+
 The fixtures are single sentences, so natural context is unchanged. With
-earlier sentences, accuracy rises by 6.3 points, but a fresh 128-token context
-costs about 1.2 s on the portable worker (about 0.26 s with AVX2). Extending a
-prepared one by a word costs 15 to 160 ms. The three failures were reply
-timeouts. These are regression measurements on synthetic fixtures whose overlap
+earlier sentences, accuracy rises by about 6 points, but a fresh 128-token
+context costs about 1.2 s on the portable worker (about 0.26 s with AVX2) and
+96 tokens is not much faster end to end. Extending a prepared context by a word
+costs 15 to 160 ms. Failures are reply timeouts. The machine was in desktop use
+during these runs; the AVX2 "before" run also timed out, so the AVX2 and typing
+failure counts include contention. These are regression measurements on synthetic fixtures whose overlap
 with model pretraining is unknown.

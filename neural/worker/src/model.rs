@@ -295,7 +295,7 @@ mod tests {
         fn forward(&mut self, ids: &[u32], position: usize) -> Result<Vec<f32>> {
             ensure!(position == self.sequence.len(), "position");
             ensure!(
-                position % CHUNK == 0 && (1..=CHUNK).contains(&ids.len()),
+                position.is_multiple_of(CHUNK) && (1..=CHUNK).contains(&ids.len()),
                 "chunk"
             );
             self.sequence.extend_from_slice(ids);
