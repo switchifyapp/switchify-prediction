@@ -15,6 +15,9 @@ use std::{
 use switchify_prediction::{Options, Predictor, normalize, sentences};
 
 const REPLY_DEADLINE_MS: u64 = 2_000;
+/// Tokens the model sees before a prediction, including the leading
+/// end-of-text token. Matches `policy.context_tokens` in `model-bundle.json`.
+pub const CONTEXT_TOKENS: usize = 128;
 
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, thiserror::Error)]
@@ -121,17 +124,29 @@ pub fn effective_context(before: &str) -> String {
     .join(" ")
 }
 
-/// The current sentence as typed, for generation. Case and punctuation are kept
-/// because the model learned from natural text. Whitespace runs become single
-/// spaces, and trailing opening quotes and brackets are dropped, because the
-/// generated word follows the context after a space.
+/// The text before the word as typed, earlier sentences included, for
+/// generation. Case and punctuation are kept because the model learned from
+/// natural text. A whitespace run becomes one line break if it contains one,
+/// otherwise one space. Leading and trailing whitespace and trailing opening
+/// quotes and brackets are dropped, because the generated word follows the
+/// context after a space. The worker keeps the end that fits in
+/// `CONTEXT_TOKENS`.
 pub fn generation_context(before: &str) -> String {
-    let sentence = before
-        .rsplit(['.', '!', '?', '\n', '\r'])
-        .next()
-        .unwrap_or_default()
-        .replace('\u{2019}', "'");
-    let mut text = sentence.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut text = String::with_capacity(before.len());
+    let mut gap = None;
+    for c in before.chars() {
+        if c.is_whitespace() {
+            let line = matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}');
+            if !text.is_empty() && gap != Some('\n') {
+                gap = Some(if line { '\n' } else { ' ' });
+            }
+        } else {
+            if let Some(separator) = gap.take() {
+                text.push(separator);
+            }
+            text.push(if c == '\u{2019}' { '\'' } else { c });
+        }
+    }
     while let Some(last) = text.chars().last() {
         let opening = matches!(
             last,
@@ -146,7 +161,7 @@ pub fn generation_context(before: &str) -> String {
                 | '\u{AB}'
         );
         let rest = &text[..text.len() - last.len_utf8()];
-        if !(opening && (rest.is_empty() || rest.ends_with(' '))) {
+        if !(opening && (rest.is_empty() || rest.ends_with([' ', '\n']))) {
             break;
         }
         text = rest.trim_end().to_owned();
@@ -180,7 +195,7 @@ impl Refiner {
         let capabilities = Capabilities {
             accelerated,
             threads: config.threads,
-            context_tokens: 64,
+            context_tokens: CONTEXT_TOKENS,
             shortlist: 8,
             deadline_ms: REPLY_DEADLINE_MS,
         };
@@ -369,6 +384,16 @@ impl Refiner {
     /// A subsequent submit/reset invalidates any previously unconsumed result.
     pub fn poll(&mut self) -> Option<Refined> {
         self.state.0.lock().unwrap().result.take()
+    }
+
+    /// Discard queued work and unconsumed or in-flight results, but keep the
+    /// worker's context so a later request that extends the same text is
+    /// cheap. Use `reset` once the text is gone.
+    pub fn cancel(&mut self) {
+        let mut shared = self.state.0.lock().unwrap();
+        shared.pending = None;
+        shared.result = None;
+        shared.latest = shared.latest.saturating_add(1);
     }
 
     /// Clear queued text and worker context. In-flight replies are discarded.

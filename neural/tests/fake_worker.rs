@@ -27,9 +27,12 @@ fn main() {
         return;
     }
     let mut input = io::stdin().lock();
+    // Like the real worker, a generation context is kept until a reset.
+    let mut context: Option<String> = None;
     while let Ok(command) = protocol::read_frame(&mut input) {
         let reply = match command {
             Command::Reset => {
+                context = None;
                 if mode == "slow-reset" {
                     thread::sleep(Duration::from_millis(750));
                 }
@@ -54,10 +57,12 @@ fn main() {
                 if mode == "duplicate" {
                     words = vec!["hello".into(), "hello".into()];
                 }
+                let cache_hit = context.as_ref() == Some(&query.before);
+                context = Some(query.before);
                 Reply::Generated {
                     id: query.id + u64::from(mode == "id"),
                     words,
-                    cache_hit: false,
+                    cache_hit,
                 }
             }
             Command::GeneratePhrases(query) => {

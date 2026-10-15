@@ -73,20 +73,36 @@ def workload():
     return result
 
 
-def natural_workload(queries):
+def natural_workload(queries, history=0):
     """Give each query its fixture text before the target as typed, with original
-    case and punctuation, as the desktop sends it. Targets and prefixes are unchanged."""
+    case and punctuation, as the desktop sends it. Targets and prefixes are unchanged.
+
+    With `history`, earlier texts of the same fixture group precede it, as if typed
+    first, and the context keeps its last `history` characters without a clipped
+    leading word, as the desktop's typing buffer does."""
     import regex
     index = {}
     for name in ['regression.json', 'general-writing.json']:
         for texts in json.loads((ROOT / 'neural/fixtures' / name).read_bytes()).values():
-            for text in texts:
-                text = unicodedata.normalize('NFC', text.replace('’', "'"))
+            texts = [unicodedata.normalize('NFC', t.replace('’', "'")) for t in texts]
+            for j, text in enumerate(texts):
+                earlier = ''
+                for back in range(1, len(texts)):
+                    if len(earlier) >= history:
+                        break
+                    previous = texts[(j - back) % len(texts)].strip()
+                    if not previous.endswith(('.', '!', '?')):
+                        previous += '.'
+                    earlier = previous + ' ' + earlier
                 matches = list(regex.finditer(r"\p{L}[\p{L}\p{M}]*(?:'\p{L}[\p{L}\p{M}]*)*", text.lower()))
                 tokens = [m.group() for m in matches]
                 assert tokens == words(text)
                 for i, match in enumerate(matches):
-                    index.setdefault((' '.join(tokens[:i]), tokens[i]), text[:match.start()])
+                    before = earlier + text[:match.start()]
+                    if history and len(before) > history:
+                        before = before[-history:]
+                        before = before[before.find(' ') + 1:] if ' ' in before else ''
+                    index.setdefault((' '.join(tokens[:i]), tokens[i]), before)
     return [tuple(q[:4]) + (index[(q[4], q[6])],) + tuple(q[5:]) for q in queries]
 
 

@@ -5,7 +5,7 @@
   "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
   "conversion": "Candle 0.11.0 Q8_0, F32 norms, adjacent-pair RoPE, tied embeddings; neural/worker/src/bin/quantize.rs",
   "policy": {
-    "context_tokens": 64,
+    "context_tokens": 128,
     "shortlist": 8,
     "max_results": 5,
     "scoring": "whole-word log probability plus boundary probability, sequential",

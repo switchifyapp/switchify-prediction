@@ -1,4 +1,5 @@
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import tempfile
@@ -21,6 +22,34 @@ class NeuralBundleTests(unittest.TestCase):
         generated(client, 'synthetic', 'sy')
         commands = [json.loads(line) for line in client.process.stdin.getvalue().splitlines()]
         self.assertEqual([c['command'] for c in commands], ['reset', 'generate'])
+
+    def test_typing_measurement_can_keep_the_context(self):
+        import io
+        from types import SimpleNamespace
+        replies = iter([{'type':'immediate', 'result':{'refinement_requested':True, 'request_id':9}},
+                        {'type':'refined', 'result':{'request_id':9}}])
+        client = SimpleNamespace(process=SimpleNamespace(stdin=io.StringIO()), receive=lambda: next(replies))
+        generated(client, 'synthetic', 'sy', reset=False)
+        commands = [json.loads(line) for line in client.process.stdin.getvalue().splitlines()]
+        self.assertEqual([c['command'] for c in commands], ['generate'])
+
+    @unittest.skipUnless(importlib.util.find_spec('regex'), 'benchmark dependency')
+    def test_long_contexts_keep_earlier_texts_within_the_history(self):
+        from generation_evaluate import typed_workload
+        from neural_evaluate import natural_workload, workload
+        queries = workload()
+        plain = natural_workload(queries)
+        long = natural_workload(queries, 512)
+        self.assertTrue(all(q[4].endswith(p[4]) and len(q[4]) <= 512 for q, p in zip(long, plain)))
+        self.assertGreater(sum(len(q[4]) > 400 for q in long), len(long) // 2)
+        steps = typed_workload(512, 0)
+        self.assertIsNone(steps[-1])
+        self.assertTrue(all(len(s[0]) <= 512 for s in steps if s))
+        self.assertEqual(steps[:3], [('', ''), ('', steps[1][1]), ('', steps[2][1])])
+        groups = steps.count(None)
+        bounded = typed_workload(512, 100)
+        self.assertEqual(bounded.count(None), groups)
+        self.assertEqual(len(bounded) - groups, -(-100 // groups) * groups)
 
     def test_warmup_cannot_silently_turn_into_statistical_only_measurement(self):
         class FakeClient:

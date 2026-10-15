@@ -29,6 +29,20 @@ struct Layer {
     kv_cache: Option<(Tensor, Tensor)>,
 }
 
+/// Rotary angles for every position, `(MAX_SEQ_LEN, rope_dim / 2)`.
+fn angles(rope_dim: usize, freq_base: f32) -> Result<Tensor> {
+    let device = &Device::Cpu;
+    let theta: Vec<_> = (0..rope_dim)
+        .step_by(2)
+        .map(|i| 1f32 / freq_base.powf(i as f32 / rope_dim as f32))
+        .collect();
+    let theta = Tensor::new(theta.as_slice(), device)?;
+    Ok(Tensor::arange(0, MAX_SEQ_LEN as u32, device)?
+        .to_dtype(DType::F32)?
+        .reshape((MAX_SEQ_LEN, 1))?
+        .matmul(&theta.reshape((1, theta.elem_count()))?)?)
+}
+
 #[derive(Clone)]
 pub struct Llama {
     embeddings: Embedding,
@@ -68,15 +82,7 @@ impl Llama {
         let freq_base = get("llama.rope.freq_base")
             .and_then(|m| Ok(m.to_f32()?))
             .unwrap_or(10000.);
-        let theta: Vec<_> = (0..rope_dim)
-            .step_by(2)
-            .map(|i| 1f32 / freq_base.powf(i as f32 / rope_dim as f32))
-            .collect();
-        let theta = Tensor::new(theta.as_slice(), device)?;
-        let angles = Tensor::arange(0, MAX_SEQ_LEN as u32, device)?
-            .to_dtype(DType::F32)?
-            .reshape((MAX_SEQ_LEN, 1))?
-            .matmul(&theta.reshape((1, theta.elem_count()))?)?;
+        let angles = angles(rope_dim, freq_base)?;
         let embeddings_q = ct.tensor(reader, "token_embd.weight", device)?;
         let embeddings = embeddings_q.dequantize(device)?;
         let norm = RmsNorm::from_qtensor(ct.tensor(reader, "output_norm.weight", device)?, eps)?;
@@ -121,6 +127,18 @@ impl Llama {
         for layer in &mut self.layers {
             if let Some((k, v)) = &layer.kv_cache {
                 layer.kv_cache = Some((k.index_select(&rows, 0)?, v.index_select(&rows, 0)?));
+            }
+        }
+        Ok(())
+    }
+
+    /// Keep the first `len` cached positions, so the next forward pass
+    /// continues at position `len`.
+    pub fn truncate(&mut self, len: usize) -> Result<()> {
+        for layer in &mut self.layers {
+            if let Some((k, v)) = &layer.kv_cache {
+                ensure!(len <= k.dim(2)?, "cache");
+                layer.kv_cache = Some((k.narrow(2, 0, len)?, v.narrow(2, 0, len)?));
             }
         }
         Ok(())
@@ -211,5 +229,61 @@ impl Llama {
         let y = att.matmul(&v.contiguous()?)?;
         let y = y.transpose(1, 2)?.reshape(&[b, seq_len, n_embd])?;
         Ok(layer.wo.forward(&y)?)
+    }
+}
+
+#[cfg(test)]
+impl Llama {
+    /// A small random model with the pinned model's layout: Q8 weights, F32
+    /// norms, grouped-query attention and tied embeddings.
+    pub fn tiny(vocab: usize) -> Result<Self> {
+        use candle_core::quantized::{GgmlDType, QTensor};
+        let device = &Device::Cpu;
+        let (embedding, n_head, n_kv_head, hidden) = (64, 2, 1, 96);
+        let head_dim = embedding / n_head;
+        let q8 = |shape: (usize, usize)| -> Result<QMatMul> {
+            let weights = Tensor::randn(0f32, 0.3, shape, device)?;
+            Ok(QMatMul::from_qtensor(QTensor::quantize(
+                &weights,
+                GgmlDType::Q8_0,
+            )?)?)
+        };
+        let norm = || -> Result<RmsNorm> {
+            let weights = Tensor::ones(embedding, DType::F32, device)?;
+            Ok(RmsNorm::from_qtensor(
+                QTensor::quantize(&weights, GgmlDType::F32)?,
+                1e-5,
+            )?)
+        };
+        let layers = (0..2)
+            .map(|_| {
+                Ok(Layer {
+                    wq: q8((embedding, embedding))?,
+                    wk: q8((n_kv_head * head_dim, embedding))?,
+                    wv: q8((n_kv_head * head_dim, embedding))?,
+                    wo: q8((embedding, embedding))?,
+                    w1: q8((hidden, embedding))?,
+                    w2: q8((embedding, hidden))?,
+                    w3: q8((hidden, embedding))?,
+                    attention_norm: norm()?,
+                    ffn_norm: norm()?,
+                    kv_cache: None,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let embeddings = Tensor::randn(0f32, 1., (vocab, embedding), device)?;
+        let angles = angles(head_dim, 10000.)?;
+        Ok(Self {
+            output: QMatMul::from_qtensor(QTensor::quantize(&embeddings, GgmlDType::Q8_0)?)?,
+            embeddings: Embedding::new(embeddings, embedding),
+            layers,
+            norm: norm()?,
+            n_head,
+            n_kv_head,
+            head_dim,
+            cos: angles.cos()?,
+            sin: angles.sin()?,
+            neg_inf: Tensor::new(f32::NEG_INFINITY, device)?,
+        })
     }
 }

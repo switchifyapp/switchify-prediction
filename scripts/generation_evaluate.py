@@ -18,12 +18,13 @@ import time
 from neural_evaluate import Client, ROOT, natural_workload, sha, timing, words, workload
 
 
-def generated(client, before, prefix, command='generate'):
-    # Match the desktop's changed-context reset. The comparison mode must not
-    # prefill generation's context cache before the measured request.
-    client.process.stdin.write('{"command":"reset"}\n')
-    client.process.stdin.flush()
-    assert client.receive()['type'] == 'reset'
+def generated(client, before, prefix, command='generate', reset=True):
+    # By default no measured request reuses the previous one's context: the
+    # comparison mode must not prefill generation's context cache before it.
+    if reset:
+        client.process.stdin.write('{"command":"reset"}\n')
+        client.process.stdin.flush()
+        assert client.receive()['type'] == 'reset'
     started = time.perf_counter()
     client.process.stdin.write(json.dumps(dict(command=command, before=before,
                                               prefix=prefix, session=1)) + '\n')
@@ -75,7 +76,7 @@ def evaluate_phrases(args, queries):
     targets = [(q, [q[6], nxt]) for q, nxt in targets if nxt]
     targets = sample(targets, args.samples)
     if args.natural_context:
-        natural = natural_workload([q for q, _ in targets])
+        natural = natural_workload([q for q, _ in targets], args.history)
         targets = [(n, phrase) for n, (_, phrase) in zip(natural, targets)]
     command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
                '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
@@ -140,7 +141,7 @@ def evaluate_phrases(args, queries):
                   warmup_failures=warmup_failures, failures=dict(failures), summary=summary,
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
                   peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
-                  natural_context=args.natural_context,
+                  natural_context=args.natural_context, history_chars=args.history,
                   cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
                   accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
                   fixture_hashes={n: sha(ROOT / 'neural/fixtures' / n) for n in ['regression.json', 'general-writing.json']},
@@ -150,12 +151,86 @@ def evaluate_phrases(args, queries):
     args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 
 
+def typed_workload(history, samples):
+    """Each fixture group's texts typed in order, as the desktop sends them while
+    typing: before each word, then after each of its first two letters. The
+    context keeps its last `history` characters without a clipped leading word.
+    None separates groups. A bounded run takes the same number from each group."""
+    import regex
+    groups = []
+    for name in ['regression.json', 'general-writing.json']:
+        for texts in json.loads((ROOT / 'neural/fixtures' / name).read_bytes()).values():
+            steps, typed = [], ''
+            for text in texts:
+                text = text.replace('’', "'").strip()
+                for match in regex.finditer(r"\p{L}[\p{L}\p{M}]*(?:'\p{L}[\p{L}\p{M}]*)*", text):
+                    before = typed + text[:match.start()]
+                    if len(before) > history:
+                        before = before[-history:]
+                        before = before[before.find(' ') + 1:] if ' ' in before else ''
+                    graphemes = regex.findall(r'\X', match.group())
+                    steps.extend((before, ''.join(graphemes[:n]))
+                                 for n in range(min(3, len(graphemes))))
+                typed += text + ('' if text.endswith(('.', '!', '?')) else '.') + ' '
+            groups.append(steps)
+    per_group = -(-samples // len(groups)) if samples else None
+    return [step for steps in groups for step in steps[:per_group] + [None]]
+
+
+def evaluate_typing(args):
+    """Generation latency while typing, without resets within a fixture group,
+    so the worker can reuse the previous request's context. Latency only."""
+    steps = typed_workload(args.history or 512, args.samples)
+    command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
+               '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
+    if args.accelerated_worker:
+        command += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
+    client = Client(command)
+    times, failures, hits, warmup_failures = [], 0, 0, 0
+    try:
+        for step in [s for s in steps if s][:20]:
+            if generated(client, *step)[1] is None:
+                warmup_failures += 1
+                client.retry()
+        reset = True
+        for step in steps:
+            if step is None:
+                reset = True
+                continue
+            _, reply, _, total = generated(client, *step, reset=reset)
+            reset = reply is None
+            if reply is None:
+                failures += 1
+                client.retry()  # Explicit benchmark recovery, not production policy.
+            else:
+                times.append(total)
+                hits += reply['result']['cache_hit']
+    finally:
+        client.close()
+    measured = len([s for s in steps if s])
+    report = dict(schema=1, mode='typing',
+                  policy=json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy'],
+                  platform=platform.platform(), queries=measured, history_chars=args.history or 512,
+                  warmup_queries=20, warmup_failures=warmup_failures,
+                  failures=failures, exact_context_hits=hits, latency={'generation_with_ipc': timing(times)},
+                  cold_load_ms=client.cold_ms, peak_process_tree_rss_bytes=client.peak,
+                  capabilities=client.ready['capabilities'], worker_sha256=sha(args.worker),
+                  accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
+                  fixture_hashes={n: sha(ROOT / 'neural/fixtures' / n) for n in ['regression.json', 'general-writing.json']},
+                  note='Latency only. Contexts follow each fixture group typed in order without resets.',
+                  production_qualified=False)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+
+
 def evaluate(args):
+    if args.typing:
+        return evaluate_typing(args)
     queries = workload()
     if args.phrases:
         return evaluate_phrases(args, queries)
     if args.natural_context:
-        queries = natural_workload(queries)
+        queries = natural_workload(queries, args.history)
     queries = sample(queries, args.samples)
     db = sqlite3.connect(args.baseline.resolve().as_uri() + '?mode=ro', uri=True)
     vocabulary = {row[0] for row in db.execute('SELECT word FROM vocabulary')}
@@ -225,7 +300,7 @@ def evaluate(args):
                   warmup_failures=warmup_failures, failures=dict(failures),
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
                   peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
-                  natural_context=args.natural_context,
+                  natural_context=args.natural_context, history_chars=args.history,
                   cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
                   accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
                   fixture_hashes={n: sha(ROOT / 'neural/fixtures' / n) for n in ['regression.json', 'general-writing.json']},
@@ -243,11 +318,21 @@ def main():
     parser.add_argument('--samples', type=int, default=0, help='0 uses the full frozen workload')
     parser.add_argument('--natural-context', action='store_true',
                         help='send preceding text with its original case and punctuation')
+    parser.add_argument('--history', type=int, default=0, metavar='CHARS',
+                        help='with --natural-context, precede each query with earlier texts '
+                             'of its fixture group, keeping the last CHARS characters')
+    parser.add_argument('--typing', action='store_true',
+                        help='time generation while typing each fixture group in order, '
+                             'without resets; context is clipped to --history or 512 characters')
     parser.add_argument('--phrases', action='store_true',
                         help='measure two-word phrases instead of six word slots')
     args = parser.parse_args()
     if args.samples < 0:
         parser.error('samples must be nonnegative')
+    if args.history < 0 or (args.history and not (args.natural_context or args.typing)):
+        parser.error('history must be nonnegative and requires --natural-context or --typing')
+    if args.typing and args.phrases:
+        parser.error('--typing measures words only')
     evaluate(args)
 
 

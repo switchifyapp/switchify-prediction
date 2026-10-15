@@ -4,7 +4,7 @@ An optional library and CLI for immediate statistical suggestions followed by of
 
 This candidate is not yet production-qualified. The optimized Windows worker passed the latency target and improved overall top-five accuracy, but two development cells failed the frozen quality gate. See `docs/smol-production-results.md` in the repository for the full comparison and platform limits. `Ready` means the worker is available, not that the quality gate has passed.
 
-The preserved reranking policy reranks eight statistical candidates using SmolLM2-135M Q8. It scores every token of a word plus the probability of a following word boundary, uses the current sentence capped at 64 tokens and returns at most five ordered words. Scores from different models are never combined or exposed as shared probabilities. Limits above five are errors. Minimum grapheme settings are honored; unigram-only requests stay statistical. The same caller-owned predictor supplies immediate suggestions and the shortlist, including its current personal snapshot.
+The preserved reranking policy reranks eight statistical candidates using SmolLM2-135M Q8. It scores every token of a word plus the probability of a following word boundary, uses the current sentence capped at the 128-token context window and returns at most five ordered words. Scores from different models are never combined or exposed as shared probabilities. Limits above five are errors. Minimum grapheme settings are honored; unigram-only requests stay statistical. The same caller-owned predictor supplies immediate suggestions and the shortlist, including its current personal snapshot.
 
 The controller returns immediate words synchronously. A persistent child loads the model once and refines through private bounded pipes. There is one active request and one replaceable pending request. `poll()` yields only the latest request; callers should also match its request ID before displaying it. Session changes and `reset()` invalidate old results and clear the worker's context. Loading is separate from the 2 second reply deadline for inference and reset. Startup has a 30 second bound. Failure stops the worker and leaves immediate suggestions available. Recovery requires `retry()`. `shutdown()` kills and joins the worker and clears pending text.
 
@@ -89,8 +89,16 @@ further completion could change the ranked result: every later completion extend
 a live beam by a piece that does not start a word boundary, so each returned word
 must lead the next by more than the beams' remaining continuation probability.
 Stopping early therefore returns the same words as the full search. Generation
-sees the current sentence as typed, with case and punctuation, because the model
-learned from natural text; reranking still uses the normalized sentence. Results are
+sees the text before the word as typed, earlier sentences included, with case and
+punctuation, because the model learned from natural text; reranking still uses
+the normalized current sentence. The model sees at most 128 tokens. A longer
+context starts at the earliest sentence that fits, or within a long sentence at a
+multiple of 32 tokens from its start, so the start stays put while typing. The
+worker keeps the prepared context and evaluates only what changed, in 16-token
+groups that give exactly the values of a fresh evaluation. Between requests for
+the same text field, callers should use `Refiner::cancel()`, which discards
+pending work and results but keeps that context; `reset()` clears it, so the next
+request evaluates its whole context again. See [earlier sentences](../docs/earlier-sentences.md). Results are
 ranked by whole-word probability including following boundary mass. A boundary
 probability of at least 0.5 excludes likely unfinished fragments. Search can return
 fewer than three words, including none. This is English-focused and not a spelling
@@ -101,6 +109,9 @@ Run scripts/generation_evaluate.py with explicit --cli, --worker, --baseline,
 across the existing frozen corpus partitions and zero through four graphemes.
 Omit --samples for the full comparison. --natural-context sends each query's
 preceding fixture text with its original case and punctuation, as the desktop does.
+Adding --history 512 precedes it with earlier texts of the same fixture group, up
+to the desktop's 512-character buffer. --typing instead measures latency only,
+typing each group in order without resets, as the desktop asks while typing.
 Install psutil==7.0.0 and regex==2025.11.3.
 The report includes top-three/top-six counts, fill, OOV, regressions, latency and
 process-tree RSS. This is a regression comparison, not unseen-data qualification.

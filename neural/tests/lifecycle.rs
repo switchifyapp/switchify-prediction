@@ -254,21 +254,37 @@ fn context_and_bundle_validation() {
     );
     assert_eq!(effective_context("last sentence."), "");
     assert_eq!(effective_context("first\nsecond line"), "second line");
+    // Generation keeps earlier sentences and lines as typed.
     assert_eq!(
-        generation_context("Ignore me! I can\u{2019}t  find the  "),
-        "I can't find the"
+        generation_context("  Keep me! I can\u{2019}t  find the  "),
+        "Keep me! I can't find the"
     );
+    assert_eq!(
+        generation_context("We went to the beach. It was warm.\tThe "),
+        "We went to the beach. It was warm. The"
+    );
+    assert_eq!(generation_context("last sentence."), "last sentence.");
+    assert_eq!(generation_context("last sentence. "), "last sentence.");
+    assert_eq!(
+        generation_context("Dear Sam, \r\n\r\n first\nSecond line, then "),
+        "Dear Sam,\nfirst\nSecond line, then"
+    );
+    assert_eq!(generation_context("Hi.\n"), "Hi.");
+    assert_eq!(generation_context(" \n "), "");
     assert_eq!(generation_context("He said \u{201C}"), "He said");
     assert_eq!(generation_context("Il a dit \u{AB}"), "Il a dit");
+    assert_eq!(generation_context("Done.\n\u{201C}"), "Done.");
     assert_eq!(
         generation_context("Call me (or \"Sam\" "),
         "Call me (or \"Sam\""
     );
     assert_eq!(generation_context("the students' "), "the students'");
-    assert_eq!(generation_context("last sentence."), "");
+    // Reranking still uses the normalized current sentence.
+    assert_eq!(effective_context("Ignore me. I can\u{2019}t"), "i can't");
+    let manifest: serde_json::Value = serde_json::from_str(bundle::MANIFEST).unwrap();
     assert_eq!(
-        generation_context("first\nSecond line, then "),
-        "Second line, then"
+        manifest["policy"]["context_tokens"],
+        switchify_prediction_neural::CONTEXT_TOKENS
     );
     let temp = tempfile::tempdir().unwrap();
     assert!(bundle::load(temp.path()).is_err());
@@ -377,6 +393,38 @@ fn generation_is_async_normalized_and_latest_only() {
     thread::sleep(Duration::from_millis(150));
     assert!(engine.poll().is_none());
     assert!(engine.generate("", "", 2, &[], 4).is_err());
+}
+
+#[test]
+fn cancel_discards_results_but_keeps_the_context() {
+    let (_temp, _predictor, mut engine) = fixture("delay");
+    until(|| engine.status() == Status::Ready);
+    let generate = |engine: &mut Refiner| {
+        let id = engine
+            .generate("I went home. Then I", "", 1, &[], 3)
+            .unwrap()
+            .unwrap();
+        let mut result = None;
+        until(|| {
+            result = engine.poll();
+            result.is_some()
+        });
+        let result = result.unwrap();
+        assert_eq!(result.request_id, id);
+        result.cache_hit
+    };
+    assert!(!generate(&mut engine));
+    // Whether or not the worker received it, the cancelled request's result
+    // is discarded and its context stays prepared.
+    engine
+        .generate("I went home. Then I", "", 1, &[], 3)
+        .unwrap();
+    engine.cancel();
+    thread::sleep(Duration::from_millis(150));
+    assert!(engine.poll().is_none());
+    assert!(generate(&mut engine));
+    engine.reset();
+    assert!(!generate(&mut engine));
 }
 
 #[test]
