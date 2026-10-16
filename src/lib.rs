@@ -318,13 +318,6 @@ fn validate_connection(db: &Connection) -> Result<Validation> {
         return Err(Error::Invalid("unknown database kind".into()));
     }
     let counts = load_checked(db, &kind)?;
-    let mut logical = String::new();
-    for (context, words) in &counts.0 {
-        for (word, count) in words {
-            logical.push_str(&serde_json::to_string(&(context, word, count))?);
-            logical.push('\n');
-        }
-    }
     Ok(Validation {
         schema_version: 1,
         format: "sqlite".into(),
@@ -341,8 +334,7 @@ fn logical_sha256(counts: &Counts) -> Result<String> {
     for (context, words) in &counts.0 {
         for (word, count) in words {
             logical.push_str(&serde_json::to_string(&(context, word, count))?);
-            logical.push('
-');
+            logical.push('\n');
         }
     }
     Ok(digest(logical.as_bytes()))
