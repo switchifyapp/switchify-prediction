@@ -22,10 +22,14 @@ architecture. Extract the CLI and model into **separate directories**, verify
 the checksums, and run each bundle's `python verify_bundle.py`.
 
 ```sh
-/path/to/switchify-prediction validate --database /path/to/model/english.sqlite --production
-/path/to/switchify-prediction predict --baseline /path/to/model/english.sqlite \
+/path/to/switchify-prediction validate --database /path/to/model/english.ngrams --production
+/path/to/switchify-prediction predict --baseline /path/to/model/english.ngrams \
   --before 'I need ' --prefix 'he'
 ```
+
+The model bundle holds the same model twice: `english.ngrams`, a compact file
+that opens in milliseconds, and `english.sqlite` for applications that still
+pin the SQLite file. Either path works everywhere a baseline is accepted.
 
 On Windows use `switchify-prediction.exe`. The executable includes SQLite; no
 server or Rust installation is needed. CLI packages are unsigned, not desktop app
@@ -94,8 +98,9 @@ refuses to finish unless the logical fingerprint matches. `predict`, `learn`,
 for the baseline and give bit-identical predictions. Personal databases stay
 SQLite. The production model's n-gram file is 8.5 MB instead of 29.8 MB, and
 opens in about 20 ms instead of about 2.8 s with a tenth of the memory; see
-[the baseline format report](docs/baseline-format.md). The published model
-bundle still contains `english.sqlite`.
+[the baseline format report](docs/baseline-format.md). The model bundle
+contains both files, and `scripts/artifacts.py` refuses to package an n-gram
+file whose hash is not the pinned one.
 
 ## Personal learning
 
