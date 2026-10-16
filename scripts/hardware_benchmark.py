@@ -60,6 +60,13 @@ def cpuinfo(text):
     return model, isa
 
 
+def darwin_isa(features, leaf7):
+    """ISA support from Intel macOS machdep.cpu feature strings, which spell AVX as AVX1.0."""
+    names = {{'avx1_0': 'avx'}.get(f, f) for f in
+             ((features or '') + ' ' + (leaf7 or '')).lower().replace('.', '_').split()}
+    return {name: name in names for name in ISA}
+
+
 def sysctl(name):
     try:
         return subprocess.run(['sysctl', '-n', name], capture_output=True, text=True,
@@ -119,10 +126,7 @@ def hardware():
         result['translated'] = sysctl('sysctl.proc_translated') == '1'
         result['native_machine'] = 'aarch64' if sysctl('hw.optional.arm64') == '1' else 'x86_64'
         if result['native_machine'] == 'x86_64':
-            features = (sysctl('machdep.cpu.features') or '').lower().replace('.', '_').split()
-            leaf7 = (sysctl('machdep.cpu.leaf7_features') or '').lower().split()
-            for name in ISA:
-                result['isa'][name] = name in features or name in leaf7
+            result['isa'] = darwin_isa(sysctl('machdep.cpu.features'), sysctl('machdep.cpu.leaf7_features'))
             result['isa_method'] = 'sysctl machdep.cpu'
         for level in ['0', '1']:
             cores = sysctl(f'hw.perflevel{level}.physicalcpu')
@@ -144,10 +148,10 @@ def hardware():
 
 
 def experiment_limits(worker, limits):
-    """Confirm an experiment worker accepts these limits. A production worker has
-    no such mode and exits without output, so it cannot be mislabelled."""
-    if not limits:
-        return None
+    """The search limits an experiment build reports with these settings, or None
+    for a production worker, which has no such mode and exits without output.
+    Requested limits that a worker does not confirm are an error, so a production
+    worker cannot be mislabelled as an experiment."""
     env = dict(os.environ, **{EXPERIMENT[k]: str(v) for k, v in limits.items()})
     reply = subprocess.run([str(worker), '--experiment-limits'], capture_output=True,
                            text=True, env=env, timeout=30)
@@ -155,7 +159,9 @@ def experiment_limits(worker, limits):
         actual = json.loads(reply.stdout)
     except json.JSONDecodeError:
         actual = None
-    if reply.returncode != 0 or not isinstance(actual, dict) or any(actual.get(k) != v for k, v in limits.items()):
+    if reply.returncode != 0 or not isinstance(actual, dict):
+        actual = None
+    if limits and (actual is None or any(actual.get(k) != v for k, v in limits.items())):
         raise RuntimeError('Worker is not an experiment build or rejected the limits')
     return actual
 
@@ -164,22 +170,42 @@ def total(cells, field):
     return sum(c[field] for c in cells.values())
 
 
+def timeouts(statuses):
+    return sum(n for status, n in (statuses or {}).items() if 'Timeout' in status)
+
+
+def split_statuses(generation):
+    """Generation and rerank failure statuses. Reports from before they were kept
+    apart have one combined count, which splits exactly only when every failure
+    was a timeout."""
+    if 'rerank_failure_statuses' in generation:
+        return generation['failure_statuses'], generation['rerank_failure_statuses']
+    failures, combined = generation['failures'], generation['failure_statuses']
+    if timeouts(combined) != sum(combined.values()) or sum(combined.values()) != sum(failures.values()):
+        raise ValueError('Combined failure statuses cannot be split')
+    status = next(iter(combined), json.dumps({'Unavailable': 'Timeout'}))
+    return ({status: failures['generation']} if failures.get('generation') else {},
+            {status: failures['rerank']} if failures.get('rerank') else {})
+
+
 def summarize(generation, refinement):
     """The issue's per-machine metrics, from the unchanged benchmark reports."""
     def latency(timing, statuses):
-        timeouts = sum(n for status, n in (statuses or {}).items() if 'Timeout' in status)
         return {'median_ms': timing and timing['median_ms'], 'p95_ms': timing and timing['p95_ms'],
                 'max_ms': timing and timing['max_ms'], 'successful_samples': timing and timing['samples'],
-                'timeouts': timeouts,
+                'timeouts': timeouts(statuses),
                 # A reply timeout is a missed deadline, as is a late reply the CLI still displayed.
-                'deadline_misses': timeouts + (timing['at_least_deadline'] if timing else 0)}
+                'deadline_misses': timeouts(statuses) + (timing['at_least_deadline'] if timing else 0)}
     result = {}
     if generation:
         cells, queries = generation['cells'], generation['queries']
+        statuses, rerank = split_statuses(generation)
         result['generation'] = dict(
-            latency(generation['latency'].get('generation_with_ipc'), generation['failure_statuses']),
-            queries=queries, failed_requests=sum(generation['failures'].values()),
-            failures=generation['failures'], cold_startup_ms=generation['cold_load_ms'],
+            latency(generation['latency'].get('generation_with_ipc'), statuses),
+            queries=queries, failed_requests=generation['failures'].get('generation', 0),
+            # The comparison also reranks each query first; its failures are reported apart.
+            rerank_failed_requests=generation['failures'].get('rerank', 0),
+            rerank_timeouts=timeouts(rerank), cold_startup_ms=generation['cold_load_ms'],
             peak_process_tree_rss_bytes=generation['peak_process_tree_rss_bytes'],
             peak_process_tree_threads=generation['peak_process_tree_threads'],
             six_slot_top6_accuracy=total(cells, 'six_slots_top6_hits') / queries,
@@ -187,7 +213,9 @@ def summarize(generation, refinement):
             current_top3_accuracy=total(cells, 'current_top3_hits') / queries,
             neural_slot_fill_rate=total(cells, 'generated_words') / (queries * 3),
             generated_sha256=generation['generated_sha256'])
-    if refinement:
+    if refinement and 'error' in refinement:
+        result['refinement'] = {'error': refinement['error']}
+    elif refinement:
         cells, queries = refinement['cells'], refinement['queries']
         result['refinement'] = dict(
             latency(refinement['timings'].get('refinement_with_ipc'), refinement['failure_statuses']),
@@ -224,7 +252,13 @@ def run(args):
         raise SystemExit(f'System CPU use is {background:.0f}% before measuring; close other work and retry')
     limits = {k: v for k, v in [('beam_width', args.beam_width),
                                 ('max_forward_evaluations', args.max_forward_evaluations)] if v}
-    experiment = experiment_limits(args.worker.resolve(), limits)
+    # Never start the accelerated worker directly unless limits must be confirmed on it;
+    # it may not run on this CPU.
+    workers = [args.worker] + ([args.accelerated_worker] if limits and args.accelerated_worker else [])
+    probes = [experiment_limits(w.resolve(), limits) for w in workers]
+    if limits and None in probes:
+        raise RuntimeError('Every worker must be an experiment build to apply experiment limits')
+    experiment = next((p for p in probes if p), None)
     saved = {name: os.environ.get(name) for name in EXPERIMENT.values()}
     reports = {}
     try:
@@ -239,8 +273,12 @@ def run(args):
             reports['generation'] = json.loads(output.read_bytes())
             if args.training:
                 output = Path(temp) / 'refinement.json'
-                neural_evaluate.evaluate(SimpleNamespace(**common, output=output, training=args.training))
-                reports['refinement'] = json.loads(output.read_bytes())
+                try:
+                    neural_evaluate.evaluate(SimpleNamespace(**common, output=output, training=args.training))
+                    reports['refinement'] = json.loads(output.read_bytes())
+                except RuntimeError as error:
+                    # Keep the completed generation run; record why refinement has no report.
+                    reports['refinement'] = {'error': str(error)}
     finally:
         for name, value in saved.items():
             if value is None:
@@ -253,8 +291,8 @@ def run(args):
         'configuration': {
             'threads': args.threads or 4, 'samples': reports['generation']['queries'],
             'natural_context': args.natural_context, 'cpu_restriction': args.cpus,
-            'simulated': bool(args.cpus), 'experiment_limits': experiment,
-            'production_policy': not experiment,
+            'simulated': bool(args.cpus), 'experiment_build': experiment is not None,
+            'experiment_limits': experiment, 'production_policy': experiment is None,
             'accelerated_used': reports['generation']['capabilities']['accelerated'],
             'deadline_ms': DEADLINE_MS, 'refinement_benchmark': bool(args.training),
             'system_cpu_percent_before': background, 'system_cpu_percent_after': background_cpu_percent()},

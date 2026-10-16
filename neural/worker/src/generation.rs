@@ -13,8 +13,9 @@ const WIDTH: usize = 8;
 const TOKENS: usize = 8;
 const EVALUATIONS: usize = 64;
 
-/// Beam width and forward-evaluation budget. Production builds always use the
-/// policy constants. Only the benchmark-only `experiment` feature can lower them.
+/// Beam width and forward-evaluation budget, shared by word and phrase search.
+/// Production builds always use the policy constants. Only the benchmark-only
+/// `experiment` feature can lower them, and then it lowers both searches.
 #[cfg(not(feature = "experiment"))]
 fn limits() -> (usize, usize) {
     (WIDTH, EVALUATIONS)
@@ -418,6 +419,13 @@ mod tests {
         let policy = &manifest["policy"]["generation"];
         assert_eq!(policy["beam_width"], WIDTH);
         assert_eq!(policy["max_forward_evaluations"], EVALUATIONS);
+        assert_eq!(policy["max_tokens_per_word"], TOKENS);
+        let phrases = &manifest["policy"]["phrases"];
+        assert_eq!(phrases["max_forward_evaluations"], EVALUATIONS);
+        assert_eq!(
+            phrases["max_tokens_per_phrase"],
+            TOKENS * switchify_prediction_neural::protocol::PHRASE_WORDS
+        );
         // Without configured overrides, experiment builds search like production.
         assert_eq!(limits(), (WIDTH, EVALUATIONS));
     }

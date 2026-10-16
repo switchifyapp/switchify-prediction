@@ -10,12 +10,16 @@ import hardware_benchmark
 from neural_evaluate import command, timing
 
 
-def generation_report(timeout_count=0, slow=0):
+TIMEOUT = '{"Unavailable": "Timeout"}'
+
+
+def generation_report(timeout_count=0, slow=0, rerank=0):
     cell = {'queries': 4, 'six_slots_top6_hits': 3, 'statistical_six_top6_hits': 2,
             'current_top3_hits': 1, 'generated_words': 6}
-    statuses = {'{"Unavailable": "Timeout"}': timeout_count} if timeout_count else {}
-    return {'queries': 4, 'cells': {'a/b/0': cell}, 'failures': {'generation': timeout_count},
-            'failure_statuses': statuses, 'cold_load_ms': 1.0, 'peak_process_tree_rss_bytes': 2,
+    failures = {k: v for k, v in [('rerank', rerank), ('generation', timeout_count)] if v}
+    return {'queries': 4, 'cells': {'a/b/0': cell}, 'failures': failures,
+            'failure_statuses': {TIMEOUT: timeout_count} if timeout_count else {},
+            'rerank_failure_statuses': {TIMEOUT: rerank} if rerank else {}, 'cold_load_ms': 1.0, 'peak_process_tree_rss_bytes': 2,
             'peak_process_tree_threads': 3, 'generated_sha256': 'x',
             'latency': {'generation_with_ipc': {'samples': 4 - timeout_count, 'median_ms': 1,
                                                 'p95_ms': 2, 'max_ms': 3, 'at_least_deadline': slow}}}
@@ -31,6 +35,48 @@ class HardwareBenchmarkTests(unittest.TestCase):
         self.assertEqual(summary['generation']['six_slot_top6_accuracy'], .75)
         self.assertEqual(summary['generation']['neural_slot_fill_rate'], .5)
         self.assertNotIn('refinement', summary)
+
+    def test_rerank_failures_are_not_generation_deadline_misses(self):
+        summary = hardware_benchmark.summarize(generation_report(timeout_count=1, slow=1, rerank=4), None)['generation']
+        self.assertEqual((summary['failed_requests'], summary['timeouts'], summary['deadline_misses']), (1, 1, 2))
+        self.assertEqual((summary['rerank_failed_requests'], summary['rerank_timeouts']), (4, 4))
+        # Older reports combined both; all-timeout counts split exactly by request kind.
+        old = generation_report(timeout_count=1, slow=1, rerank=4)
+        old['failure_statuses'] = {TIMEOUT: 5}
+        del old['rerank_failure_statuses']
+        self.assertEqual(hardware_benchmark.summarize(old, None)['generation'], summary)
+        old['failure_statuses'] = {TIMEOUT: 4, '{"Unavailable": "Worker"}': 1}
+        with self.assertRaisesRegex(ValueError, 'cannot be split'):
+            hardware_benchmark.summarize(old, None)
+
+    def test_refinement_warmup_failure_keeps_the_generation_run(self):
+        def generation(args):
+            args.output.write_text(json.dumps(dict(generation_report(), capabilities={'accelerated': False})))
+        with tempfile.TemporaryDirectory() as temp:
+            temp = Path(temp)
+            for name in ['cli', 'worker']:
+                (temp / name).write_bytes(b'synthetic')
+            args = hardware_benchmark.parser().parse_args(
+                ['--cli', str(temp / 'cli'), '--worker', str(temp / 'worker'), '--baseline', 'b', '--bundle', 'm',
+                 '--output', str(temp / 'out.json'), '--label', 'synthetic', '--training', 't'])
+            with mock.patch.object(hardware_benchmark, 'verify_inputs', return_value={}), \
+                    mock.patch.object(hardware_benchmark, 'background_cpu_percent', return_value=0), \
+                    mock.patch.object(hardware_benchmark, 'experiment_limits', return_value=None), \
+                    mock.patch.object(hardware_benchmark, 'hardware', return_value={}), \
+                    mock.patch.object(hardware_benchmark.generation_evaluate, 'evaluate', side_effect=generation), \
+                    mock.patch.object(hardware_benchmark.neural_evaluate, 'evaluate',
+                                      side_effect=RuntimeError('Neural warm-up failed; no measured run was produced')), \
+                    mock.patch('builtins.print'):
+                hardware_benchmark.run(args)
+            report = json.loads((temp / 'out.json').read_bytes())
+        self.assertEqual(report['summary']['generation']['queries'], 4)
+        self.assertIn('warm-up failed', report['summary']['refinement']['error'])
+        self.assertEqual(report['configuration']['experiment_build'], False)
+
+    def test_intel_mac_avx_spelling(self):
+        isa = hardware_benchmark.darwin_isa('FPU SSE4.1 SSE4.2 AVX1.0 F16C FMA', 'AVX2 BMI1')
+        self.assertEqual(isa, dict.fromkeys(hardware_benchmark.ISA, True))
+        self.assertFalse(hardware_benchmark.darwin_isa('SSE4.1', None)['avx'])
 
     def test_threads_are_passed_only_when_requested(self):
         args = SimpleNamespace(cli=Path('cli'), baseline=Path('b'), bundle=Path('m'), worker=Path('w'),
@@ -59,7 +105,13 @@ class HardwareBenchmarkTests(unittest.TestCase):
         self.assertIsNone(isa['avx2'])
 
     def test_production_worker_cannot_be_labelled_as_an_experiment(self):
-        self.assertIsNone(hardware_benchmark.experiment_limits(Path('worker'), {}))
+        production = subprocess.CompletedProcess([], 1, '', '')
+        with mock.patch.object(hardware_benchmark.subprocess, 'run', return_value=production):
+            self.assertIsNone(hardware_benchmark.experiment_limits(Path('worker'), {}))
+        # An experiment build is labelled as one even at the policy limits.
+        policy = subprocess.CompletedProcess([], 0, '{"beam_width":8,"max_forward_evaluations":64}', '')
+        with mock.patch.object(hardware_benchmark.subprocess, 'run', return_value=policy):
+            self.assertEqual(hardware_benchmark.experiment_limits(Path('worker'), {})['beam_width'], 8)
         limits = {'beam_width': 4}
         for reply in [subprocess.CompletedProcess([], 1, '', ''),
                       subprocess.CompletedProcess([], 0, '{"beam_width":8}', '')]:

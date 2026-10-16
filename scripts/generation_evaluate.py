@@ -19,7 +19,7 @@ import time
 from neural_evaluate import Client, ROOT, command, natural_workload, sha, timing, words, workload
 
 
-def generated(client, before, prefix, command='generate'):
+def generated(client, before, prefix, command='generate', statuses=None):
     # Match the desktop's changed-context reset. The comparison mode must not
     # prefill generation's context cache before the measured request.
     client.process.stdin.write('{"command":"reset"}\n')
@@ -37,7 +37,8 @@ def generated(client, before, prefix, command='generate'):
     reply = client.receive()
     total = (time.perf_counter() - started) * 1000
     if reply['type'] != 'refined':
-        client.failure_statuses[json.dumps(reply.get('status'))] += 1
+        # Generation failures are counted apart from the comparison's rerank failures.
+        (client.failure_statuses if statuses is None else statuses)[json.dumps(reply.get('status'))] += 1
         return immediate, None, elapsed, total
     assert reply['result']['request_id'] == immediate['result']['request_id']
     return immediate, reply, elapsed, total
@@ -179,13 +180,14 @@ def evaluate(args):
                 warmup_failures += 1
                 client.retry()
         client.failure_statuses.clear()  # Count measured queries only.
+        generation_statuses = collections.Counter()
         for index, (_, part, domain, n, before, prefix, target) in enumerate(queries):
             old, ranked, _, _ = client.query(before, prefix)
             old_words = ranked['result']['words'] if ranked else old['result']['words']
             if old['result']['refinement_requested'] and ranked is None:
                 failures['rerank'] += 1
                 client.retry()
-            immediate, reply, latency, total = generated(client, before, prefix)
+            immediate, reply, latency, total = generated(client, before, prefix, statuses=generation_statuses)
             instant = immediate['result']['words']
             stats = immediate['result']['statistical_six']
             assert instant == stats[:3]
@@ -228,7 +230,8 @@ def evaluate(args):
     report = dict(schema=1, policy=json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy'],
                   platform=platform.platform(), queries=len(queries), warmup_queries=min(20, len(queries)),
                   warmup_failures=warmup_failures, failures=dict(failures),
-                  failure_statuses=dict(client.failure_statuses),
+                  failure_statuses=dict(generation_statuses),
+                  rerank_failure_statuses=dict(client.failure_statuses),
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
                   peak_process_tree_rss_bytes=client.peak, peak_process_tree_threads=client.peak_threads,
                   process_tree_cpu_affinity=client.affinity, generated_sha256=digest.hexdigest(),
