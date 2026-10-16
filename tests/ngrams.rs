@@ -393,13 +393,17 @@ fn malformed_and_truncated_files_are_rejected() {
         b[l.bigram_ids + start * 4 + 4..l.bigram_ids + start * 4 + 8].copy_from_slice(&first);
     });
     mutate("bigram-start-decreases", &|b| {
-        // A middle start index above the one after it.
+        // A start index above the one after it, at a word with no followers
+        // whose predecessor has none either: the predecessor's range then
+        // holds one valid record of a later context and passes, so the
+        // decreasing range itself is what is rejected.
+        let start = |c: usize| u32_at(b, l.bigram_starts + c * 4);
         let context = (1..l.n_words)
-            .find(|&c| u32_at(b, l.bigram_starts + (c + 1) * 4) > 0)
-            .expect("a context with records");
-        let next = u32_at(b, l.bigram_starts + (context + 1) * 4) as u32;
+            .find(|&c| start(c - 1) == start(c) && start(c) == start(c + 1))
+            .expect("two adjacent words without followers");
+        let raised = (start(context + 1) + 1) as u32;
         b[l.bigram_starts + context * 4..l.bigram_starts + context * 4 + 4]
-            .copy_from_slice(&(next + 1).to_le_bytes());
+            .copy_from_slice(&raised.to_le_bytes());
     });
     // The untouched file is still fine.
     assert!(validate(&f.ngrams).is_ok());

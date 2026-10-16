@@ -67,9 +67,9 @@ new dependency. No crate was added.
 
 `Ngrams::parse` checks, in order: the magic and that the trailer equals the
 SHA-256 of the rest; the version; the metadata (language `en`, kind
-`baseline`); that every array fits the file and nothing follows the last one; that the
-vocabulary is non-empty, strictly ascending and made of valid normalized
-words; that every count is positive and within the SQLite schema's limit;
+`baseline`); that there is at least one word; that every array fits the file
+and nothing follows the last one; that the vocabulary is strictly ascending
+and made of valid normalized words; that every count is positive and within the SQLite schema's limit;
 that ids are in range and strictly ascending within each context; that
 trigram contexts are strictly ascending and non-empty; and that no n-gram
 count exceeds its word's unigram count. These are the rules the SQLite

@@ -69,6 +69,17 @@
       "wall_ms": [30, 27, 27]
     }
   },
+  "cross_binary_parity": {
+    "before": "1b5fc54 CLI, predict and predict --phrases on english.sqlite",
+    "after": "c30155a CLI, predict and predict --phrases on english.ngrams",
+    "contexts": ["", "i want to", "the", "can you", "i need", "what time", "please help me", "my"],
+    "prefixes": ["", "s", "th", "wa", "he"],
+    "options": "--limit 8 --min-chars 0",
+    "queries": 40,
+    "output_lines": 3720,
+    "output_sha256_both": "f590040840b173728fbb9e23e8bf1004b3e612798fcada203e2e6cdde5e46d91",
+    "identical": true
+  },
   "parity": {
     "test": "production_parity",
     "queries_per_phase": 40559,

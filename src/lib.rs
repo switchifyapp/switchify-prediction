@@ -418,29 +418,8 @@ pub fn build_ngrams(path: &Path, text: &str, provenance: &str) -> Result<Validat
 /// Converts a SQLite baseline to an n-gram file with the same counts and
 /// provenance. The output's logical fingerprint must equal the input's.
 pub fn convert(input: &Path, output: &Path) -> Result<Validation> {
-    let (counts, metadata, logical_sha256) = {
-        let mut connection = readonly(input)?;
-        let db = connection.transaction()?;
-        if check(&db)? != "baseline" {
-            return Err(Error::Invalid("expected baseline database".into()));
-        }
-        let counts = load_checked(&db, "baseline")?;
-        let provenance: String = db.query_row(
-            "SELECT value FROM metadata WHERE key='provenance'",
-            [],
-            |r| r.get(0),
-        )?;
-        let logical_sha256 = logical_sha256(&counts)?;
-        (
-            counts,
-            ngrams::Metadata {
-                language: "en".into(),
-                kind: "baseline".into(),
-                provenance,
-            },
-            logical_sha256,
-        )
-    };
+    let (counts, metadata) = load_sqlite_baseline(input)?;
+    let logical_sha256 = logical_sha256(&counts)?;
     persist_ngrams(
         output,
         &ngrams::Ngrams::encode(&counts, &metadata)?,
@@ -571,6 +550,12 @@ fn open_baseline(path: &Path) -> Result<ngrams::Ngrams> {
     if is_ngrams_file(path)? {
         return ngrams::Ngrams::open(path);
     }
+    let (counts, metadata) = load_sqlite_baseline(path)?;
+    ngrams::Ngrams::parse(ngrams::Ngrams::encode(&counts, &metadata)?)
+}
+/// A validated SQLite baseline's counts, with the metadata an n-gram file
+/// of it carries.
+fn load_sqlite_baseline(path: &Path) -> Result<(Counts, ngrams::Metadata)> {
     let mut connection = readonly(path)?;
     let db = connection.transaction()?;
     if check(&db)? != "baseline" {
@@ -587,7 +572,7 @@ fn open_baseline(path: &Path) -> Result<ngrams::Ngrams> {
         kind: "baseline".into(),
         provenance,
     };
-    ngrams::Ngrams::parse(ngrams::Ngrams::encode(&counts, &metadata)?)
+    Ok((counts, metadata))
 }
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
