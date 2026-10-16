@@ -8,6 +8,10 @@ publish = false
 
 [features]
 accelerated = []
+# Benchmark-only search limit overrides for low-end experiments. Never packaged.
+experiment = []
+# Experimental Apple GPU backend. Untested on hardware and never packaged.
+metal = ["candle-core/metal", "candle-nn/metal", "candle-transformers/metal"]
 
 [dependencies]
 switchify-prediction-neural = { path = ".." }

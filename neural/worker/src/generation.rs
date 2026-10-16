@@ -13,6 +13,42 @@ const WIDTH: usize = 8;
 const TOKENS: usize = 8;
 const EVALUATIONS: usize = 64;
 
+/// Beam width and forward-evaluation budget, shared by word and phrase search.
+/// Production builds always use the policy constants. Only the benchmark-only
+/// `experiment` feature can lower them, and then it lowers both searches.
+#[cfg(not(feature = "experiment"))]
+fn limits() -> (usize, usize) {
+    (WIDTH, EVALUATIONS)
+}
+#[cfg(feature = "experiment")]
+static LIMITS: std::sync::OnceLock<(usize, usize)> = std::sync::OnceLock::new();
+#[cfg(feature = "experiment")]
+fn limits() -> (usize, usize) {
+    *LIMITS.get_or_init(|| (WIDTH, EVALUATIONS))
+}
+/// Read lowered limits once at startup. Invalid values fail rather than silently
+/// measuring the policy limits.
+#[cfg(feature = "experiment")]
+pub fn configure() -> Result<(usize, usize)> {
+    let read = |name: &str, default: usize| -> Result<usize> {
+        match std::env::var(name) {
+            Err(std::env::VarError::NotPresent) => Ok(default),
+            Ok(value) => {
+                let value: usize = value.parse()?;
+                ensure!((1..=default).contains(&value), "experiment");
+                Ok(value)
+            }
+            Err(_) => anyhow::bail!("experiment"),
+        }
+    };
+    let limits = (
+        read("SWITCHIFY_SMOL_EXPERIMENT_BEAM_WIDTH", WIDTH)?,
+        read("SWITCHIFY_SMOL_EXPERIMENT_EVALUATIONS", EVALUATIONS)?,
+    );
+    ensure!(*LIMITS.get_or_init(|| limits) == limits, "experiment");
+    Ok(limits)
+}
+
 /// What a search completes: `words` whole words separated by single spaces,
 /// the first constrained by `prefix`, each result checked by `accepts`.
 pub struct Target<'a> {
@@ -256,6 +292,7 @@ fn run(
     }];
     let mut finished: BTreeMap<Vec<String>, f64> = BTreeMap::new();
     let mut batch = Duration::ZERO;
+    let (width, budget) = limits();
     for depth in 0..TOKENS * target.words {
         let mut candidates: Vec<Candidate> = Vec::new();
         for (parent, beam) in beams.iter().enumerate() {
@@ -280,7 +317,7 @@ fn run(
                     continue;
                 }
                 let score = beam.score + beam.logits[token] as f64 - normalizer;
-                if candidates.len() == WIDTH && score <= candidates.last().unwrap().score {
+                if candidates.len() == width && score <= candidates.last().unwrap().score {
                     continue;
                 }
                 let mut bytes = beam.bytes.clone();
@@ -303,7 +340,7 @@ fn run(
                             .then(a.parent.cmp(&b.parent))
                             .then(a.token.cmp(&b.token))
                     });
-                    candidates.truncate(WIDTH);
+                    candidates.truncate(width);
                 }
             }
         }
@@ -312,7 +349,7 @@ fn run(
         if started.elapsed() + batch >= Duration::from_millis(1600) {
             break;
         }
-        candidates.truncate(EVALUATIONS.saturating_sub(evaluations));
+        candidates.truncate(budget.saturating_sub(evaluations));
         if candidates.is_empty() {
             break;
         }
@@ -358,8 +395,7 @@ fn run(
             });
         }
         beams = next;
-        if evaluations >= EVALUATIONS
-            || (stop_when_settled && settled(&finished, &beams, target.limit))
+        if evaluations >= budget || (stop_when_settled && settled(&finished, &beams, target.limit))
         {
             break;
         }
@@ -376,6 +412,24 @@ fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn search_limits_match_the_frozen_policy() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../model-bundle.json")).unwrap();
+        let policy = &manifest["policy"]["generation"];
+        assert_eq!(policy["beam_width"], WIDTH);
+        assert_eq!(policy["max_forward_evaluations"], EVALUATIONS);
+        assert_eq!(policy["max_tokens_per_word"], TOKENS);
+        let phrases = &manifest["policy"]["phrases"];
+        assert_eq!(phrases["max_forward_evaluations"], EVALUATIONS);
+        assert_eq!(
+            phrases["max_tokens_per_phrase"],
+            TOKENS * switchify_prediction_neural::protocol::PHRASE_WORDS
+        );
+        // Without configured overrides, experiment builds search like production.
+        assert_eq!(limits(), (WIDTH, EVALUATIONS));
+    }
+
     #[test]
     fn byte_prefix_and_word_shapes() {
         assert!(partial(b" caf\xc3", true, "café", 1));

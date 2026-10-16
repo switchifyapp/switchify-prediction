@@ -8,6 +8,7 @@ Requires psutil and regex. No personal database is opened.
 """
 import argparse
 import collections
+import hashlib
 import json
 from pathlib import Path
 import platform
@@ -15,10 +16,10 @@ import re
 import sqlite3
 import time
 
-from neural_evaluate import Client, ROOT, natural_workload, sha, timing, words, workload
+from neural_evaluate import Client, ROOT, command, natural_workload, sha, timing, words, workload
 
 
-def generated(client, before, prefix, command='generate'):
+def generated(client, before, prefix, command='generate', statuses=None):
     # Match the desktop's changed-context reset. The comparison mode must not
     # prefill generation's context cache before the measured request.
     client.process.stdin.write('{"command":"reset"}\n')
@@ -36,6 +37,8 @@ def generated(client, before, prefix, command='generate'):
     reply = client.receive()
     total = (time.perf_counter() - started) * 1000
     if reply['type'] != 'refined':
+        # Generation failures are counted apart from the comparison's rerank failures.
+        (client.failure_statuses if statuses is None else statuses)[json.dumps(reply.get('status'))] += 1
         return immediate, None, elapsed, total
     assert reply['result']['request_id'] == immediate['result']['request_id']
     return immediate, reply, elapsed, total
@@ -77,25 +80,25 @@ def evaluate_phrases(args, queries):
     if args.natural_context:
         natural = natural_workload([q for q, _ in targets])
         targets = [(n, phrase) for n, (_, phrase) in zip(natural, targets)]
-    command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
-               '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
-    if args.accelerated_worker:
-        command += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
-    client = Client(command)
+    client = Client(command(args), getattr(args, 'cpus', None))
     times = collections.defaultdict(list)
     cells = collections.defaultdict(collections.Counter)
     failures = collections.Counter()
     warmup_failures = 0
+    # Ordered generated outputs: compares builds and settings without storing words.
+    digest = hashlib.sha256()
     try:
         for query, _ in targets[:20]:
             _, reply, _, _ = generated(client, query[4], query[5], 'generate_phrases')
             if reply is None:
                 warmup_failures += 1
                 client.retry()
+        client.failure_statuses.clear()  # Count measured queries only.
         for index, ((_, part, domain, n, before, prefix, _), target) in enumerate(targets):
             immediate, reply, latency, total = generated(client, before, prefix, 'generate_phrases')
             statistical = immediate['result']['phrases']
             neural = reply['result']['phrases'] if reply else []
+            digest.update(json.dumps(neural, ensure_ascii=False, separators=(',', ':')).encode() + b'\n')
             for phrases in [statistical, neural]:
                 assert len(phrases) <= 3 and all(len(p) == 2 for p in phrases)
                 assert len({tuple(p) for p in phrases}) == len(phrases)
@@ -138,8 +141,11 @@ def evaluate_phrases(args, queries):
                   policy=json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy'],
                   platform=platform.platform(), queries=len(targets), warmup_queries=min(20, len(targets)),
                   warmup_failures=warmup_failures, failures=dict(failures), summary=summary,
+                  failure_statuses=dict(client.failure_statuses),
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
-                  peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
+                  peak_process_tree_rss_bytes=client.peak, peak_process_tree_threads=client.peak_threads,
+                  process_tree_cpu_affinity=client.affinity, generated_sha256=digest.hexdigest(),
+                  capabilities=client.ready['capabilities'],
                   natural_context=args.natural_context,
                   cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
                   accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
@@ -160,32 +166,33 @@ def evaluate(args):
     db = sqlite3.connect(args.baseline.resolve().as_uri() + '?mode=ro', uri=True)
     vocabulary = {row[0] for row in db.execute('SELECT word FROM vocabulary')}
     db.close()
-    command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
-               '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
-    if args.accelerated_worker:
-        command += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
-    client = Client(command)
+    client = Client(command(args), getattr(args, 'cpus', None))
     times = collections.defaultdict(list)
     cells = collections.defaultdict(collections.Counter)
     failures = collections.Counter()
     warmup_failures = 0
+    # Ordered generated outputs: compares builds and settings without storing words.
+    digest = hashlib.sha256()
     try:
         for query in queries[:20]:
             _, reply, _, _ = generated(client, query[4], query[5])
             if reply is None:
                 warmup_failures += 1
                 client.retry()
+        client.failure_statuses.clear()  # Count measured queries only.
+        generation_statuses = collections.Counter()
         for index, (_, part, domain, n, before, prefix, target) in enumerate(queries):
             old, ranked, _, _ = client.query(before, prefix)
             old_words = ranked['result']['words'] if ranked else old['result']['words']
             if old['result']['refinement_requested'] and ranked is None:
                 failures['rerank'] += 1
                 client.retry()
-            immediate, reply, latency, total = generated(client, before, prefix)
+            immediate, reply, latency, total = generated(client, before, prefix, statuses=generation_statuses)
             instant = immediate['result']['words']
             stats = immediate['result']['statistical_six']
             assert instant == stats[:3]
             words = reply['result']['words'] if reply else []
+            digest.update(json.dumps(words, ensure_ascii=False, separators=(',', ':')).encode() + b'\n')
             assert len(words) <= 3 and not set(words).intersection(instant)
             assert len(set(words)) == len(words)
             slots = instant + [None] * (3 - len(instant)) + words + [None] * (3 - len(words))
@@ -223,8 +230,12 @@ def evaluate(args):
     report = dict(schema=1, policy=json.loads((ROOT / 'neural/model-bundle.json').read_bytes())['policy'],
                   platform=platform.platform(), queries=len(queries), warmup_queries=min(20, len(queries)),
                   warmup_failures=warmup_failures, failures=dict(failures),
+                  failure_statuses=dict(generation_statuses),
+                  rerank_failure_statuses=dict(client.failure_statuses),
                   latency={k: timing(v) for k, v in times.items()}, cold_load_ms=client.cold_ms,
-                  peak_process_tree_rss_bytes=client.peak, capabilities=client.ready['capabilities'],
+                  peak_process_tree_rss_bytes=client.peak, peak_process_tree_threads=client.peak_threads,
+                  process_tree_cpu_affinity=client.affinity, generated_sha256=digest.hexdigest(),
+                  capabilities=client.ready['capabilities'],
                   natural_context=args.natural_context,
                   cells=dict(cells), baseline_sha256=sha(args.baseline), worker_sha256=sha(args.worker),
                   accelerated_worker_sha256=sha(args.accelerated_worker) if args.accelerated_worker else None,
@@ -240,6 +251,7 @@ def main():
     for name in ['cli', 'baseline', 'bundle', 'worker', 'output']:
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--accelerated-worker', type=Path)
+    parser.add_argument('--threads', type=int, choices=range(1, 5), help='worker threads; the CLI defaults to 4')
     parser.add_argument('--samples', type=int, default=0, help='0 uses the full frozen workload')
     parser.add_argument('--natural-context', action='store_true',
                         help='send preceding text with its original case and punctuation')

@@ -18,6 +18,8 @@ import time
 import unicodedata
 
 ROOT = Path(__file__).resolve().parent.parent
+# The parent's reply deadline, REPLY_DEADLINE_MS in neural/src/lib.rs.
+DEADLINE_MS = 2000
 
 
 def sha(path):
@@ -95,18 +97,46 @@ def timing(values):
     if not values:
         return None
     return {'samples': len(values), 'median_ms': values[len(values)//2],
-            'p95_ms': values[math.ceil(len(values)*.95)-1], 'max_ms': values[-1]}
+            'p95_ms': values[math.ceil(len(values)*.95)-1], 'max_ms': values[-1],
+            'at_least_deadline': sum(v >= DEADLINE_MS for v in values)}
+
+
+def command(args):
+    result = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
+              '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
+    if args.accelerated_worker:
+        result += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
+    if getattr(args, 'threads', None):
+        result += ['--threads', str(args.threads)]
+    return result
+
+
+def tree(process):
+    return [process] + process.children(recursive=True)
 
 
 class Client:
-    def __init__(self, command):
+    def __init__(self, command, cpus=None):
         import psutil
+        me = psutil.Process()
+        original = me.cpu_affinity() if cpus else None
+        if cpus:
+            # Simulation only. The CLI inherits this and its worker inherits from the
+            # CLI; the benchmark itself returns to every CPU so it does not compete.
+            me.cpu_affinity(cpus)
         self.started = time.perf_counter()
-        self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        try:
+            self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        finally:
+            if cpus:
+                me.cpu_affinity(original)
         self.messages = queue.Queue()
         self.stop = threading.Event()
         self.peak = 0
+        self.peak_threads = 0
+        # Failed refinements by reported status, for example a reply timeout.
+        self.failure_statuses = collections.Counter()
         def read():
             try:
                 for line in self.process.stdout:
@@ -117,8 +147,10 @@ class Client:
             parent = psutil.Process(self.process.pid)
             while not self.stop.is_set():
                 try:
-                    total = sum(p.memory_info().rss for p in [parent] + parent.children(recursive=True))
+                    processes = tree(parent)
+                    total = sum(p.memory_info().rss for p in processes)
                     self.peak = max(self.peak, total)
+                    self.peak_threads = max(self.peak_threads, sum(p.num_threads() for p in processes))
                 except psutil.Error:
                     pass
                 self.stop.wait(.01)
@@ -131,6 +163,12 @@ class Client:
             self.close()
             raise RuntimeError('Worker did not become ready')
         self.cold_ms = (time.perf_counter()-self.started)*1000
+        self.affinity = None
+        try:
+            # Children inherit the caller's affinity; record what the worker received.
+            self.affinity = sorted({tuple(p.cpu_affinity()) for p in tree(psutil.Process(self.process.pid))})
+        except (AttributeError, psutil.Error):
+            pass  # macOS has no affinity API.
 
     def receive(self):
         return self.messages.get(timeout=40)
@@ -148,6 +186,7 @@ class Client:
         refined = self.receive()
         elapsed = (time.perf_counter()-start)*1000
         if refined['type'] != 'refined':
+            self.failure_statuses[json.dumps(refined.get('status'))] += 1
             return immediate, None, ipc_immediate, elapsed
         assert refined['result']['request_id'] == immediate['result']['request_id']
         return immediate, refined, ipc_immediate, elapsed
@@ -194,11 +233,7 @@ def evaluate(args):
     for name in ['regression', 'general-writing']:
         fixtures = json.loads((ROOT / f'neural/fixtures/{name}.json').read_bytes())
         assert not training.intersection(' '.join(words(text)) for texts in fixtures.values() for text in texts)
-    command = [str(args.cli.resolve()), 'stream', '--baseline', str(args.baseline.resolve()),
-               '--bundle', str(args.bundle.resolve()), '--worker', str(args.worker.resolve())]
-    if args.accelerated_worker:
-        command += ['--accelerated-worker', str(args.accelerated_worker.resolve())]
-    client = Client(command)
+    client = Client(command(args), getattr(args, 'cpus', None))
     times = collections.defaultdict(list)
     cells = collections.defaultdict(lambda: {'queries':0, 'baseline_top1':0, 'baseline_top5':0,
                                             'refined_top1':0, 'refined_top5':0, 'failures':0})
@@ -240,7 +275,9 @@ def evaluate(args):
     report = {'platform':platform.platform(), 'processor':platform.processor(), 'logical_cpus':psutil.cpu_count(),
               'capabilities':client.ready['capabilities'], 'cold_load_ms':client.cold_ms,
               'process_tree_peak_rss_bytes':client.peak, 'memory_method':'10ms sum of parent and descendants RSS; shared pages may count twice',
-              'queries':len(queries), 'failures':failures, 'timings':{k:timing(v) for k,v in times.items()},
+              'process_tree_peak_threads':client.peak_threads, 'process_tree_cpu_affinity':client.affinity,
+              'queries':len(queries), 'failures':failures, 'failure_statuses':dict(client.failure_statuses),
+              'timings':{k:timing(v) for k,v in times.items()},
               'explicit_retry_load_ms':reload_ms,
               'model_file_bytes':(args.bundle / 'model.gguf').stat().st_size,
               'baseline_file_bytes':args.baseline.stat().st_size,
@@ -263,6 +300,7 @@ def main():
     for name in ['cli', 'worker', 'baseline', 'bundle', 'training', 'output']:
         parser.add_argument('--'+name, type=Path, required=True)
     parser.add_argument('--accelerated-worker', type=Path)
+    parser.add_argument('--threads', type=int, choices=range(1, 5), help='worker threads; the CLI defaults to 4')
     args = parser.parse_args()
     if args.output.exists():
         raise ValueError('Output already exists')
