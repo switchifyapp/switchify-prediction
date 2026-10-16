@@ -63,6 +63,8 @@ python scripts/neural_evaluate.py --cli target/smol-portable/release/switchify-p
 
 Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for the optimized comparison. Each run contains 1,760 warmed queries with personal learning disabled. Reports include quality cells, immediate and IPC-inclusive refinement timings, cache hits/misses, cold load and sampled process-tree RSS. Training overlap is checked; unknown neural pretraining overlap remains possible. These are regression comparisons and do not prove unseen-data accuracy. A failed quality or latency gate prevents a production-quality claim; it does not cause test-set tuning or automatic promotion.
 
+`scripts/hardware_benchmark.py` wraps both benchmarks with hardware details for minimum-spec measurements; see `docs/low-end-hardware.md`. The worker's `experiment` and `metal` features are benchmark-only and never packaged.
+
 `python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release` packages binaries, hashes and dependency notices without model files. Omit the accelerated path for ARM. CI builds/tests Windows x64, Linux x64, macOS ARM64 and macOS x64. Build/test success is not a claim of measured model latency on those platforms. See `SECURITY.md` for the scoped dependency advisory exception and deployment boundaries.
 
 
