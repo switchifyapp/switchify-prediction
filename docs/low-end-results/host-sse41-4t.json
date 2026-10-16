@@ -54,6 +54,7 @@
     "natural_context": false,
     "cpu_restriction": null,
     "simulated": false,
+    "experiment_build": false,
     "experiment_limits": null,
     "production_policy": true,
     "accelerated_used": false,
@@ -72,7 +73,8 @@
       "deadline_misses": 0,
       "queries": 440,
       "failed_requests": 0,
-      "failures": {},
+      "rerank_failed_requests": 0,
+      "rerank_timeouts": 0,
       "cold_startup_ms": 4621.235800208524,
       "peak_process_tree_rss_bytes": 491335680,
       "peak_process_tree_threads": 27,
@@ -1761,5 +1763,9 @@
       "production_qualified": false
     }
   },
-  "interpretation": "Frozen regression fixtures with unknown pretraining overlap. A simulated or experiment configuration is not production policy or a low-end measurement."
+  "interpretation": "Frozen regression fixtures with unknown pretraining overlap. A simulated or experiment configuration is not production policy or a low-end measurement.",
+  "summary_recomputed": {
+    "harness_sha256": "e9a9fda2619f4995fff53d159d51b9828c3daf143d729a80b86eec127c0e1e1c",
+    "reason": "Recomputed from the stored reports after review: rerank failures are reported apart from generation failures and deadline misses, and experiment builds are labelled from the worker's own --experiment-limits reply. Measurements unchanged."
+  }
 }

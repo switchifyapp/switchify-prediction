@@ -4,8 +4,8 @@ Issue #39 asks for measured evidence for a minimum spec and for whether a GPU pa
 
 ## What is new
 
-- `scripts/hardware_benchmark.py` runs the frozen `generation_evaluate.py` workload and, with `--training`, the `neural_evaluate.py` refinement benchmark, unchanged. It records the CPU model, SSE4.1/SSE4.2/AVX/AVX2 support, cores, logical CPUs, RAM, OS, power state and the native machine when an x64 process is emulated. It summarizes median, p95 and maximum latency, failed requests, reply timeouts, replies at or past the 2 s deadline, cold startup, process-tree peak RSS and thread count. It refuses a model or baseline that differs from the pins and refuses to start on a busy machine.
-- A benchmark-only `experiment` worker feature lowers beam width and `max_forward_evaluations` through the environment. The harness confirms the worker is such a build, so a production worker cannot be mislabelled. Production builds keep the policy constants, checked against `model-bundle.json` by a test.
+- `scripts/hardware_benchmark.py` runs the frozen `generation_evaluate.py` workload and, with `--training`, the `neural_evaluate.py` refinement benchmark, unchanged. It records the CPU model, SSE4.1/SSE4.2/AVX/AVX2 support, cores, logical CPUs, RAM, OS, power state and the native machine when an x64 process is emulated. It summarizes median, p95 and maximum latency, failed requests, reply timeouts, replies at or past the 2 s deadline, cold startup, process-tree peak RSS and thread count. Generation and reranking failures are counted separately. A refinement warm-up failure is recorded in the report without discarding the generation run. It refuses a model or baseline that differs from the pins and refuses to start on a busy machine.
+- A benchmark-only `experiment` worker feature lowers beam width and `max_forward_evaluations` through the environment, for word and phrase search alike. The harness asks every worker for its limits, so an experiment build is labelled as one even at the policy limits, and a production worker cannot be mislabelled as an experiment. Production builds keep the policy constants, checked against `model-bundle.json` by a test.
 - An experimental `metal` worker feature selects Candle 0.11's Metal device on macOS. It is compile-checked in CI on macOS ARM64 only. **It has not run on any hardware.**
 - `--cpus` restricts the CLI and worker to chosen logical CPUs. That is a simulation of a weaker CPU, not a low-end measurement, and reports say so.
 
@@ -49,20 +49,22 @@ The experiment worker ran with the portable flags and four threads. At the polic
 | 4 | 32 | 234 ms | 347 ms | 496 ms | 66.4% | 86.3% | 0 |
 | 2 | 16 | 171 ms | 268 ms | 344 ms | 61.4% | 76.0% | 0 |
 
-The statistical six alone score 45.9% on these queries. Halving the search cuts median latency by about 29% and costs 5.6 points of top-six accuracy. The AVX2 build at the policy limits is both faster (157 ms) and more accurate (71.8%) than either reduced search, so on any CPU with AVX2, the AVX2 build is the mitigation to use. Reduced search is only relevant to CPUs without AVX2, and its value there is unmeasured.
+The statistical six alone score 45.9% on these queries. Width 4 with 32 evaluations cuts median latency by 28.5% against the experiment worker at the policy limits (327 ms), or 29.0% against the production portable worker (329 ms), and costs 5.6 points of top-six accuracy. The AVX2 build at the policy limits is both faster (157 ms) and more accurate (71.8%) than either reduced search, so on any CPU with AVX2, the AVX2 build is the mitigation to use. Reduced search is only relevant to CPUs without AVX2, and its value there is unmeasured.
 
 ### Simulated weak CPU
 
 Restricting the CLI and worker to two efficiency cores (logical CPUs 12 and 13) with two threads was meant to simulate a weaker CPU. It is a simulation, not a measurement of a Celeron: Gracemont efficiency cores are faster than Gemini Lake or Jasper Lake cores and do have AVX2, though the portable worker does not use it, and this laptop's clocks and Windows scheduling under restriction are unknown.
 
-| Worker | Successful | Median | p95 | Maximum | Failed requests | Deadline misses | Top six |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Portable | 59 / 440 | 1,899 ms | 2,008 ms | 2,039 ms | 821 | 824 | 38.2% |
-| Experiment, width 4, 32 evaluations | 56 / 440 | 1,903 ms | 1,988 ms | 2,013 ms | 823 | 825 | 38.2% |
+| Worker | Successful generation | Median | p95 | Maximum | Failed generation | Generation deadline misses | Failed reranking | Top six |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Portable | 59 / 440 | 1,899 ms | 2,008 ms | 2,039 ms | 381 | 384 | 440 / 440 | 38.2% |
+| Experiment, width 4, 32 evaluations | 56 / 440 | 1,903 ms | 1,988 ms | 2,013 ms | 384 | 386 | 439 / 440 | 38.2% |
 
-All but one of the 880 reranking requests and 87% of generation requests timed out. The few successful generation replies returned no words, so the six slots fell below the statistical six. The benchmark retries after each failure, so most requests also followed a fresh model load.
+The comparison reranks each query before generating, so reranking failures are counted separately. Deadline misses are timeouts plus replies that arrived at or after 2 s. All but one of the 880 reranking requests and 87% of generation requests timed out. The few successful generation replies returned no words, so the six slots fell below the statistical six. The benchmark retries after each failure, so most requests also followed a fresh model load.
 
-A control run restricted to two performance cores (logical CPUs 0 and 2, two threads, 40 queries, `sim-2pcore-portable-2t-40.json`) also timed out on all 80 requests, although the same worker with one thread and no restriction answered in 322 ms. So the restriction itself, on this laptop and Windows build, causes the timeouts; it does not model a slower CPU. **These simulation results say nothing reliable about low-end hardware and should not be used for the minimum spec.** The cause was not investigated further. `--cpus` stays in the harness for Linux and other machines, but its results need the same control before they are trusted.
+A control run restricted to two performance cores (logical CPUs 0 and 2, two threads, 40 queries, `sim-2pcore-portable-2t-40.json`) also timed out on all 40 generation and all 40 reranking requests, although the same worker with one thread and no restriction answered in 322 ms. So the restriction itself, on this laptop and Windows build, causes the timeouts; it does not model a slower CPU. **These simulation results say nothing reliable about low-end hardware and should not be used for the minimum spec.** The cause was not investigated further. `--cpus` stays in the harness for Linux and other machines, but its results need the same control before they are trusted.
+
+The report summaries were recomputed from their stored data after review, to separate reranking from generation failures and to label the experiment build from its own reply; each report's `summary_recomputed` field records this. No measurement was repeated or changed.
 
 ### Equivalence of the default build
 
@@ -87,7 +89,7 @@ Neither was implemented.
 This is provisional. It rests on one fast laptop, and must be confirmed or replaced by the machines listed below.
 
 - **x86-64 with AVX2, FMA and F16C:** supported with the AVX2 worker. On the stand-in it halves portable latency, with no failures and no missed deadlines. On the Ryzen reference it already met the reranking target.
-- **x86-64 without AVX2** (Celeron and Pentium Silver class): do not offer the neural companion by default; keep statistical prediction, until a real machine shows it meets the 2 s deadline. This is a cautious default, not a measured failure. Even on a fast core the portable worker is about twice as slow as AVX2 (329 against 157 ms median for generation). SSE4.1 and AVX builds give nothing, thread count made no difference here, and halving the search costs 5.6 points of accuracy for a 29% gain. The CPU-restriction simulation was not usable as evidence.
+- **x86-64 without AVX2** (Celeron and Pentium Silver class): do not offer the neural companion by default; keep statistical prediction, until a real machine shows it meets the 2 s deadline. This is a cautious default, not a measured failure. Even on a fast core the portable worker is about twice as slow as AVX2 (329 against 157 ms median for generation). SSE4.1 and AVX builds give nothing, thread count made no difference here, and halving the search costs 5.6 points of accuracy for about 28% lower median latency. The CPU-restriction simulation was not usable as evidence.
 - **Memory:** sampled process-tree peak RSS was 0.43–0.55 GiB in every configuration. Whether that fits alongside other applications on a 4 GB machine is unmeasured.
 - **Apple Silicon and Windows on ARM:** unknown. Do not infer them from these results.
 - **Threads:** keep the default of four. Nothing here supports changing it.

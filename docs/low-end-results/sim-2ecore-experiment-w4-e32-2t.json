@@ -57,6 +57,7 @@
       13
     ],
     "simulated": true,
+    "experiment_build": true,
     "experiment_limits": {
       "beam_width": 4,
       "max_forward_evaluations": 32
@@ -74,14 +75,12 @@
       "p95_ms": 1988.4726000018418,
       "max_ms": 2013.3856001775712,
       "successful_samples": 56,
-      "timeouts": 823,
-      "deadline_misses": 825,
+      "timeouts": 384,
+      "deadline_misses": 386,
       "queries": 440,
-      "failed_requests": 823,
-      "failures": {
-        "rerank": 439,
-        "generation": 384
-      },
+      "failed_requests": 384,
+      "rerank_failed_requests": 439,
+      "rerank_timeouts": 439,
       "cold_startup_ms": 5668.782799970359,
       "peak_process_tree_rss_bytes": 575369216,
       "peak_process_tree_threads": 28,
@@ -1757,5 +1756,9 @@
       "production_qualified": false
     }
   },
-  "interpretation": "Frozen regression fixtures with unknown pretraining overlap. A simulated or experiment configuration is not production policy or a low-end measurement."
+  "interpretation": "Frozen regression fixtures with unknown pretraining overlap. A simulated or experiment configuration is not production policy or a low-end measurement.",
+  "summary_recomputed": {
+    "harness_sha256": "e9a9fda2619f4995fff53d159d51b9828c3daf143d729a80b86eec127c0e1e1c",
+    "reason": "Recomputed from the stored reports after review: rerank failures are reported apart from generation failures and deadline misses, and experiment builds are labelled from the worker's own --experiment-limits reply. Measurements unchanged."
+  }
 }
