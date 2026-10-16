@@ -42,7 +42,7 @@ def main():
             'Download and extract the separate English model into another directory.\n'
             'Run switchify-prediction validate --database /path/to/english.ngrams --production\n'
             'Run switchify-prediction predict --baseline /path/to/english.ngrams --before "I need" --prefix he\n'
-            'The model bundle also contains english.sqlite, which every command accepts the same way.\n'
+            'The model bundle also contains english.sqlite; predict, learn, import, reset-personal and validate accept either file.\n'
             'Retain LICENSE, THIRD_PARTY_NOTICES.md and RUST_LIBRARY_COPYRIGHT.html when redistributing.\n'
             'These standalone CLI binaries are unsigned; they are not signed/notarized app installers.\n'
             'Personal databases are local and unencrypted. Do not put them in a distributed bundle.\n', encoding='utf-8')
