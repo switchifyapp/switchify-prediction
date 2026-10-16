@@ -39,8 +39,9 @@ pub struct Metadata {
     pub provenance: String,
 }
 
-/// A parsed, verified n-gram file. Offsets are byte positions in `bytes`;
-/// every index reachable through the public methods was checked when parsing.
+/// A parsed, verified n-gram file. Offsets are byte positions in `bytes`.
+/// Ids come only from the file itself, so the crate-private accessors index
+/// without further checks; parsing checked every id and offset.
 pub struct Ngrams {
     bytes: Vec<u8>,
     metadata: Metadata,
@@ -64,14 +65,14 @@ pub struct Ngrams {
 
 /// The words observed after one context, with their counts.
 #[derive(Clone, Copy)]
-pub struct Table<'a> {
+pub(crate) struct Table<'a> {
     ngrams: &'a Ngrams,
     /// `None` for the unigram table, where the word id is the index.
     sorted: Option<(usize, usize, usize)>,
     total: f64,
 }
 impl Table<'_> {
-    pub fn get(&self, id: u32) -> Option<u64> {
+    pub(crate) fn get(&self, id: u32) -> Option<u64> {
         match self.sorted {
             None => Some(self.ngrams.u64_at(self.ngrams.unigram_counts, id as usize)),
             Some((ids, counts, len)) => {
@@ -91,10 +92,10 @@ impl Table<'_> {
         }
     }
     /// The float sum of the counts, in word order.
-    pub fn total(&self) -> f64 {
+    pub(crate) fn total(&self) -> f64 {
         self.total
     }
-    pub fn ids(&self) -> impl Iterator<Item = u32> + '_ {
+    pub(crate) fn ids(&self) -> impl Iterator<Item = u32> + '_ {
         let (ids, len) = match self.sorted {
             None => (None, self.ngrams.n_words),
             Some((ids, _, len)) => (Some(ids), len),
@@ -187,13 +188,14 @@ impl Ngrams {
         if n_words == 0 {
             return Err(Error::Invalid("baseline has no unigrams".into()));
         }
-        let word_offsets = cursor.array(n_words + 1, 4)?;
+        let counted = |n: usize| n.checked_add(1).ok_or_else(|| invalid("truncated"));
+        let word_offsets = cursor.array(counted(n_words)?, 4)?;
         let offset_at = |i: usize| {
             u32::from_le_bytes(bytes[word_offsets + i * 4..][..4].try_into().unwrap()) as usize
         };
         let words = cursor.take(offset_at(n_words))?;
         let unigram_counts = cursor.array(n_words, 8)?;
-        let bigram_starts = cursor.array(n_words + 1, 4)?;
+        let bigram_starts = cursor.array(counted(n_words)?, 4)?;
         let start_at = |offset: usize, i: usize| {
             u32::from_le_bytes(bytes[offset + i * 4..][..4].try_into().unwrap()) as usize
         };
@@ -202,7 +204,7 @@ impl Ngrams {
         let bigram_counts = cursor.array(n_bigrams, 8)?;
         let n_trigram_contexts = cursor.u32()? as usize;
         let trigram_contexts = cursor.array(n_trigram_contexts, 8)?;
-        let trigram_starts = cursor.array(n_trigram_contexts + 1, 4)?;
+        let trigram_starts = cursor.array(counted(n_trigram_contexts)?, 4)?;
         let n_trigrams = start_at(trigram_starts, n_trigram_contexts);
         let trigram_ids = cursor.array(n_trigrams, 4)?;
         let trigram_counts = cursor.array(n_trigrams, 8)?;
@@ -342,7 +344,7 @@ impl Ngrams {
         digest(&self.bytes)
     }
 
-    pub fn word(&self, id: u32) -> &str {
+    pub(crate) fn word(&self, id: u32) -> &str {
         let (start, end) = (
             self.u32_at(self.word_offsets, id as usize) as usize,
             self.u32_at(self.word_offsets, id as usize + 1) as usize,
@@ -363,21 +365,21 @@ impl Ngrams {
         }
         low as u32
     }
-    pub fn id(&self, word: &str) -> Option<u32> {
+    pub(crate) fn id(&self, word: &str) -> Option<u32> {
         let id = self.partition_point(|w| w < word);
         ((id as usize) < self.n_words && self.word(id) == word).then_some(id)
     }
     /// Ids of the words starting with `prefix`, in word order.
-    pub fn prefix_range(&self, prefix: &str) -> Range<u32> {
+    pub(crate) fn prefix_range(&self, prefix: &str) -> Range<u32> {
         let start = self.partition_point(|w| w < prefix);
         let end = self.partition_point(|w| w < prefix || w.starts_with(prefix));
         start..end.max(start)
     }
-    pub fn unigram(&self, id: u32) -> u64 {
+    pub(crate) fn unigram(&self, id: u32) -> u64 {
         self.u64_at(self.unigram_counts, id as usize)
     }
     /// The words after `context` (up to two word ids), if any were observed.
-    pub fn table(&self, context: &[u32]) -> Option<Table<'_>> {
+    pub(crate) fn table(&self, context: &[u32]) -> Option<Table<'_>> {
         match *context {
             [] => Some(Table {
                 ngrams: self,
@@ -429,7 +431,7 @@ impl Ngrams {
         }
     }
     /// The table after a context given as words; `None` if any word is unknown.
-    pub fn table_for_words(&self, context: &[String]) -> Option<Table<'_>> {
+    pub(crate) fn table_for_words(&self, context: &[String]) -> Option<Table<'_>> {
         let mut ids = [0; 2];
         if context.len() > ids.len() {
             return None;

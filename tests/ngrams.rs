@@ -119,6 +119,7 @@ fn converted_and_built_files_match_the_sqlite_baseline_exactly() {
 fn learning_on_either_format_matches_the_other() {
     let f = fixture();
     let personal = f.dir.path().join("personal.sqlite");
+    let original = fs::read(&f.ngrams).unwrap();
     let mut from_sqlite = Predictor::open(&f.sqlite, Some(&personal)).unwrap();
     let mut from_ngrams = Predictor::open(&f.ngrams, Some(&personal)).unwrap();
     for text in [
@@ -146,10 +147,7 @@ fn learning_on_either_format_matches_the_other() {
         "reset equals none",
     );
     // The baseline file is never written.
-    assert_eq!(
-        fs::read(&f.ngrams).unwrap(),
-        fs::read(f.dir.path().join("baseline.ngrams")).unwrap()
-    );
+    assert_eq!(original, fs::read(&f.ngrams).unwrap());
 }
 
 #[test]
@@ -168,9 +166,10 @@ fn outputs_are_never_replaced_and_only_baselines_convert() {
     assert!(!out.exists());
     assert!(convert(&f.ngrams, &out).is_err(), "only SQLite converts");
     assert!(!out.exists());
-    // An n-gram file is not a personal database.
+    // An n-gram file is not a personal database, and is left as it was.
     assert!(Predictor::open(&f.sqlite, Some(&f.ngrams)).is_err());
     assert!(Predictor::open(&f.ngrams, Some(&f.ngrams)).is_err());
+    assert_eq!(before, fs::read(&f.ngrams).unwrap());
 }
 
 /// Byte offsets of the file's regions, from the documented layout.
@@ -185,6 +184,9 @@ struct Layout {
     bigram_ids: usize,
     bigram_counts: usize,
     trigram_contexts: usize,
+    n_trigram_contexts: usize,
+    trigram_starts: usize,
+    trigram_ids: usize,
     end: usize,
 }
 fn u32_at(bytes: &[u8], at: usize) -> usize {
@@ -204,6 +206,9 @@ fn layout(bytes: &[u8]) -> Layout {
     let n_bigrams = u32_at(bytes, bigram_starts + n_words * 4);
     let bigram_counts = bigram_ids + n_bigrams * 4;
     let trigram_contexts = bigram_counts + n_bigrams * 8 + 4;
+    let n_trigram_contexts = u32_at(bytes, trigram_contexts - 4);
+    let trigram_starts = trigram_contexts + n_trigram_contexts * 8;
+    let trigram_ids = trigram_starts + (n_trigram_contexts + 1) * 4;
     Layout {
         version,
         metadata,
@@ -215,6 +220,9 @@ fn layout(bytes: &[u8]) -> Layout {
         bigram_ids,
         bigram_counts,
         trigram_contexts,
+        n_trigram_contexts,
+        trigram_starts,
+        trigram_ids,
         end: bytes.len() - 32,
     }
 }
@@ -359,11 +367,39 @@ fn malformed_and_truncated_files_are_rejected() {
             .copy_from_slice(&(l.n_words as u32).to_le_bytes())
     });
     mutate("trigram-context-order", &|b| {
-        b[l.trigram_contexts..l.trigram_contexts + 4].copy_from_slice(&u32::MAX.to_le_bytes());
+        // The first context becomes the largest possible one, after the rest.
         b[l.trigram_contexts..l.trigram_contexts + 4]
             .copy_from_slice(&((l.n_words - 1) as u32).to_le_bytes());
         b[l.trigram_contexts + 4..l.trigram_contexts + 8]
             .copy_from_slice(&((l.n_words - 1) as u32).to_le_bytes());
+    });
+    assert!(l.n_trigram_contexts >= 2);
+    mutate("trigram-empty-context", &|b| {
+        // The second context starts where the first does: the first is empty.
+        let first = b[l.trigram_starts..l.trigram_starts + 4].to_vec();
+        b[l.trigram_starts + 4..l.trigram_starts + 8].copy_from_slice(&first);
+    });
+    mutate("trigram-id-out-of-range", &|b| {
+        b[l.trigram_ids..l.trigram_ids + 4].copy_from_slice(&(l.n_words as u32).to_le_bytes())
+    });
+    mutate("duplicate-id-in-context", &|b| {
+        let start = (0..l.n_words)
+            .map(|context| u32_at(b, l.bigram_starts + context * 4))
+            .zip((1..=l.n_words).map(|next| u32_at(b, l.bigram_starts + next * 4)))
+            .find(|(start, end)| end - start >= 2)
+            .expect("a word with two followers")
+            .0;
+        let first = b[l.bigram_ids + start * 4..l.bigram_ids + start * 4 + 4].to_vec();
+        b[l.bigram_ids + start * 4 + 4..l.bigram_ids + start * 4 + 8].copy_from_slice(&first);
+    });
+    mutate("bigram-start-decreases", &|b| {
+        // A middle start index above the one after it.
+        let context = (1..l.n_words)
+            .find(|&c| u32_at(b, l.bigram_starts + (c + 1) * 4) > 0)
+            .expect("a context with records");
+        let next = u32_at(b, l.bigram_starts + (context + 1) * 4) as u32;
+        b[l.bigram_starts + context * 4..l.bigram_starts + context * 4 + 4]
+            .copy_from_slice(&(next + 1).to_le_bytes());
     });
     // The untouched file is still fine.
     assert!(validate(&f.ngrams).is_ok());

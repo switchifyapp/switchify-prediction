@@ -93,7 +93,7 @@ refuses to finish unless the logical fingerprint matches. `predict`, `learn`,
 `import`, `reset-personal`, `validate` and the Rust API accept either format
 for the baseline and give bit-identical predictions. Personal databases stay
 SQLite. The production model's n-gram file is 8.5 MB instead of 29.8 MB, and
-opens in about 20 ms instead of about 2.4 s with a tenth of the memory; see
+opens in about 20 ms instead of about 2.8 s with a tenth of the memory; see
 [the baseline format report](docs/baseline-format.md). The published model
 bundle still contains `english.sqlite`.
 

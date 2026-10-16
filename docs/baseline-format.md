@@ -66,8 +66,8 @@ new dependency. No crate was added.
 ### Validation
 
 `Ngrams::parse` checks, in order: the magic and that the trailer equals the
-SHA-256 of the rest; the version; that every array fits the file and nothing
-follows the last one; the metadata (language `en`, kind `baseline`); that the
+SHA-256 of the rest; the version; the metadata (language `en`, kind
+`baseline`); that every array fits the file and nothing follows the last one; that the
 vocabulary is non-empty, strictly ascending and made of valid normalized
 words; that every count is positive and within the SQLite schema's limit;
 that ids are in range and strictly ascending within each context; that
@@ -114,6 +114,13 @@ partitions (1,827 sentences): for every word, with 0–2 typed letters, the top
 eight words and phrases, as word and score bits, first without learning and
 then after learning half of the sentences into a shared personal database.
 That is 40,559 queries per phase, 81,118 in all. Every comparison was identical.
+
+Both sides of that test run in the new binary, where a SQLite baseline is
+encoded before use. To rule out a shared encoder bug, the CLI built from
+`1b5fc54` was also run on `english.sqlite` and the new CLI on `english.ngrams`
+for 40 word and phrase queries (eight contexts, five prefixes, eight results
+each, scores included): the JSON output was byte-identical. The exact-score
+unit tests from before the change also pass unchanged.
 
 ## Results
 

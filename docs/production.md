@@ -54,7 +54,7 @@ a noisy shared-runner gate. Dependency audit warnings also fail CI.
 Open one long-lived `Predictor` on a worker thread. Reusing it keeps prediction
 entirely in memory; spawning a CLI process or reopening the model for each
 keystroke incurs cold validation/loading. Loading the promoted model from
-SQLite takes about 1.6 seconds on the development M2 Max and 2.4 seconds on a
+SQLite takes about 1.6 seconds on the development M2 Max and 2.8 seconds on a
 Ryzen AI 9 HX 370 under Windows; from its n-gram file, about 20 ms. Learning writes only learned counts and
 validates the personal database: with a few thousand learned words a sentence
 takes tens of milliseconds, and about 200 ms at tens of thousands. It reloads

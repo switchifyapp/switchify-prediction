@@ -273,8 +273,11 @@ pub struct Validation {
 fn is_ngrams_file(path: &Path) -> Result<bool> {
     use std::io::Read;
     let mut magic = [0; ngrams::MAGIC.len()];
-    let read = fs::File::open(path)?.read(&mut magic)?;
-    Ok(&magic[..read] == ngrams::MAGIC)
+    match fs::File::open(path)?.read_exact(&mut magic) {
+        Ok(()) => Ok(&magic == ngrams::MAGIC),
+        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => Ok(false),
+        Err(error) => Err(error.into()),
+    }
 }
 /// Validates either format. Returns the embedded provenance as well.
 fn validate_with_provenance(path: &Path) -> Result<(Validation, String)> {
@@ -329,8 +332,20 @@ fn validate_connection(db: &Connection) -> Result<Validation> {
         kind,
         vocabulary: counts.0.get(&Vec::new()).map_or(0, BTreeMap::len),
         ngrams: counts.0.values().map(BTreeMap::len).sum(),
-        logical_sha256: digest(logical.as_bytes()),
+        logical_sha256: logical_sha256(&counts)?,
     })
+}
+/// One JSON line per n-gram in map order, hashed.
+fn logical_sha256(counts: &Counts) -> Result<String> {
+    let mut logical = String::new();
+    for (context, words) in &counts.0 {
+        for (word, count) in words {
+            logical.push_str(&serde_json::to_string(&(context, word, count))?);
+            logical.push('
+');
+        }
+    }
+    Ok(digest(logical.as_bytes()))
 }
 /// Creates a new baseline without replacing an existing file.
 pub fn build(path: &Path, text: &str, provenance: &str) -> Result<Validation> {
@@ -417,20 +432,21 @@ pub fn convert(input: &Path, output: &Path) -> Result<Validation> {
         if check(&db)? != "baseline" {
             return Err(Error::Invalid("expected baseline database".into()));
         }
-        let validation = validate_connection(&db)?;
+        let counts = load_checked(&db, "baseline")?;
         let provenance: String = db.query_row(
             "SELECT value FROM metadata WHERE key='provenance'",
             [],
             |r| r.get(0),
         )?;
+        let logical_sha256 = logical_sha256(&counts)?;
         (
-            load_checked(&db, "baseline")?,
+            counts,
             ngrams::Metadata {
-                language: validation.language,
-                kind: validation.kind,
+                language: "en".into(),
+                kind: "baseline".into(),
                 provenance,
             },
-            validation.logical_sha256,
+            logical_sha256,
         )
     };
     persist_ngrams(
