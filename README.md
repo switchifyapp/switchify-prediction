@@ -1,8 +1,8 @@
 # Switchify Prediction
 
 Offline English word completion using a Rust library and bundled SQLite. The
-read-only baseline and a separate personal database feed an in-memory n-gram
-predictor. No keystroke capture, background monitoring, abbreviations or Switchify
+read-only baseline, as a SQLite database or a compact n-gram file, and a
+separate personal SQLite database feed an in-memory n-gram predictor. No keystroke capture, background monitoring, abbreviations or Switchify
 PC integration is included.
 
 The default model is **en-aac-oanc-v1**: 21,674 words and 539,151 n-grams. It adds
@@ -78,6 +78,25 @@ Plain `validate` checks any compatible model; `validate --production` additional
 requires this binary's exact shipped model and provenance. A custom build does
 not inherit the official baseline's evaluation or distribution permissions.
 
+### N-gram files
+
+A baseline can also be a compact n-gram file that is read without SQLite:
+
+```sh
+switchify-prediction convert --input english.sqlite --output english.ngrams
+switchify-prediction validate --database english.ngrams --production
+switchify-prediction build --input training.txt --output custom.ngrams --format ngrams
+```
+
+`convert` copies a SQLite baseline's counts and provenance into the file and
+refuses to finish unless the logical fingerprint matches. `predict`, `learn`,
+`import`, `reset-personal`, `validate` and the Rust API accept either format
+for the baseline and give bit-identical predictions. Personal databases stay
+SQLite. The production model's n-gram file is 8.5 MB instead of 29.8 MB, and
+opens in about 20 ms instead of about 2.4 s with a tenth of the memory; see
+[the baseline format report](docs/baseline-format.md). The published model
+bundle still contains `english.sqlite`.
+
 ## Personal learning
 
 ```sh
@@ -129,8 +148,9 @@ fn example() -> Result<()> {
 }
 ```
 
-`build`, `validate`, `production::build_english`, `production::validate_english`,
-`Predictor::import` and `Predictor::reset_personal` cover the other operations.
+`build`, `build_ngrams`, `convert`, `validate`, `production::build_english`,
+`production::validate_english`, `Predictor::import` and
+`Predictor::reset_personal` cover the other operations.
 Fallible operations return typed `Error` values. Reuse a long-lived predictor;
 keep loading, imports, learning, refresh and resets on a worker thread. Prediction
 uses memory only. The model uses unigram/bigram/trigram weights **0.1/0.3/0.6**,

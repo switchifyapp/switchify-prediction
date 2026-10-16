@@ -1,5 +1,5 @@
 //! Pinned, evaluated English model. Corpus rights are distinct from the MIT code licence.
-use crate::{Error, Result, Validation, build_expected, digest, readonly, validate_connection};
+use crate::{Error, Result, Validation, build_expected, digest, validate_with_provenance};
 use serde_json::Value;
 use std::path::Path;
 
@@ -24,16 +24,11 @@ pub fn build_english(path: &Path, text: &str) -> Result<Validation> {
 
 /// Check the shipped model identity and embedded provenance, as well as schema/integrity.
 /// Distribution file checksums should also be verified before opening a download.
+/// Accepts the SQLite model and its converted n-gram file alike: both carry
+/// the same counts and provenance.
 pub fn validate_english(path: &Path) -> Result<Validation> {
-    let mut connection = readonly(path)?;
-    let db = connection.transaction()?;
-    let result = validate_connection(&db)?;
+    let (result, provenance) = validate_with_provenance(path)?;
     let manifest: Value = serde_json::from_str(MANIFEST)?;
-    let provenance: String = db.query_row(
-        "SELECT value FROM metadata WHERE key='provenance'",
-        [],
-        |r| r.get(0),
-    )?;
     let provenance: Value = serde_json::from_str(&provenance)?;
     if result.kind != "baseline"
         || Some(result.logical_sha256.as_str()) != manifest["logical_sha256"].as_str()
@@ -59,5 +54,9 @@ mod tests {
         crate::build(&path, "hello water", MANIFEST).unwrap();
         assert!(validate_english(&path).is_err());
         assert!(crate::validate(&path).is_ok());
+        let ngrams = dir.path().join("model.ngrams");
+        crate::build_ngrams(&ngrams, "hello water", MANIFEST).unwrap();
+        assert!(validate_english(&ngrams).is_err());
+        assert!(crate::validate(&ngrams).is_ok());
     }
 }

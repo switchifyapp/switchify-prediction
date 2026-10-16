@@ -1,10 +1,20 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::{
     fs,
     io::{self, Read},
     path::PathBuf,
 };
-use switchify_prediction::{Options, Predictor, Result, build, digest, evaluation, validate};
+use switchify_prediction::{
+    Options, Predictor, Result, build, build_ngrams, convert, digest, evaluation, validate,
+};
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Format {
+    /// A SQLite database, as shipped so far.
+    Sqlite,
+    /// A compact n-gram file read without SQLite.
+    Ngrams,
+}
 
 #[derive(Parser)]
 #[command(version, about = "Offline English n-gram word prediction")]
@@ -43,6 +53,16 @@ enum Command {
         output: PathBuf,
         #[arg(long)]
         input: Option<PathBuf>,
+        /// The file format. Only custom models (`--input`) can be n-gram files.
+        #[arg(long, value_enum, default_value_t = Format::Sqlite)]
+        format: Format,
+    },
+    /// Convert a SQLite baseline to an n-gram file with identical counts.
+    Convert {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
     },
     Predict {
         #[arg(long)]
@@ -149,17 +169,27 @@ fn run() -> Result<()> {
         Command::Build {
             output,
             input: path,
-        } => {
-            if path.is_none() {
+            format,
+        } => match (path.is_none(), format) {
+            (true, Format::Sqlite) => {
                 let text = fs::read_to_string(switchify_prediction::production::TRAINING_PATH)?;
                 print(switchify_prediction::production::build_english(
                     &output, &text,
                 )?)
-            } else {
+            }
+            (true, Format::Ngrams) => Err(switchify_prediction::Error::Invalid(
+                "build the production model as SQLite, then use convert".into(),
+            )),
+            (false, Format::Sqlite) => {
                 let (text, provenance) = input(path)?;
                 print(build(&output, &text, &provenance)?)
             }
-        }
+            (false, Format::Ngrams) => {
+                let (text, provenance) = input(path)?;
+                print(build_ngrams(&output, &text, &provenance)?)
+            }
+        },
+        Command::Convert { input, output } => print(convert(&input, &output)?),
         Command::Predict {
             baseline,
             personal,

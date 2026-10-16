@@ -33,7 +33,12 @@ the project's GitHub Actions or Releases. Then run:
 
 `--production` rejects altered model counts and missing/changed embedded
 provenance even when the SQLite structure is otherwise valid. A CLI version
-recognizes the model pinned when it was compiled. For custom models or inspecting
+recognizes the model pinned when it was compiled. It also accepts the model's
+n-gram file, made with `convert --input english.sqlite --output english.ngrams`,
+which carries the same counts and provenance under a whole-file SHA-256 (see
+`docs/baseline-format.md`). The bundle ships `english.sqlite`; shipping the
+n-gram file instead is a separate decision for the bundle and for
+applications that pin the file's hash. For custom models or inspecting
 older model versions, use plain `validate` with the corresponding application
 schema support. There is no silent schema migration or automatic network updater.
 
@@ -48,8 +53,9 @@ a noisy shared-runner gate. Dependency audit warnings also fail CI.
 
 Open one long-lived `Predictor` on a worker thread. Reusing it keeps prediction
 entirely in memory; spawning a CLI process or reopening the model for each
-keystroke incurs cold validation/loading. Loading the promoted model takes about
-1.6 seconds on the development M2 Max. Learning writes only learned counts and
+keystroke incurs cold validation/loading. Loading the promoted model from
+SQLite takes about 1.6 seconds on the development M2 Max and 2.4 seconds on a
+Ryzen AI 9 HX 370 under Windows; from its n-gram file, about 20 ms. Learning writes only learned counts and
 validates the personal database: with a few thousand learned words a sentence
 takes tens of milliseconds, and about 200 ms at tens of thousands. It reloads
 the personal database when another connection has changed it. Keep

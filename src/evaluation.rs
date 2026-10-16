@@ -178,11 +178,6 @@ pub fn score_database(path: &Path, text: &str, hardware: String) -> Result<Score
     let start = Instant::now();
     let predictor = Predictor::open(path, None)?;
     let cold_load_ms = start.elapsed().as_secs_f64() * 1000.0;
-    let vocabulary = predictor
-        .baseline
-        .0
-        .get(&Vec::new())
-        .expect("validated baseline has unigrams");
     let mut counts = [[0usize; 4]; 5]; // queries, top1, top5, in vocabulary
     let mut timings = Vec::new();
     let mut chars_total = 0;
@@ -213,7 +208,7 @@ pub fn score_database(path: &Path, text: &str, hardware: String) -> Result<Score
                     counts[n][0] += 1;
                     counts[n][1] += usize::from(rank == Some(0));
                     counts[n][2] += usize::from(rank.is_some());
-                    counts[n][3] += usize::from(vocabulary.contains_key(*target));
+                    counts[n][3] += usize::from(predictor.baseline_has(target));
                 }
                 if n >= 2
                     && let Some(rank) = rank
