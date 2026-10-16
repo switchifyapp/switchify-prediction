@@ -12,7 +12,15 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub mod corpus;
 pub mod evaluation;
+pub mod ngrams;
 pub mod production;
+
+/// The largest stored count, as the SQLite schema's check constraint allows.
+pub(crate) const MAX_COUNT: u64 = (i64::MAX / 10) as u64;
+/// A stored word: non-empty, normalized, and one word to the tokenizer.
+pub(crate) fn valid_word(w: &str) -> bool {
+    !w.is_empty() && normalize(w) == w && sentences(w) == vec![vec![w.to_string()]]
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -110,12 +118,9 @@ impl Counts {
             let (context, word, count) = row?;
             let encoded = context;
             let context: Vec<String> = serde_json::from_str(&encoded)?;
-            let valid_word = |w: &str| {
-                !w.is_empty() && normalize(w) == w && sentences(w) == vec![vec![w.to_string()]]
-            };
             if context.len() > 2
                 || count <= 0
-                || count > i64::MAX / 10
+                || count as u64 > MAX_COUNT
                 || encoded != serde_json::to_string(&context)?
                 || !valid_word(&word)
                 || context.iter().any(|w| !valid_word(w))
@@ -254,17 +259,58 @@ fn load_checked(db: &Connection, kind: &str) -> Result<Counts> {
 }
 #[derive(Serialize)]
 pub struct Validation {
+    /// The SQLite schema version, or the n-gram file format version.
     pub schema_version: u32,
+    /// `sqlite` or `ngrams`.
+    pub format: String,
     pub language: String,
     pub kind: String,
     pub vocabulary: usize,
     pub ngrams: usize,
     pub logical_sha256: String,
 }
-pub fn validate(path: &Path) -> Result<Validation> {
+/// Whether the file starts like an n-gram file rather than a SQLite database.
+fn is_ngrams_file(path: &Path) -> Result<bool> {
+    use std::io::Read;
+    let mut magic = [0; ngrams::MAGIC.len()];
+    match fs::File::open(path)?.read_exact(&mut magic) {
+        Ok(()) => Ok(&magic == ngrams::MAGIC),
+        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => Ok(false),
+        Err(error) => Err(error.into()),
+    }
+}
+/// Validates either format. Returns the embedded provenance as well.
+fn validate_with_provenance(path: &Path) -> Result<(Validation, String)> {
+    if is_ngrams_file(path)? {
+        let ngrams = ngrams::Ngrams::open(path)?;
+        return Ok((
+            ngrams_validation(&ngrams)?,
+            ngrams.metadata().provenance.clone(),
+        ));
+    }
     let mut connection = readonly(path)?;
     let db = connection.transaction()?;
-    validate_connection(&db)
+    let validation = validate_connection(&db)?;
+    let provenance: String = db.query_row(
+        "SELECT value FROM metadata WHERE key='provenance'",
+        [],
+        |r| r.get(0),
+    )?;
+    Ok((validation, provenance))
+}
+fn ngrams_validation(ngrams: &ngrams::Ngrams) -> Result<Validation> {
+    Ok(Validation {
+        schema_version: 1,
+        format: "ngrams".into(),
+        language: ngrams.metadata().language.clone(),
+        kind: ngrams.metadata().kind.clone(),
+        vocabulary: ngrams.vocabulary_len(),
+        ngrams: ngrams.ngram_count(),
+        logical_sha256: ngrams.logical_sha256()?,
+    })
+}
+pub fn validate(path: &Path) -> Result<Validation> {
+    validate_with_provenance(path).map(|(validation, _)| validation)
 }
 fn validate_connection(db: &Connection) -> Result<Validation> {
     let kind = check(db)?;
@@ -272,6 +318,18 @@ fn validate_connection(db: &Connection) -> Result<Validation> {
         return Err(Error::Invalid("unknown database kind".into()));
     }
     let counts = load_checked(db, &kind)?;
+    Ok(Validation {
+        schema_version: 1,
+        format: "sqlite".into(),
+        language: "en".into(),
+        kind,
+        vocabulary: counts.0.get(&Vec::new()).map_or(0, BTreeMap::len),
+        ngrams: counts.0.values().map(BTreeMap::len).sum(),
+        logical_sha256: logical_sha256(&counts)?,
+    })
+}
+/// One JSON line per n-gram in map order, hashed.
+fn logical_sha256(counts: &Counts) -> Result<String> {
     let mut logical = String::new();
     for (context, words) in &counts.0 {
         for (word, count) in words {
@@ -279,14 +337,7 @@ fn validate_connection(db: &Connection) -> Result<Validation> {
             logical.push('\n');
         }
     }
-    Ok(Validation {
-        schema_version: 1,
-        language: "en".into(),
-        kind,
-        vocabulary: counts.0.get(&Vec::new()).map_or(0, BTreeMap::len),
-        ngrams: counts.0.values().map(BTreeMap::len).sum(),
-        logical_sha256: digest(logical.as_bytes()),
-    })
+    Ok(digest(logical.as_bytes()))
 }
 /// Creates a new baseline without replacing an existing file.
 pub fn build(path: &Path, text: &str, provenance: &str) -> Result<Validation> {
@@ -325,6 +376,56 @@ fn build_expected(
         .map_err(|e| Error::Io(e.error))?;
     Ok(validation)
 }
+/// Writes verified n-gram file bytes next to `path`, then moves them into
+/// place without replacing an existing file.
+fn persist_ngrams(
+    path: &Path,
+    bytes: &[u8],
+    expected_logical_sha256: Option<&str>,
+) -> Result<Validation> {
+    use std::io::Write;
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
+    temp.write_all(bytes)?;
+    temp.as_file().sync_all()?;
+    let validation = ngrams_validation(&ngrams::Ngrams::open(temp.path())?)?;
+    if expected_logical_sha256.is_some_and(|expected| expected != validation.logical_sha256) {
+        return Err(Error::Invalid(
+            "converted counts differ from the source database".into(),
+        ));
+    }
+    temp.persist_noclobber(path)
+        .map_err(|e| Error::Io(e.error))?;
+    Ok(validation)
+}
+/// Creates a new baseline as an n-gram file without replacing an existing file.
+pub fn build_ngrams(path: &Path, text: &str, provenance: &str) -> Result<Validation> {
+    let mut counts = Counts::default();
+    counts.add_text(text);
+    if counts.0.is_empty() {
+        return Err(Error::Invalid("training text contains no words".into()));
+    }
+    let metadata = ngrams::Metadata {
+        language: "en".into(),
+        kind: "baseline".into(),
+        provenance: provenance.into(),
+    };
+    persist_ngrams(path, &ngrams::Ngrams::encode(&counts, &metadata)?, None)
+}
+/// Converts a SQLite baseline to an n-gram file with the same counts and
+/// provenance. The output's logical fingerprint must equal the input's.
+pub fn convert(input: &Path, output: &Path) -> Result<Validation> {
+    let (counts, metadata) = load_sqlite_baseline(input)?;
+    let logical_sha256 = logical_sha256(&counts)?;
+    persist_ngrams(
+        output,
+        &ngrams::Ngrams::encode(&counts, &metadata)?,
+        Some(&logical_sha256),
+    )
+}
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Suggestion {
     pub word: String,
@@ -340,25 +441,29 @@ pub struct Phrase {
 const PHRASE_FIRST_WORDS: usize = 8;
 /// Baseline and usable learned counts after one context, their weighted total,
 /// and the interpolation weight.
-type Part<'a> = (
-    &'a BTreeMap<String, i64>,
-    Option<&'a BTreeMap<String, i64>>,
-    f64,
-    f64,
-);
+struct Part<'a> {
+    base: Option<ngrams::Table<'a>>,
+    learned: Option<&'a BTreeMap<String, i64>>,
+    total: f64,
+    weight: f64,
+}
 struct Distributions<'a> {
     parts: Vec<Part<'a>>,
     weight_sum: f64,
     personal: f64,
 }
 impl Distributions<'_> {
-    fn score(&self, word: &str) -> f64 {
+    /// `id` is the word's baseline id, or `None` for a word the baseline lacks.
+    fn score(&self, word: &str, id: Option<u32>) -> f64 {
         self.parts
             .iter()
-            .map(|(base, learned, total, w)| {
-                let own = learned.and_then(|l| l.get(word)).copied().unwrap_or(0);
-                (base.get(word).copied().unwrap_or(0) as f64 + self.personal * own as f64) / total
-                    * w
+            .map(|part| {
+                let own = part.learned.and_then(|l| l.get(word)).copied().unwrap_or(0);
+                let base = match (part.base, id) {
+                    (Some(table), Some(id)) => table.get(id).unwrap_or(0),
+                    _ => 0,
+                };
+                (base as f64 + self.personal * own as f64) / part.total * part.weight
                     / self.weight_sum
             })
             .sum()
@@ -391,9 +496,9 @@ const PERSONAL_SATURATION: f64 = 2000.;
 /// baseline has it at least `TRUSTED_BASELINE` times. A single misspelling,
 /// including one the baseline itself has once or twice, is not suggested.
 const NEW_WORD_REPEATS: i64 = 2;
-const TRUSTED_BASELINE: i64 = 3;
+const TRUSTED_BASELINE: u64 = 3;
 pub struct Predictor {
-    baseline: Counts,
+    baseline: ngrams::Ngrams,
     /// Learned counts, as stored.
     learned: Counts,
     /// What predicting uses of `learned`, rebuilt whenever it changes.
@@ -439,14 +544,39 @@ fn standard_schema(db: &Connection) -> Result<bool> {
     });
     Ok(standard.as_ref() == Some(&schema(db)?))
 }
+/// Opens a baseline in either format. A SQLite baseline is validated as
+/// before, then encoded in memory, so prediction has one code path.
+fn open_baseline(path: &Path) -> Result<ngrams::Ngrams> {
+    if is_ngrams_file(path)? {
+        return ngrams::Ngrams::open(path);
+    }
+    let (counts, metadata) = load_sqlite_baseline(path)?;
+    ngrams::Ngrams::parse(ngrams::Ngrams::encode(&counts, &metadata)?)
+}
+/// A validated SQLite baseline's counts, with the metadata an n-gram file
+/// of it carries.
+fn load_sqlite_baseline(path: &Path) -> Result<(Counts, ngrams::Metadata)> {
+    let mut connection = readonly(path)?;
+    let db = connection.transaction()?;
+    if check(&db)? != "baseline" {
+        return Err(Error::Invalid("expected baseline database".into()));
+    }
+    let counts = load_checked(&db, "baseline")?;
+    let provenance: String = db.query_row(
+        "SELECT value FROM metadata WHERE key='provenance'",
+        [],
+        |r| r.get(0),
+    )?;
+    let metadata = ngrams::Metadata {
+        language: "en".into(),
+        kind: "baseline".into(),
+        provenance,
+    };
+    Ok((counts, metadata))
+}
 impl Predictor {
     pub fn open(baseline: &Path, personal: Option<&Path>) -> Result<Self> {
-        let mut connection = readonly(baseline)?;
-        let db = connection.transaction()?;
-        if check(&db)? != "baseline" {
-            return Err(Error::Invalid("expected baseline database".into()));
-        }
-        let counts = load_checked(&db, "baseline")?;
+        let counts = open_baseline(baseline)?;
         let personal = if let Some(path) = personal {
             if path.exists() && fs::canonicalize(path)? == fs::canonicalize(baseline)? {
                 return Err(Error::Invalid(
@@ -584,10 +714,12 @@ impl Predictor {
     }
     fn trusted(&self, word: &str) -> bool {
         self.baseline
-            .0
-            .get(&Vec::new())
-            .and_then(|w| w.get(word))
-            .is_some_and(|c| *c >= TRUSTED_BASELINE)
+            .id(word)
+            .is_some_and(|id| self.baseline.unigram(id) >= TRUSTED_BASELINE)
+    }
+    /// Whether the baseline vocabulary has `word`.
+    pub(crate) fn baseline_has(&self, word: &str) -> bool {
+        self.baseline.id(word).is_some()
     }
     /// Whether learned counts of `word` are used.
     fn usable_word(&self, word: &str) -> bool {
@@ -611,32 +743,31 @@ impl Predictor {
         sentences(tail).pop().unwrap_or_default()
     }
     /// Interpolated trigram/bigram/unigram distributions of the word after `context`.
-    fn distributions<'a>(
-        &'a self,
-        context: &[String],
-        unigram_only: bool,
-        empty: &'a BTreeMap<String, i64>,
-    ) -> Distributions<'a> {
+    fn distributions<'a>(&'a self, context: &[String], unigram_only: bool) -> Distributions<'a> {
         let mut parts = Vec::new();
         for (n, weight) in [(0, 0.1), (1, 0.3), (2, 0.6)] {
             if n > context.len() || (unigram_only && n != 0) {
                 continue;
             }
             let key = &context[context.len() - n..];
-            let base = self.baseline.0.get(key);
+            let base = self.baseline.table_for_words(key);
             let learned = self.usable.counts.0.get(key);
             if base.is_none() && learned.is_none() {
                 continue;
             }
-            let base = base.unwrap_or(empty);
-            let mut total: f64 = base.values().map(|c| *c as f64).sum();
+            let mut total: f64 = base.map_or(0., |table| table.total());
             if learned.is_some() {
                 total += self.usable.weight * self.usable.totals[key];
             }
-            parts.push((base, learned, total, weight));
+            parts.push(Part {
+                base,
+                learned,
+                total,
+                weight,
+            });
         }
         Distributions {
-            weight_sum: parts.iter().map(|(_, _, _, w)| w).sum(),
+            weight_sum: parts.iter().map(|part| part.weight).sum(),
             parts,
             personal: self.usable.weight,
         }
@@ -646,30 +777,31 @@ impl Predictor {
         if prefix.graphemes(true).count() < options.min_chars || options.limit == 0 {
             return vec![];
         }
-        let empty = BTreeMap::new();
-        let distributions =
-            self.distributions(&Self::context(before), options.unigram_only, &empty);
+        let distributions = self.distributions(&Self::context(before), options.unigram_only);
         // Baseline words, then learned words the baseline lacks, starting with
         // the prefix.
-        fn range<'a>(counts: &'a Counts, prefix: &str) -> impl Iterator<Item = &'a String> {
-            counts
+        let mut result: Vec<Suggestion> = self
+            .baseline
+            .prefix_range(&prefix)
+            .map(|id| Suggestion {
+                word: self.baseline.word(id).to_owned(),
+                score: distributions.score(self.baseline.word(id), Some(id)),
+            })
+            .collect();
+        result.extend(
+            self.usable
+                .counts
                 .0
                 .get(&Vec::new())
                 .into_iter()
-                .flat_map(move |v| v.range(prefix.to_owned()..))
-                .take_while(move |(w, _)| w.starts_with(prefix))
-                .map(|(w, _)| w)
-        }
-        let baseline = self.baseline.0.get(&Vec::new()).unwrap_or(&empty);
-        let mut words: Vec<&String> = range(&self.baseline, &prefix).collect();
-        words.extend(range(&self.usable.counts, &prefix).filter(|w| !baseline.contains_key(*w)));
-        let mut result: Vec<Suggestion> = words
-            .into_iter()
-            .map(|word| Suggestion {
-                word: word.clone(),
-                score: distributions.score(word),
-            })
-            .collect();
+                .flat_map(|v| v.range(prefix.clone()..))
+                .take_while(|(w, _)| w.starts_with(&prefix))
+                .filter(|(w, _)| !self.baseline_has(w))
+                .map(|(word, _)| Suggestion {
+                    word: word.clone(),
+                    score: distributions.score(word, None),
+                }),
+        );
         result.sort_unstable_by(|a, b| {
             b.score
                 .total_cmp(&a.score)
@@ -688,7 +820,6 @@ impl Predictor {
             return vec![];
         }
         let context = Self::context(before);
-        let empty = BTreeMap::new();
         let mut result = Vec::new();
         let firsts = self.predict(
             before,
@@ -700,23 +831,30 @@ impl Predictor {
         );
         for first in firsts.into_iter().filter(|s| s.score > 0.) {
             let key = std::slice::from_ref(&first.word);
-            let mut followers: BTreeSet<&String> = BTreeSet::new();
-            followers.extend(self.baseline.0.get(key).into_iter().flat_map(|w| w.keys()));
-            followers.extend(
-                self.usable
-                    .counts
-                    .0
-                    .get(key)
-                    .into_iter()
-                    .flat_map(|w| w.keys()),
-            );
+            // Followers with their baseline ids, in word order.
+            let mut followers: BTreeMap<&str, Option<u32>> = BTreeMap::new();
+            if let Some(table) = self.baseline.table_for_words(key) {
+                followers.extend(table.ids().map(|id| (self.baseline.word(id), Some(id))));
+            }
+            for second in self
+                .usable
+                .counts
+                .0
+                .get(key)
+                .into_iter()
+                .flat_map(|w| w.keys())
+            {
+                followers
+                    .entry(second)
+                    .or_insert_with(|| self.baseline.id(second));
+            }
             let mut extended = context.clone();
             extended.push(first.word.clone());
-            let distributions = self.distributions(&extended, false, &empty);
-            for second in followers {
+            let distributions = self.distributions(&extended, false);
+            for (second, id) in followers {
                 result.push(Phrase {
-                    words: vec![first.word.clone(), second.clone()],
-                    score: first.score * distributions.score(second),
+                    words: vec![first.word.clone(), second.to_owned()],
+                    score: first.score * distributions.score(second, id),
                 });
             }
         }
@@ -817,27 +955,69 @@ impl Predictor {
         self.rebuild();
         Ok(())
     }
-    /// Approximate bytes of stored UTF-8 keys and counts, excluding allocator/tree overhead.
+    /// The baseline's bytes in memory, plus the approximate bytes of learned
+    /// UTF-8 keys and counts, excluding allocator/tree overhead.
     pub fn model_payload_bytes(&self) -> usize {
-        [&self.baseline, &self.learned]
-            .iter()
-            .map(|counts| {
-                counts
-                    .0
-                    .iter()
-                    .map(|(ctx, words)| {
-                        ctx.iter().map(String::len).sum::<usize>()
-                            + words.keys().map(|w| w.len() + 8).sum::<usize>()
-                    })
-                    .sum::<usize>()
-            })
-            .sum()
+        self.baseline.bytes_len()
+            + self
+                .learned
+                .0
+                .iter()
+                .map(|(ctx, words)| {
+                    ctx.iter().map(String::len).sum::<usize>()
+                        + words.keys().map(|w| w.len() + 8).sum::<usize>()
+                })
+                .sum::<usize>()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Run with SWITCHIFY_BASELINE pointing at a SQLite baseline. Prints how
+    /// long each part of opening it takes, in milliseconds.
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_BASELINE"]
+    fn profile_sqlite_baseline_open() {
+        let path = std::path::PathBuf::from(std::env::var_os("SWITCHIFY_BASELINE").unwrap());
+        let ms = |started: std::time::Instant| started.elapsed().as_secs_f64() * 1000.0;
+        let mut phases = Vec::new();
+        let started = std::time::Instant::now();
+        let mut connection = readonly(&path).unwrap();
+        let db = connection.transaction().unwrap();
+        phases.push(("open_and_begin", ms(started)));
+        let started = std::time::Instant::now();
+        let integrity: String = db
+            .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(integrity, "ok");
+        phases.push(("integrity_check", ms(started)));
+        let started = std::time::Instant::now();
+        assert_eq!(check(&db).unwrap(), "baseline");
+        phases.push(("schema_check_including_integrity", ms(started)));
+        let started = std::time::Instant::now();
+        let counts = Counts::load(&db).unwrap();
+        phases.push(("row_load_and_validation", ms(started)));
+        let started = std::time::Instant::now();
+        drop(counts);
+        phases.push(("drop_counts", ms(started)));
+        let started = std::time::Instant::now();
+        let counts = load_checked(&db, "baseline").unwrap();
+        phases.push(("load_checked_total", ms(started)));
+        let started = std::time::Instant::now();
+        let predictor = Predictor::open(&path, None).unwrap();
+        phases.push(("predictor_open_total", ms(started)));
+        println!(
+            "{}",
+            serde_json::json!({
+                "phases_ms": phases.iter().map(|(k, v)| (k.to_string(), v)).collect::<BTreeMap<_, _>>(),
+                "contexts": counts.0.len(),
+                "ngrams": counts.0.values().map(BTreeMap::len).sum::<usize>(),
+                "payload_bytes": predictor.model_payload_bytes(),
+            })
+        );
+    }
 
     /// Adds a learned count only memory has, which a reload from the
     /// database removes and adding counts in place keeps.

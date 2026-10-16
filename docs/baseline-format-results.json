@@ -1,0 +1,109 @@
+{
+  "issue": 40,
+  "date": "2026-10-16",
+  "machine": {
+    "os": "Microsoft Windows 11 Pro 10.0.26200",
+    "cpu": "AMD Ryzen AI 9 HX 370 w/ Radeon 890M",
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "profile": "release"
+  },
+  "inputs": {
+    "english.sqlite": {
+      "model_id": "en-aac-oanc-v1",
+      "sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+      "bytes": 29802496
+    },
+    "english.ngrams": {
+      "converted_from": "english.sqlite",
+      "sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+      "bytes": 8477752,
+      "logical_sha256": "e7d83562681951d4b1a1c12a598c3f9934b211bc697d210cb787672e18c7ec64",
+      "vocabulary": 21674,
+      "ngrams": 539151
+    },
+    "parity_text": {
+      "description": "data/aac-oanc/prepared/aac-test.txt, conversation-test.txt and general-test.txt concatenated",
+      "sha256": "6ae743ac269d30bcc3b76aacfb33b6389ee770ce1aa1c55c2960d792c65cb3d7",
+      "sentences": 1827
+    }
+  },
+  "binaries": {
+    "before": {
+      "commit": "1b5fc54610545124dcca206242a512909add139e",
+      "switchify-prediction.exe_sha256": "820177a3e631e3cc2a7aa0e9c1eb2bd39782e615215cadea2de69ec72c5a8626"
+    },
+    "after": {
+      "commit": "c30155a",
+      "switchify-prediction.exe_sha256": "ba3f527ca23446c5ee9a01f40a99c91f4f370d43b1d52f471f663bae395670a9"
+    }
+  },
+  "sqlite_open_phases_ms": {
+    "test": "profile_sqlite_baseline_open, three runs",
+    "open_and_begin": [0.39, 0.34, 0.31],
+    "integrity_check": [954.3, 955.8, 945.3],
+    "schema_check_including_integrity": [928.5, 875.0, 877.6],
+    "row_load_and_validation": [1148.8, 1099.1, 1077.0],
+    "load_checked_total": [1879.1, 1769.8, 1802.4],
+    "predictor_open_total": [2843.8, 3014.7, 2832.5],
+    "contexts": 165138,
+    "map_payload_bytes": 8410609
+  },
+  "ngrams_open_phases_ms": {
+    "test": "profile_ngrams_open, three runs",
+    "read_file": [2.55, 2.17, 1.98],
+    "sha256_only": [4.21, 4.20, 3.40],
+    "parse_including_hash_and_checks": [21.76, 21.86, 18.00],
+    "logical_fingerprint_for_validate_only": [80.8, 74.5, 68.1],
+    "predictor_open_total": [24.7, 19.3, 19.7],
+    "validate_total": [105.7, 88.4, 89.0]
+  },
+  "cli_predict_process": {
+    "command": "predict --baseline <file> --before \"I need\" --prefix he",
+    "measure": "GetProcessMemoryInfo PeakWorkingSetSize and wall time, three runs",
+    "sqlite_before": {
+      "peak_working_set_mib": [135.9, 134.4, 134.4],
+      "wall_ms": [2215, 2126, 2142]
+    },
+    "ngrams_after": {
+      "peak_working_set_mib": [14.0, 14.0, 14.0],
+      "wall_ms": [30, 27, 27]
+    }
+  },
+  "cross_binary_parity": {
+    "before": "1b5fc54 CLI, predict and predict --phrases on english.sqlite",
+    "after": "c30155a CLI, predict and predict --phrases on english.ngrams",
+    "contexts": ["", "i want to", "the", "can you", "i need", "what time", "please help me", "my"],
+    "prefixes": ["", "s", "th", "wa", "he"],
+    "options": "--limit 8 --min-chars 0",
+    "queries": 40,
+    "output_lines": 3720,
+    "output_sha256_both": "f590040840b173728fbb9e23e8bf1004b3e612798fcada203e2e6cdde5e46d91",
+    "identical": true
+  },
+  "parity": {
+    "test": "production_parity",
+    "queries_per_phase": 40559,
+    "phases": ["no learning", "half of the sentences learned"],
+    "compared": "top eight words and phrases with 0-2 typed letters, word and score bits",
+    "identical": true,
+    "duration_s": 1219
+  },
+  "prediction_cost_ms": {
+    "tests": "prediction_cost_on_production_baseline and learning_cost_on_production_baseline, one run each on an idle machine",
+    "sqlite_before": {
+      "open": 2514.4,
+      "none": {"predict_empty": 4.447, "phrases_empty": 16.557, "predict_i_want_to": 9.243, "phrases_i_want_to": 15.985, "predict_the_s": 0.907, "phrases_the_s": 1.792},
+      "2k_new_words": {"one_learn": 15.4, "learn_making_usable": 15.9, "predict_empty": 7.945, "phrases_empty": 18.136, "predict_i_want_to": 10.400, "phrases_i_want_to": 14.563, "predict_the_s": 0.938, "phrases_the_s": 2.615},
+      "40k_new_words": {"one_learn": 172.8, "learn_making_usable": 169.6, "predict_empty": 27.198, "phrases_empty": 75.386, "predict_i_want_to": 34.028, "phrases_i_want_to": 83.048, "predict_the_s": 1.015, "phrases_the_s": 2.684},
+      "learn_median_50": 7.8
+    },
+    "ngrams_after": {
+      "open": 49.6,
+      "none": {"predict_empty": 3.764, "phrases_empty": 9.138, "predict_i_want_to": 3.729, "phrases_i_want_to": 6.341, "predict_the_s": 0.335, "phrases_the_s": 0.515},
+      "2k_new_words": {"one_learn": 10.9, "learn_making_usable": 11.3, "predict_empty": 3.813, "phrases_empty": 7.810, "predict_i_want_to": 4.501, "phrases_i_want_to": 6.194, "predict_the_s": 0.339, "phrases_the_s": 0.858},
+      "40k_new_words": {"one_learn": 189.5, "learn_making_usable": 171.0, "predict_empty": 22.587, "phrases_empty": 67.104, "predict_i_want_to": 25.478, "phrases_i_want_to": 76.405, "predict_the_s": 0.607, "phrases_the_s": 1.625},
+      "learn_median_50": 7.9
+    }
+  },
+  "not_measured": ["macOS", "low-end hardware (issue #39)"]
+}
