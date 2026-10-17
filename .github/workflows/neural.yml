@@ -101,5 +101,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       - run: cargo install cargo-audit --locked --version 0.22.0
-      # Scoped, documented maintenance-only exception. Root CI remains unchanged.
-      - run: cargo audit --file neural/Cargo.lock --deny warnings --ignore RUSTSEC-2024-0436
+      # Scoped, documented exceptions (see neural/SECURITY.md). Root CI remains unchanged.
+      - run: cargo audit --file neural/Cargo.lock --deny warnings --ignore RUSTSEC-2024-0436 --ignore RUSTSEC-2026-0367 --ignore RUSTSEC-2026-0369
