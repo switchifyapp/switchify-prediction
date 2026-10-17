@@ -14,6 +14,8 @@ from quality import json_run
 ROOT = Path(__file__).resolve().parent.parent
 NOTICE_NAMES = ['aac-notice.html', 'aac-readme.txt', 'oanc-notice.html',
                 'oanc-download.html', 'oanc-legacy-license.txt']
+# SHA-256 of english.ngrams converted from the pinned en-aac-oanc-v1 model (docs/baseline-format.md).
+NGRAMS_SHA256 = 'c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a'
 
 
 def verify_quality(report, manifest, expected_quality):
@@ -69,6 +71,15 @@ def main():
         verified = json_run(exe, 'validate', '--database', stage / 'english.sqlite', '--production')
         if validation != verified or validation['logical_sha256'] != report['validation']['candidate']['logical_sha256']:
             raise ValueError('Published model differs from the evaluated candidate')
+        # The n-gram file carries the same counts and provenance; its bytes are a
+        # pure function of them, so the file is pinned as well as its fingerprint.
+        converted = json_run(exe, 'convert', '--input', stage / 'english.sqlite', '--output', stage / 'english.ngrams')
+        verified_ngrams = json_run(exe, 'validate', '--database', stage / 'english.ngrams', '--production')
+        if (converted != verified_ngrams or converted['format'] != 'ngrams'
+                or converted['logical_sha256'] != validation['logical_sha256']):
+            raise ValueError('Converted n-gram file differs from the SQLite model')
+        if sha(stage / 'english.ngrams') != NGRAMS_SHA256:
+            raise ValueError('Converted n-gram file is not the pinned production file')
         # All six candidate score reports must reference the same evaluated file.
         evaluated_hash = sha(experiment / 'candidate.sqlite')
         if any(report[p][s]['candidate']['database_sha256'] != evaluated_hash
@@ -77,10 +88,13 @@ def main():
         report['default_baseline_changed'] = True
         report['artifact_role'] = 'production baseline'
         report['production'] = {'model_id': manifest['model_id'], 'database_sha256': sha(stage / 'english.sqlite'),
+                                'ngrams_sha256': NGRAMS_SHA256,
                                 'logical_sha256': validation['logical_sha256'], 'default_baseline_changed': True,
-                                'note': 'Production metadata embeds full provenance; counts exactly match the evaluated candidate.'}
+                                'note': 'Production metadata embeds full provenance; counts exactly match the evaluated candidate. '
+                                        'english.ngrams holds the same counts and provenance in the n-gram file format.'}
         write_json(stage / 'quality-report.json', report)
         write_json(stage / 'validation.json', validation)
+        write_json(stage / 'ngrams-validation.json', converted)
         shutil.copyfile(experiment / 'partitions.json', stage / 'partitions.json')
         for name in ['production-model.json', 'production-quality.json', 'source-manifest.json',
                      'aac-source-manifest.json', 'quality-policy.json', 'aac-quality-policy.json', 'ATTRIBUTION.md', 'LICENSE']:
@@ -91,8 +105,9 @@ def main():
         shutil.copyfile(ROOT / 'scripts/verify_bundle.py', stage / 'verify_bundle.py')
         (stage / 'README.txt').write_text(
             'Switchify English production model en-aac-oanc-v1, schema v1.\n'
+            'english.ngrams and english.sqlite hold the same model; the n-gram file opens in milliseconds.\n'
             'Run: python verify_bundle.py\n'
-            'Then: switchify-prediction validate --database english.sqlite --production\n'
+            'Then: switchify-prediction validate --database english.ngrams --production\n'
             'Reuse a long-lived library Predictor; opening/learning belongs off the UI thread.\n'
             'Retain ATTRIBUTION.md, manifests and corpus-notices when redistributing.\n'
             'The model uses public training corpora only; held-out evaluation text is excluded.\n'

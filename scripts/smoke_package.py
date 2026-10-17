@@ -35,21 +35,24 @@ def main():
         exe = cli / ('switchify-prediction.exe' if os.name == 'nt' else 'switchify-prediction')
         if os.name != 'nt':
             exe.chmod(0o755)
-        baseline = root / 'model/english.sqlite'
-        initial = sha(baseline)
         def run(*argv, text=None):
             return json.loads(subprocess.check_output([str(exe), *map(str, argv)], input=text, text=True, cwd=root))
-        run('validate', '--database', baseline, '--production')
-        predictions = run('predict', '--baseline', baseline, '--before', 'I need', '--prefix', 'he')
-        if predictions[0]['word'] != 'help':
+        baselines = [root / 'model/english.ngrams', root / 'model/english.sqlite']
+        initial = {baseline: sha(baseline) for baseline in baselines}
+        validations = [run('validate', '--database', baseline, '--production') for baseline in baselines]
+        if [v['format'] for v in validations] != ['ngrams', 'sqlite'] or len({v['logical_sha256'] for v in validations}) != 1:
+            raise ValueError('Packaged model files disagree')
+        outputs = [run('predict', '--baseline', baseline, '--before', 'I need', '--prefix', 'he') for baseline in baselines]
+        if outputs[0][0]['word'] != 'help' or outputs[0] != outputs[1]:
             raise ValueError('Packaged model prediction mismatch')
-        personal = root / 'personal.sqlite'
-        run('learn', '--baseline', baseline, '--personal', personal, text='I need zyzzyvate. ' * 3)
-        result = run('predict', '--baseline', baseline, '--personal', personal, '--before', 'I need', '--prefix', 'zyzz')
-        if result[0]['word'] != 'zyzzyvate':
-            raise ValueError('Packaged personal learning failed')
-        run('reset-personal', '--baseline', baseline, '--personal', personal)
-        if sha(baseline) != initial:
+        for baseline in baselines:
+            personal = root / 'personal.sqlite'
+            run('learn', '--baseline', baseline, '--personal', personal, text='I need zyzzyvate. ' * 3)
+            result = run('predict', '--baseline', baseline, '--personal', personal, '--before', 'I need', '--prefix', 'zyzz')
+            if result[0]['word'] != 'zyzzyvate':
+                raise ValueError('Packaged personal learning failed')
+            run('reset-personal', '--baseline', baseline, '--personal', personal)
+        if any(sha(baseline) != initial[baseline] for baseline in baselines):
             raise ValueError('Personal learning modified baseline')
     print('Downloaded production CLI/model smoke test passed outside the repository.')
 

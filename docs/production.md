@@ -27,18 +27,20 @@ Checksums detect corruption, not an untrusted distributor: obtain packages from
 the project's GitHub Actions or Releases. Then run:
 
 ```sh
-/path/to/switchify-prediction validate --database /path/to/model/english.sqlite --production
-/path/to/switchify-prediction predict --baseline /path/to/model/english.sqlite --before 'I need' --prefix he
+/path/to/switchify-prediction validate --database /path/to/model/english.ngrams --production
+/path/to/switchify-prediction predict --baseline /path/to/model/english.ngrams --before 'I need' --prefix he
 ```
 
-`--production` rejects altered model counts and missing/changed embedded
-provenance even when the SQLite structure is otherwise valid. A CLI version
-recognizes the model pinned when it was compiled. It also accepts the model's
-n-gram file, made with `convert --input english.sqlite --output english.ngrams`,
-which carries the same counts and provenance under a whole-file SHA-256 (see
-`docs/baseline-format.md`). The bundle ships `english.sqlite`; shipping the
-n-gram file instead is a separate decision for the bundle and for
-applications that pin the file's hash. For custom models or inspecting
+The bundle holds the model as `english.ngrams`, the n-gram file that opens in
+milliseconds, and as `english.sqlite` for applications that still pin the
+SQLite file. Both carry the same counts and provenance; `ngrams-validation.json`
+and `validation.json` record each file's validation, and `quality-report.json`
+both hashes. `scripts/artifacts.py` converts the SQLite model itself and
+refuses to package an n-gram file whose SHA-256 differs from the pinned
+`c6df388c…bf964a`. `--production` rejects altered model counts and
+missing/changed embedded provenance in either format, even when the structure
+is otherwise valid (see `docs/baseline-format.md`). A CLI version recognizes the
+model pinned when it was compiled. For custom models or inspecting
 older model versions, use plain `validate` with the corresponding application
 schema support. There is no silent schema migration or automatic network updater.
 
