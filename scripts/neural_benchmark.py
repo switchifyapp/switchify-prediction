@@ -161,7 +161,11 @@ def compare(previous, current):
                 memory_median_change_percent={k: change(previous['memory'][k]['median'], v['median'])
                                               for k, v in current['memory'].items()},
                 latency_median_change_percent={k: change(previous['latency_ms'][k]['median'], v['median'])
-                                               for k, v in current['latency_ms'].items()})
+                                               for k, v in current['latency_ms'].items()},
+                latency_case_notes={k: 'Identical repeated shortlist: builds may reuse different amounts of cached work. '
+                                       'This measures cache reuse, not an inference-only speedup.'
+                                    for k in current['latency_ms']
+                                    if k.startswith('Predict/') and k.endswith('/hit')})
 
 
 def benchmark(args):

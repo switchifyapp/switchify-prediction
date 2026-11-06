@@ -37,6 +37,9 @@ or on statistical/personal counts; those affect which candidates are submitted.
 An identical repeat is a best-case cache hit. It must not be presented as the
 cost of every typed character. Fresh-context latency and the frozen workload's
 changing shortlists provide the other measurements.
+New benchmark comparisons label `Predict/*/hit` cases as cache reuse, since
+the old worker recomputed candidates there while the new worker can reuse scores.
+Their percentage changes must not be interpreted as inference-only speedups.
 
 Generation keeps the same scoring, evaluation limit, boundary threshold and
 wall-clock cutoff. The normalizer was previously computed once for boundary mass
@@ -63,6 +66,12 @@ frozen evaluation contains 1760 queries, including 1759 legitimate neural
 refinements and one empty shortlist. Predictions and every quality cell's counts
 matched exactly. Neither run had a failed request. Existing quality-gate failures
 were preserved rather than changing thresholds or tuning the test set.
+
+Here, "before" is the build after the memory change but before the latency
+hill climb. It is not main. Both runs use this branch's controller, including
+the Candle thread limit. No full frozen-corpus run compares main with this head;
+the embedding change is instead covered by exact row tests and the earlier
+memory-stage parity checks.
 
 | Refinement including controller/IPC | Before | After |
 | --- | ---: | ---: |
@@ -104,6 +113,11 @@ generation regression spot check, not full generation qualification.
 Raw generation reports: [before](neural-hill-generation-before.json) and
 [after](neural-hill-generation-after.json).
 
+Startup also needs separate measurement: the one cold-load sample rose from
+555.3 to 654.0 ms in the frozen runs and from 3887.7 to 4634.3 ms in the
+generation runs. These single samples and uncontrolled file caches do not
+establish a startup regression, but they do not support a startup speedup either.
+
 ## Remaining scalar latency
 
 In the single-thread portable screen, empty-context fresh reranking decreased
@@ -131,6 +145,22 @@ not the same as meeting a responsive-typing requirement.
 
 Raw accelerated quota reports: [before](neural-hill-avx2-throttle-before.json)
 and [after](neural-hill-avx2-throttle-after.json).
+
+Fresh long-context reranking became slower in these quota samples:
+
+| Worker | Before median | After median | Before maximum | After maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Portable | 1868.6 ms | 2223.8 ms | 2153.4 ms | 2279.2 ms |
+| AVX2 | 194.6 ms | 481.4 ms | 489.3 ms | 490.5 ms |
+
+The earlier portable run's two late replies were one reranking request and one
+word-generation request. Both late replies in the hill-climb rerun were long-context
+reranking requests. Keeping the total at two does not mean the failure pattern
+was unchanged. Quota-window alignment and batching's additional KV-row copies
+are possible contributors; these runs do not identify the cause. More repeats
+of `--modes Predict --cases long` under the same quota are needed to determine
+whether this is a repeatable regression. It remains an observed risk, not a
+resolved or dismissed result.
 
 The [portable quota rerun](neural-hill-portable-throttle-after.json), compared
 with the earlier [portable quota report](neural-throttled-after.json), still had

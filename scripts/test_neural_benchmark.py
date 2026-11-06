@@ -60,9 +60,14 @@ class BenchmarkTests(unittest.TestCase):
         current = copy.deepcopy(report)
         current['memory']['peak']['median'] = 50
         current['output_hashes']['word'] = ['def']
+        for key in ['Predict/long/hit', 'Predict/long/miss', 'Generate/long/hit']:
+            report['latency_ms'][key] = {'median': 100}
+            current['latency_ms'][key] = {'median': 1}
         result = compare(report, current)
         self.assertEqual(result['changed_output_cases'], ['word'])
         self.assertEqual(result['memory_median_change_percent']['peak'], -50)
+        self.assertEqual(list(result['latency_case_notes']), ['Predict/long/hit'])
+        self.assertIn('cache reuse', result['latency_case_notes']['Predict/long/hit'])
         current['threads'] = 1
         with self.assertRaisesRegex(ValueError, 'threads'):
             compare(report, current)
