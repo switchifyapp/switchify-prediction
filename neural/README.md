@@ -67,6 +67,9 @@ Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for th
 
 ## Worker performance benchmark
 
+The [portable SSE2 hill climb](../docs/neural-portable-sse2.md) records paired
+fresh-context CPU-quota tests, complete frozen reranking and generation results.
+
 Use `scripts/neural_benchmark.py` for a repeatable speed and memory comparison
 without building a statistical database. It requires Python 3.11+ and `psutil==7.0.0`,
 an existing validated model bundle, and a release worker. It never downloads assets.
@@ -139,6 +142,14 @@ IDs and cleared with context/session changes or reset. An identical repeat can
 therefore avoid inference; changing shortlists reuse only overlapping candidates.
 Report fresh-context latency separately from warm repeats. Generation reuses each
 beam's probability normalizer instead of recomputing it at the next depth.
+
+For a focused cold-context test, add `--fresh-only` to omit the identical
+cache-hit request after each reset. This is a distinct workload in the comparison
+hash. Reports also include per-request worker CPU time, whose OS accounting
+resolution can be coarser than wall-clock timing.
+Reports capture UTC start/end times and hashes of the benchmark and throttling
+helper at the start of a run. New comparisons require matching script hashes.
+Run paired builds sequentially with the same final scripts and CPU affinity.
 
 
 ## Asynchronous generation

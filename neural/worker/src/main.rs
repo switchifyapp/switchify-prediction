@@ -1,5 +1,6 @@
 //! Dedicated offline inference process. All errors are deliberately text-free.
 mod generation;
+mod linear;
 mod llama;
 mod model;
 use std::{io, path::PathBuf};

@@ -1435,6 +1435,8 @@ dependencies = [
  "candle-core",
  "candle-nn",
  "candle-transformers",
+ "half",
+ "rayon",
  "serde_json",
  "switchify-prediction",
  "switchify-prediction-neural",

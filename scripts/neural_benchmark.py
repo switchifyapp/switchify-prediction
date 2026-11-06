@@ -6,6 +6,7 @@ not prompts. This measures worker IPC, not the desktop/controller or accuracy.
 """
 import argparse
 import collections
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -143,6 +144,15 @@ def command(mode, before, prefix, candidates=CANDIDATES):
     return {mode: query}
 
 
+def workload_hash(candidates, modes, cases, fresh_only):
+    value = hashlib.sha256(json.dumps([CASES, CANDIDATES]).encode()).hexdigest()
+    if modes != ['Predict', 'Generate', 'GeneratePhrases'] or cases != [c[0] for c in CASES] or candidates != CANDIDATES:
+        value = hashlib.sha256(json.dumps([CASES, candidates, modes, cases]).encode()).hexdigest()
+    if fresh_only:
+        value = hashlib.sha256((value + ':fresh-only').encode()).hexdigest()
+    return value
+
+
 def compare(previous, current):
     for key in ['format_version', 'platform', 'threads', 'runs', 'repeats', 'warmup',
                 'capabilities', 'model_sha256', 'manifest_sha256', 'workload_sha256']:
@@ -152,6 +162,9 @@ def compare(previous, current):
         raise ValueError('Incompatible comparison: throttle')
     if previous.get('thread_environment') != current.get('thread_environment'):
         raise ValueError('Incompatible comparison: thread_environment')
+    for key in ['benchmark_sha256', 'throttle_helper_sha256']:
+        if previous.get(key) != current.get(key):
+            raise ValueError(f'Incompatible comparison: {key}')
     changed = [k for k in previous['output_hashes'].keys() | current['output_hashes'].keys()
                if previous['output_hashes'].get(k) != current['output_hashes'].get(k)]
     def change(old, new):
@@ -169,8 +182,12 @@ def compare(previous, current):
 
 
 def benchmark(args):
+    started_at = datetime.now(timezone.utc).isoformat()
+    benchmark_sha = sha(Path(__file__))
+    throttle_sha = sha(Path(__file__).with_name('neural_throttle.py'))
     candidates = CANDIDATES if args.candidate_set == 'default' else COMPLETIONS
     times = collections.defaultdict(list)
+    request_cpu = collections.defaultdict(list)
     outputs = collections.defaultdict(set)
     memory = collections.defaultdict(list)
     startup = []
@@ -199,10 +216,12 @@ def benchmark(args):
                             continue
                         if client.request('Reset') != 'Reset':
                             raise RuntimeError('Reset failed')
-                        for cached in [False, True]:
+                        for cached in ([False] if args.fresh_only else [False, True]):
+                            cpu_before = client.info.cpu_times()
                             started = time.perf_counter()
                             reply = client.request(command(mode, before, prefix, candidates))
                             elapsed = (time.perf_counter() - started) * 1000
+                            cpu_after = client.info.cpu_times()
                             expected = dict(Predict='Ranked', Generate='Generated',
                                             GeneratePhrases='GeneratedPhrases')[mode]
                             result = reply.get(expected, {})
@@ -211,6 +230,7 @@ def benchmark(args):
                             if iteration >= args.warmup:
                                 key = f'{mode}/{name}/{"hit" if cached else "miss"}'
                                 times[key].append(elapsed)
+                                request_cpu[key].append(1000 * (cpu_after.user + cpu_after.system - cpu_before.user - cpu_before.system))
                                 deadline_exceeded[key] += elapsed > 2000
                                 words = result.get('words', result.get('phrases'))
                                 result_counts[key]['returned_results'] += len(words)
@@ -231,18 +251,21 @@ def benchmark(args):
                   repeats=args.repeats, warmup=args.warmup, capabilities=capabilities,
                   worker_sha256=sha(args.worker), model_sha256=sha(args.bundle / 'model.gguf'),
                   manifest_sha256=sha(args.bundle / 'model-bundle.json'),
-                  workload_sha256=hashlib.sha256(json.dumps([CASES, CANDIDATES]).encode()).hexdigest(),
+                  workload_sha256=workload_hash(candidates, args.modes, args.cases, args.fresh_only),
                   modes=args.modes, cases=args.cases,
+                  fresh_only=args.fresh_only, candidate_set=args.candidate_set,
                   startup_ms=summary(startup), memory={k: summary(v) for k, v in memory.items()},
                   latency_ms={k: summary(v) for k, v in times.items()},
+                  request_cpu_ms={k: summary(v) for k, v in request_cpu.items()},
+                  cpu_time_method='Per-request delta of worker user+system CPU time; OS accounting resolution may be coarse.',
+                  benchmark_sha256=benchmark_sha, throttle_helper_sha256=throttle_sha,
+                  started_at_utc=started_at, finished_at_utc=datetime.now(timezone.utc).isoformat(),
                   output_hashes={k: sorted(v) for k, v in outputs.items()},
                   requests_over_2000ms=dict(deadline_exceeded),
                   result_counts={k: dict(v) for k, v in result_counts.items()},
                   observed_cpu_percent_of_one_processor=summary(cpu_usage),
                   memory_method='Worker RSS sampled every 5 ms; brief peaks may be missed. '
                   'Startup uses a fresh process with OS file caches uncontrolled.')
-    if args.modes != ['Predict', 'Generate', 'GeneratePhrases'] or args.cases != [c[0] for c in CASES] or args.candidate_set != 'default':
-        report['workload_sha256'] = hashlib.sha256(json.dumps([CASES, candidates, args.modes, args.cases]).encode()).hexdigest()
     if args.cpu_percent is not None:
         from neural_throttle import cpu_rate
         rate = cpu_rate(args.cpu_percent, os.cpu_count())
@@ -270,6 +293,7 @@ def main():
     parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--repeats', type=int, default=5)
     parser.add_argument('--warmup', type=int, default=1)
+    parser.add_argument('--fresh-only', action='store_true', help='Reset before every request and omit identical cache-hit repeats')
     parser.add_argument('--modes', nargs='+', choices=['Predict', 'Generate', 'GeneratePhrases'],
                         default=['Predict', 'Generate', 'GeneratePhrases'])
     parser.add_argument('--candidate-set', choices=['default', 'completions'], default='default')

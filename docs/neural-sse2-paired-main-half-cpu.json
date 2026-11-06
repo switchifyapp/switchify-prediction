@@ -1,0 +1,110 @@
+{
+  "format_version": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+  "logical_cpus": 24,
+  "threads": 1,
+  "runs": 3,
+  "thread_environment": {
+    "RAYON_NUM_THREADS": "1",
+    "CANDLE_NUM_THREADS": "1",
+    "TOKENIZERS_PARALLELISM": "false"
+  },
+  "repeats": 12,
+  "warmup": 2,
+  "capabilities": {
+    "Ready": {
+      "version": 3,
+      "accelerated": false
+    }
+  },
+  "worker_sha256": "a956bda9288d7f791c6ac65a210eac8f990b48c8b216c27c521d973a45abd4de",
+  "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+  "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+  "workload_sha256": "01686631515f5f835a589876ef2c0e2ac449a2d3bc8a32d47af376d2611a6030",
+  "modes": [
+    "Predict"
+  ],
+  "cases": [
+    "long"
+  ],
+  "fresh_only": true,
+  "candidate_set": "default",
+  "startup_ms": {
+    "samples": 3,
+    "median": 471.82830004021525,
+    "p95": 642.9932999890298,
+    "maximum": 642.9932999890298
+  },
+  "memory": {
+    "ready_rss_bytes": {
+      "samples": 3,
+      "median": 164954112,
+      "p95": 165429248,
+      "maximum": 165429248
+    },
+    "warmed_rss_bytes": {
+      "samples": 3,
+      "median": 168718336,
+      "p95": 169103360,
+      "maximum": 169103360
+    },
+    "sampled_peak_rss_bytes": {
+      "samples": 3,
+      "median": 303312896,
+      "p95": 305758208,
+      "maximum": 305758208
+    }
+  },
+  "latency_ms": {
+    "Predict/long/miss": {
+      "samples": 36,
+      "median": 2018.8901000656188,
+      "p95": 2156.2452000798658,
+      "maximum": 2331.049900036305
+    }
+  },
+  "request_cpu_ms": {
+    "Predict/long/miss": {
+      "samples": 36,
+      "median": 1015.625,
+      "p95": 1125.0,
+      "maximum": 1171.875
+    }
+  },
+  "cpu_time_method": "Per-request delta of worker user+system CPU time; OS accounting resolution may be coarse.",
+  "benchmark_sha256": "af8f61746fa7adace202a1505e91b5e4d0baad0890f9d5cbf6bfc8f29889df99",
+  "throttle_helper_sha256": "fa4d5ea62269db1a537b4223780693398fe13aef122edca6122afee239bc90cd",
+  "started_at_utc": "2026-11-06T13:40:45.706720+00:00",
+  "finished_at_utc": "2026-11-06T13:42:13.772802+00:00",
+  "output_hashes": {
+    "Predict/long/miss": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ]
+  },
+  "requests_over_2000ms": {
+    "Predict/long/miss": 21
+  },
+  "result_counts": {
+    "Predict/long/miss": {
+      "returned_results": 180,
+      "empty_responses": 0
+    }
+  },
+  "observed_cpu_percent_of_one_processor": {
+    "samples": 3,
+    "median": 48.96668387614106,
+    "p95": 50.5603777872083,
+    "maximum": 50.5603777872083
+  },
+  "memory_method": "Worker RSS sampled every 5 ms; brief peaks may be missed. Startup uses a fresh process with OS file caches uncontrolled.",
+  "throttle": {
+    "method": "Windows Job Object HARD_CAP; suspended startup",
+    "requested_percent_of_one_processor": 50.0,
+    "job_cpu_rate": 208,
+    "effective_percent_of_one_processor": 49.92,
+    "affinity": [
+      0
+    ]
+  }
+}
