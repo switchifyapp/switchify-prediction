@@ -28,6 +28,7 @@ CASES = [
     ('long', 'I have been thinking about our plans for the weekend and would like to', 'go'),
 ]
 CANDIDATES = ['receipt', 'order', 'tickets', 'confirmation', 'car', 'details', 'directions', 'address']
+COMPLETIONS = ['in', 'information', 'informational', 'inform', 'international', 'interview', 'internal', 'internet']
 
 
 def sha(path):
@@ -133,10 +134,10 @@ class Worker:
             self.limit.close()
 
 
-def command(mode, before, prefix):
+def command(mode, before, prefix, candidates=CANDIDATES):
     query = dict(id=1, session=1, before=before)
     if mode == 'Predict':
-        query.update(candidates=CANDIDATES, limit=5)
+        query.update(candidates=candidates, limit=5)
     else:
         query.update(prefix=prefix, exclude=[], limit=3)
     return {mode: query}
@@ -164,6 +165,7 @@ def compare(previous, current):
 
 
 def benchmark(args):
+    candidates = CANDIDATES if args.candidate_set == 'default' else COMPLETIONS
     times = collections.defaultdict(list)
     outputs = collections.defaultdict(set)
     memory = collections.defaultdict(list)
@@ -187,13 +189,15 @@ def benchmark(args):
             request_started = time.perf_counter()
             cpu_started = client.info.cpu_times()
             for iteration in range(args.warmup + args.repeats):
-                for mode in ['Predict', 'Generate', 'GeneratePhrases']:
+                for mode in args.modes:
                     for name, before, prefix in CASES:
+                        if name not in args.cases:
+                            continue
                         if client.request('Reset') != 'Reset':
                             raise RuntimeError('Reset failed')
                         for cached in [False, True]:
                             started = time.perf_counter()
-                            reply = client.request(command(mode, before, prefix))
+                            reply = client.request(command(mode, before, prefix, candidates))
                             elapsed = (time.perf_counter() - started) * 1000
                             expected = dict(Predict='Ranked', Generate='Generated',
                                             GeneratePhrases='GeneratedPhrases')[mode]
@@ -224,6 +228,7 @@ def benchmark(args):
                   worker_sha256=sha(args.worker), model_sha256=sha(args.bundle / 'model.gguf'),
                   manifest_sha256=sha(args.bundle / 'model-bundle.json'),
                   workload_sha256=hashlib.sha256(json.dumps([CASES, CANDIDATES]).encode()).hexdigest(),
+                  modes=args.modes, cases=args.cases,
                   startup_ms=summary(startup), memory={k: summary(v) for k, v in memory.items()},
                   latency_ms={k: summary(v) for k, v in times.items()},
                   output_hashes={k: sorted(v) for k, v in outputs.items()},
@@ -232,6 +237,8 @@ def benchmark(args):
                   observed_cpu_percent_of_one_processor=summary(cpu_usage),
                   memory_method='Worker RSS sampled every 5 ms; brief peaks may be missed. '
                   'Startup uses a fresh process with OS file caches uncontrolled.')
+    if args.modes != ['Predict', 'Generate', 'GeneratePhrases'] or args.cases != [c[0] for c in CASES] or args.candidate_set != 'default':
+        report['workload_sha256'] = hashlib.sha256(json.dumps([CASES, candidates, args.modes, args.cases]).encode()).hexdigest()
     if args.cpu_percent is not None:
         from neural_throttle import cpu_rate
         rate = cpu_rate(args.cpu_percent, os.cpu_count())
@@ -259,6 +266,10 @@ def main():
     parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--repeats', type=int, default=5)
     parser.add_argument('--warmup', type=int, default=1)
+    parser.add_argument('--modes', nargs='+', choices=['Predict', 'Generate', 'GeneratePhrases'],
+                        default=['Predict', 'Generate', 'GeneratePhrases'])
+    parser.add_argument('--candidate-set', choices=['default', 'completions'], default='default')
+    parser.add_argument('--cases', nargs='+', choices=[c[0] for c in CASES], default=[c[0] for c in CASES])
     parser.add_argument('--cpu-percent', type=float,
                         help='Windows hard CPU budget as percent of ONE logical processor, 0..100')
     parser.add_argument('--cpu-affinity', type=int, nargs='+',

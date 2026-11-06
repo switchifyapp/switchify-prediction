@@ -4,11 +4,15 @@ use candle_core::{Device, Tensor};
 use switchify_prediction_neural::bundle::Bundle;
 use tokenizers::Tokenizer;
 
+const RANKED_WORDS: usize = 64;
+
 struct Prepared {
     session: u64,
     ids: Vec<u32>,
     state: Llama,
     logits: Vec<f32>,
+    /// Whole-word scores for this exact prepared context, FIFO-bounded.
+    ranked: std::collections::VecDeque<(Vec<u32>, f64)>,
 }
 pub struct Model {
     empty: Llama,
@@ -97,6 +101,7 @@ impl Model {
                 ids,
                 state,
                 logits,
+                ranked: std::collections::VecDeque::new(),
             });
         }
         Ok(cache_hit)
@@ -156,6 +161,85 @@ impl Model {
         candidates: &[String],
         limit: usize,
     ) -> Result<(Vec<String>, bool)> {
+        let hit = self.prepare(session, before)?;
+        let prepared = self.prepared.as_mut().unwrap();
+        let encoded: Vec<Vec<u32>> = candidates
+            .iter()
+            .map(|word| {
+                let text = if before.is_empty() {
+                    word.clone()
+                } else {
+                    format!(" {word}")
+                };
+                let encoded = self
+                    .tokenizer
+                    .encode(text, false)
+                    .map_err(anyhow::Error::msg)?;
+                ensure!(!encoded.get_ids().is_empty(), "candidate");
+                Ok(encoded.get_ids().to_vec())
+            })
+            .collect::<Result<_>>()?;
+        let mut state = prepared.state.clone();
+        let mut logits = vec![prepared.logits.clone()];
+        let mut scores = vec![0.; candidates.len()];
+        let mut active = Vec::new();
+        for (i, ids) in encoded.iter().enumerate() {
+            if let Some((_, score)) = prepared.ranked.iter().find(|(key, _)| key == ids) {
+                scores[i] = *score;
+            } else {
+                active.push((i, 0));
+            }
+        }
+        let mut depth = 0;
+        while !active.is_empty() {
+            let parents: Vec<u32> = active.iter().map(|&(_, row)| row as u32).collect();
+            let tokens: Vec<u32> = active.iter().map(|&(i, _)| encoded[i][depth]).collect();
+            for (&(i, row), &token) in active.iter().zip(&tokens) {
+                scores[i] += log_prob(&logits[row], token as usize);
+            }
+            state.select(&parents)?;
+            let ids = Tensor::new(tokens.as_slice(), &Device::Cpu)?.unsqueeze(1)?;
+            logits = state.forward(&ids, prepared.ids.len() + depth)?;
+            let mut next = Vec::new();
+            for (row, &(i, _)) in active.iter().enumerate() {
+                if encoded[i].len() == depth + 1 {
+                    scores[i] += log_boundary(&logits[row], &self.boundaries);
+                    ensure!(scores[i].is_finite(), "score");
+                } else {
+                    next.push((i, row));
+                }
+            }
+            active = next;
+            depth += 1;
+        }
+        for (ids, &score) in encoded.into_iter().zip(&scores) {
+            if !prepared.ranked.iter().any(|(key, _)| key == &ids) {
+                if prepared.ranked.len() == RANKED_WORDS {
+                    prepared.ranked.pop_front();
+                }
+                prepared.ranked.push_back((ids, score));
+            }
+        }
+        let mut order: Vec<usize> = (0..candidates.len()).collect();
+        order.sort_by(|&a, &b| scores[b].total_cmp(&scores[a]).then(a.cmp(&b)));
+        Ok((
+            order
+                .into_iter()
+                .take(limit)
+                .map(|i| candidates[i].clone())
+                .collect(),
+            hit,
+        ))
+    }
+
+    #[cfg(test)]
+    fn rank_sequential(
+        &mut self,
+        session: u64,
+        before: &str,
+        candidates: &[String],
+        limit: usize,
+    ) -> Result<(Vec<String>, bool)> {
         let cache_hit = self.prepare(session, before)?;
         let prepared = self.prepared.as_ref().unwrap();
         let mut scored = Vec::new();
@@ -197,6 +281,126 @@ mod tests {
         assert!((log_prob(&[0., 0.], 0) + 2_f64.ln()).abs() < 1e-12);
         assert!((log_boundary(&[0., 0.], &[1]) + 2_f64.ln()).abs() < 1e-12);
         assert_eq!(log_boundary(&[0., 0.], &[0, 1]), 0.);
+    }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; bounded score cache"]
+    fn ranked_scores_are_bounded_and_reset_with_context() {
+        let path = std::env::var_os("SWITCHIFY_SMOL_BUNDLE").unwrap();
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        model.prepare(1, "please").unwrap();
+        model.prepared.as_mut().unwrap().ranked = (0..RANKED_WORDS)
+            .map(|i| (vec![u32::MAX - i as u32], 0.))
+            .collect();
+        model.rank(1, "please", &["order".into()], 1).unwrap();
+        let ranked = &model.prepared.as_ref().unwrap().ranked;
+        assert_eq!(ranked.len(), RANKED_WORDS);
+        assert_eq!(ranked.front().unwrap().0, vec![u32::MAX - 1]);
+        model.prepare(2, "please").unwrap();
+        assert!(model.prepared.as_ref().unwrap().ranked.is_empty());
+        model.rank(2, "please", &["order".into()], 1).unwrap();
+        model.prepare(2, "please send").unwrap();
+        assert!(model.prepared.as_ref().unwrap().ranked.is_empty());
+        model.reset();
+        assert!(model.prepared.is_none());
+    }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; reranking parity"]
+    fn batched_reranking_matches_sequential_reference() {
+        let path = std::env::var_os("SWITCHIFY_SMOL_BUNDLE").unwrap();
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        let sets = [
+            vec![
+                "receipt",
+                "order",
+                "tickets",
+                "confirmation",
+                "car",
+                "details",
+                "directions",
+                "address",
+            ],
+            vec![
+                "in",
+                "information",
+                "informational",
+                "inform",
+                "international",
+                "interview",
+                "can't",
+                "café",
+            ],
+            vec![
+                "a",
+                "a",
+                "physiotherapy",
+                "wheelchair",
+                "accessibility",
+                "water",
+                "watermelon",
+                "waterproof",
+            ],
+            vec![],
+        ];
+        for before in [
+            "",
+            "please send the",
+            "I would like a",
+            "I have been thinking about our plans for the weekend and would like to",
+        ] {
+            for words in &sets {
+                let candidates: Vec<String> = words.iter().map(|s| s.to_string()).collect();
+                let expected = model.rank_sequential(1, before, &candidates, 5).unwrap().0;
+                let actual = model.rank(1, before, &candidates, 5).unwrap().0;
+                assert_eq!(
+                    actual, expected,
+                    "context {before:?}, candidates {candidates:?}"
+                );
+                let mut overlap = candidates.clone();
+                overlap.reverse();
+                overlap.truncate(6);
+                overlap.push("independently".into());
+                let expected = model.rank_sequential(1, before, &overlap, 5).unwrap().0;
+                assert_eq!(model.rank(1, before, &overlap, 5).unwrap().0, expected);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires explicit SWITCHIFY_SMOL_BUNDLE; local inference profile"]
+    fn profile_forward_shapes() {
+        let path = std::env::var_os("SWITCHIFY_SMOL_BUNDLE").unwrap();
+        let bundle =
+            switchify_prediction_neural::bundle::load(std::path::Path::new(&path)).unwrap();
+        let mut model = Model::load(bundle).unwrap();
+        for before in [
+            "",
+            "Please send the",
+            "I have been thinking about our plans for the weekend and would like to",
+        ] {
+            model.prepare(1, before).unwrap();
+            let prepared = model.prepared.as_ref().unwrap();
+            for batch in [1, 8] {
+                let started = std::time::Instant::now();
+                for _ in 0..5 {
+                    let mut state = prepared.state.clone();
+                    state.select(&vec![0; batch]).unwrap();
+                    let ids =
+                        Tensor::from_vec(vec![42u32; batch], (batch, 1), &Device::Cpu).unwrap();
+                    std::hint::black_box(state.forward(&ids, prepared.ids.len()).unwrap());
+                }
+                println!(
+                    "context_tokens={} batch={batch} forward_ms={:.2}",
+                    prepared.ids.len(),
+                    started.elapsed().as_secs_f64() * 200.
+                );
+            }
+        }
     }
 
     #[test]

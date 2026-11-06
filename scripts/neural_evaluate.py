@@ -247,7 +247,8 @@ def evaluate(args):
               'cells':dict(cells), 'prediction_sha256':digest.hexdigest(),
               'inputs':{str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else p.name:sha(p) for p in
                         [ROOT/'neural/evaluation-protocol.json', ROOT/'neural/fixtures/regression.json', ROOT/'neural/fixtures/general-writing.json',
-                         args.baseline.resolve(), args.training.resolve(), args.cli.resolve(), args.worker.resolve()]},
+                         args.baseline.resolve(), args.training.resolve(), args.cli.resolve(), args.worker.resolve()]
+                        + ([args.accelerated_worker.resolve()] if args.accelerated_worker else [])},
               'gates':{'overall_top5':total_refined >= total_baseline, 'early_cell_regressions':early_failures,
                        'immediate_latency':timing(times['immediate'])['p95_ms'] < 20,
                        'refinement_latency':bool(times['refinement_with_ipc']) and timing(times['refinement_with_ipc'])['p95_ms'] < 150,

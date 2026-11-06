@@ -127,6 +127,19 @@ pool and cannot be compared directly with reports using the new thread settings.
 Throttling approximates CPU scarcity; cache, memory bandwidth and instruction-set
 performance still belong to the host machine.
 
+For short optimization experiments, `--modes Predict` selects reranking and
+`--cases empty message` selects contexts. `--candidate-set completions` uses a
+fixed shortlist of related completions. These selections are included in the
+workload hash, so incompatible subsets cannot be compared accidentally.
+
+Reranking evaluates independent candidates together at each token position.
+Their token scores still accumulate in sequence under the same whole-word policy.
+Up to 64 scores are retained for the prepared context, keyed by candidate token
+IDs and cleared with context/session changes or reset. An identical repeat can
+therefore avoid inference; changing shortlists reuse only overlapping candidates.
+Report fresh-context latency separately from warm repeats. Generation reuses each
+beam's probability normalizer instead of recomputing it at the next depth.
+
 
 ## Asynchronous generation
 
