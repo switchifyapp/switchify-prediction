@@ -1,5 +1,9 @@
 # Neural latency hill climb
 
+The next iteration, [portable SSE2 inference](neural-portable-sse2.md), compares
+merged main against baseline-SSE2 matrix products, including repeated CPU-quota
+tests and the complete frozen corpus.
+
 The objective is lower inference latency with the same model, candidate counts,
 beam width, context limit and search budgets. Both fresh-context and warm
 requests are measured, with output comparisons and frozen corpus checks.

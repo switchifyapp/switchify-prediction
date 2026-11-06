@@ -67,6 +67,9 @@ Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for th
 
 ## Worker performance benchmark
 
+The [portable SSE2 hill climb](../docs/neural-portable-sse2.md) records paired
+fresh-context CPU-quota tests, complete frozen reranking and generation results.
+
 Use `scripts/neural_benchmark.py` for a repeatable speed and memory comparison
 without building a statistical database. It requires Python 3.11+ and `psutil==7.0.0`,
 an existing validated model bundle, and a release worker. It never downloads assets.

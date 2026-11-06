@@ -1,0 +1,131 @@
+{
+  "format_version": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+  "logical_cpus": 24,
+  "threads": 1,
+  "runs": 3,
+  "thread_environment": {
+    "RAYON_NUM_THREADS": "1",
+    "CANDLE_NUM_THREADS": "1",
+    "TOKENIZERS_PARALLELISM": "false"
+  },
+  "repeats": 10,
+  "warmup": 2,
+  "capabilities": {
+    "Ready": {
+      "version": 3,
+      "accelerated": false
+    }
+  },
+  "worker_sha256": "a956bda9288d7f791c6ac65a210eac8f990b48c8b216c27c521d973a45abd4de",
+  "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+  "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+  "workload_sha256": "7270cc5ab4bf095afea6a4d716b0b7e1b8df1a273d341bb90453345fb9609291",
+  "modes": [
+    "Predict"
+  ],
+  "cases": [
+    "empty",
+    "long"
+  ],
+  "fresh_only": true,
+  "candidate_set": "default",
+  "startup_ms": {
+    "samples": 3,
+    "median": 391.18770009372383,
+    "p95": 400.0737000023946,
+    "maximum": 400.0737000023946
+  },
+  "memory": {
+    "ready_rss_bytes": {
+      "samples": 3,
+      "median": 165482496,
+      "p95": 165539840,
+      "maximum": 165539840
+    },
+    "warmed_rss_bytes": {
+      "samples": 3,
+      "median": 170672128,
+      "p95": 171982848,
+      "maximum": 171982848
+    },
+    "sampled_peak_rss_bytes": {
+      "samples": 3,
+      "median": 299024384,
+      "p95": 305221632,
+      "maximum": 305221632
+    }
+  },
+  "latency_ms": {
+    "Predict/empty/miss": {
+      "samples": 30,
+      "median": 1053.8763999938965,
+      "p95": 1131.2268000328913,
+      "maximum": 2034.8171999212354
+    },
+    "Predict/long/miss": {
+      "samples": 30,
+      "median": 1643.9783000387251,
+      "p95": 2164.393199956976,
+      "maximum": 3470.8514000521973
+    }
+  },
+  "request_cpu_ms": {
+    "Predict/empty/miss": {
+      "samples": 30,
+      "median": 671.875,
+      "p95": 734.375,
+      "maximum": 796.875
+    },
+    "Predict/long/miss": {
+      "samples": 30,
+      "median": 1046.875,
+      "p95": 1187.5,
+      "maximum": 1187.5
+    }
+  },
+  "cpu_time_method": "Per-request delta of worker user+system CPU time; OS accounting resolution may be coarse.",
+  "benchmark_sha256": "af8f61746fa7adace202a1505e91b5e4d0baad0890f9d5cbf6bfc8f29889df99",
+  "throttle_helper_sha256": "fa4d5ea62269db1a537b4223780693398fe13aef122edca6122afee239bc90cd",
+  "started_at_utc": "2026-11-06T13:38:48.207671+00:00",
+  "finished_at_utc": "2026-11-06T13:40:25.078641+00:00",
+  "output_hashes": {
+    "Predict/empty/miss": [
+      "0f8e45eb0e68c86e91679da14897a4a50fb1d2ab091e5fd6c98e0a210c3facff"
+    ],
+    "Predict/long/miss": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ]
+  },
+  "requests_over_2000ms": {
+    "Predict/empty/miss": 1,
+    "Predict/long/miss": 2
+  },
+  "result_counts": {
+    "Predict/empty/miss": {
+      "returned_results": 150,
+      "empty_responses": 0
+    },
+    "Predict/long/miss": {
+      "returned_results": 150,
+      "empty_responses": 0
+    }
+  },
+  "observed_cpu_percent_of_one_processor": {
+    "samples": 3,
+    "median": 65.2352853921471,
+    "p95": 70.99419163826893,
+    "maximum": 70.99419163826893
+  },
+  "memory_method": "Worker RSS sampled every 5 ms; brief peaks may be missed. Startup uses a fresh process with OS file caches uncontrolled.",
+  "throttle": {
+    "method": "Windows Job Object HARD_CAP; suspended startup",
+    "requested_percent_of_one_processor": 100.0,
+    "job_cpu_rate": 417,
+    "effective_percent_of_one_processor": 100.08,
+    "affinity": [
+      0
+    ]
+  }
+}
