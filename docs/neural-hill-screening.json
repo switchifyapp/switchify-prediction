@@ -1,0 +1,1414 @@
+{
+  "note": "Screening runs only; final frozen and throttled reports validate retained changes. Prefix sharing uses the separate completion shortlist reference.",
+  "experiments": [
+    {
+      "experiment": "baseline",
+      "decision": null,
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "841279ca7db10b27033b40fea7da99d08ca1bca730ae8d24add476d237daa2bf",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165670912,
+          "p95": 165670912,
+          "maximum": 165670912
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 165339136,
+          "p95": 165339136,
+          "maximum": 165339136
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 264286208,
+          "p95": 264286208,
+          "maximum": 264286208
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 181.21219996828586,
+          "p95": 181.24760000500828,
+          "maximum": 181.24760000500828
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 161.79889999330044,
+          "p95": 164.70580000896007,
+          "maximum": 164.70580000896007
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 151.21319994796067,
+          "p95": 154.75629991851747,
+          "maximum": 154.75629991851747
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 109.5731999957934,
+          "p95": 114.93409995455295,
+          "maximum": 114.93409995455295
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 157.54150005523115,
+          "p95": 162.96750004403293,
+          "maximum": 162.96750004403293
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 112.2135000769049,
+          "p95": 113.88700001407415,
+          "maximum": 113.88700001407415
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 220.68220004439354,
+          "p95": 225.86679994128644,
+          "maximum": 225.86679994128644
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 111.49999999906868,
+          "p95": 111.78100004326552,
+          "maximum": 111.78100004326552
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 179.08280005212873,
+          "p95": 179.70179999247193,
+          "maximum": 179.70179999247193
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 164.64780003298074,
+          "p95": 165.73630005586892,
+          "maximum": 165.73630005586892
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 123.61570005305111,
+          "p95": 124.10709995310754,
+          "maximum": 124.10709995310754
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 80.10320004541427,
+          "p95": 80.38719999603927,
+          "maximum": 80.38719999603927
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 205.83290001377463,
+          "p95": 207.46360009070486,
+          "maximum": 207.46360009070486
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 162.19840000849217,
+          "p95": 169.84200000297278,
+          "maximum": 169.84200000297278
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 360.6337000383064,
+          "p95": 361.006100079976,
+          "maximum": 361.006100079976
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 258.83139995858073,
+          "p95": 263.29719997011125,
+          "maximum": 263.29719997011125
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 333.2078999374062,
+          "p95": 342.1929000178352,
+          "maximum": 342.1929000178352
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 326.6945999348536,
+          "p95": 329.79200000409037,
+          "maximum": 329.79200000409037
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 196.45379995927215,
+          "p95": 198.64009995944798,
+          "maximum": 198.64009995944798
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 163.08490000665188,
+          "p95": 165.65420001279563,
+          "maximum": 165.65420001279563
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 198.6569999717176,
+          "p95": 204.4834999833256,
+          "maximum": 204.4834999833256
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 161.9508999865502,
+          "p95": 162.56229998543859,
+          "maximum": 162.56229998543859
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 280.9545999625698,
+          "p95": 281.03579999879,
+          "maximum": 281.03579999879
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 172.48900001868606,
+          "p95": 175.251999986358,
+          "maximum": 175.251999986358
+        }
+      }
+    },
+    {
+      "experiment": "batching",
+      "decision": "keep",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "b9bdffc5efd71636b534b88a65653d816444bf67d8eb86d272f61ed195292e9f",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165400576,
+          "p95": 165400576,
+          "maximum": 165400576
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 165548032,
+          "p95": 165548032,
+          "maximum": 165548032
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 303616000,
+          "p95": 303616000,
+          "maximum": 303616000
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 124.8329000081867,
+          "p95": 128.37239995133132,
+          "maximum": 128.37239995133132
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 117.32770001981407,
+          "p95": 117.87389998789877,
+          "maximum": 117.87389998789877
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 110.0451999809593,
+          "p95": 110.16889999154955,
+          "maximum": 110.16889999154955
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 77.17399997636676,
+          "p95": 79.80700000189245,
+          "maximum": 79.80700000189245
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 114.14499999955297,
+          "p95": 114.16250001639128,
+          "maximum": 114.16250001639128
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 76.85979991219938,
+          "p95": 78.5291000502184,
+          "maximum": 78.5291000502184
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 180.77330000232905,
+          "p95": 186.41640001442283,
+          "maximum": 186.41640001442283
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 80.78379998914897,
+          "p95": 83.36110005620867,
+          "maximum": 83.36110005620867
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 165.27190001215786,
+          "p95": 166.22050001751631,
+          "maximum": 166.22050001751631
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 149.15840001776814,
+          "p95": 153.1661000335589,
+          "maximum": 153.1661000335589
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 106.20969999581575,
+          "p95": 110.39279995020479,
+          "maximum": 110.39279995020479
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 76.16659998893738,
+          "p95": 78.8689999608323,
+          "maximum": 78.8689999608323
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 193.65560007281601,
+          "p95": 195.80059999134392,
+          "maximum": 195.80059999134392
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 156.93510009441525,
+          "p95": 160.93679994810373,
+          "maximum": 160.93679994810373
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 338.18119997158647,
+          "p95": 340.46289999969304,
+          "maximum": 340.46289999969304
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 249.9695000005886,
+          "p95": 250.73500000871718,
+          "maximum": 250.73500000871718
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 321.77419995423406,
+          "p95": 341.0760998958722,
+          "maximum": 341.0760998958722
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 315.425300039351,
+          "p95": 328.30850000027567,
+          "maximum": 328.30850000027567
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 187.70200002472848,
+          "p95": 202.31139997486025,
+          "maximum": 202.31139997486025
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 152.97649998683482,
+          "p95": 165.19869992043823,
+          "maximum": 165.19869992043823
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 191.94209994748235,
+          "p95": 207.32410007622093,
+          "maximum": 207.32410007622093
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 160.12490005232394,
+          "p95": 163.15129993017763,
+          "maximum": 163.15129993017763
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 258.3815000252798,
+          "p95": 281.5468000480905,
+          "maximum": 281.5468000480905
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 161.0338999889791,
+          "p95": 175.6177000934258,
+          "maximum": 175.6177000934258
+        }
+      },
+      "comparison": {
+        "reference_sha256": "22a241a19dbd99e54964e03dc034299bff6ce7e0f0f35bd6127fc9378322e78f",
+        "changed_output_cases": [],
+        "startup_median_change_percent": 31.10660933691889,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": -0.16317650258362848,
+          "warmed_rss_bytes": 0.12634395283159794,
+          "sampled_peak_rss_bytes": 14.881515118639864
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": -31.112309198810106,
+          "Predict/empty/hit": -27.48547732730431,
+          "Predict/message/miss": -27.225136417435223,
+          "Predict/message/hit": -29.568544151918964,
+          "Predict/prefix/miss": -27.546075186832788,
+          "Predict/prefix/hit": -31.505745868791234,
+          "Predict/long/miss": -18.08433123923734,
+          "Predict/long/hit": -27.54816144410427,
+          "Generate/empty/miss": -7.71201926480416,
+          "Generate/empty/hit": -9.40759610034868,
+          "Generate/message/miss": -14.0807357396879,
+          "Generate/message/hit": -4.9144104782893105,
+          "Generate/prefix/miss": -5.916109591879481,
+          "Generate/prefix/hit": -3.2449764694358008,
+          "Generate/long/miss": -6.225846354440822,
+          "Generate/long/hit": -3.423811778404884,
+          "GeneratePhrases/empty/miss": -3.4314012318795495,
+          "GeneratePhrases/empty/hit": -3.4494907163295174,
+          "GeneratePhrases/message/miss": -4.454889615959601,
+          "GeneratePhrases/message/hit": -6.198243994020758,
+          "GeneratePhrases/prefix/miss": -3.380147704430869,
+          "GeneratePhrases/prefix/hit": -1.1275021839198929,
+          "GeneratePhrases/long/miss": -8.03442974071158,
+          "GeneratePhrases/long/hit": -6.641061185621111
+        }
+      }
+    },
+    {
+      "experiment": "normalizer reuse",
+      "decision": "keep",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "209b0765870a7c3e5e018eca5aced3fb8515f8734eefe3ab893947a5d02407af",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165298176,
+          "p95": 165298176,
+          "maximum": 165298176
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 164892672,
+          "p95": 164892672,
+          "maximum": 164892672
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 295297024,
+          "p95": 295297024,
+          "maximum": 295297024
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 111.22940003406256,
+          "p95": 113.71569999027997,
+          "maximum": 113.71569999027997
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 95.83990008104593,
+          "p95": 98.1253000209108,
+          "maximum": 98.1253000209108
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 92.1819000504911,
+          "p95": 92.62740006670356,
+          "maximum": 92.62740006670356
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 65.80979994032532,
+          "p95": 66.21610000729561,
+          "maximum": 66.21610000729561
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 98.04029995575547,
+          "p95": 100.19080003257841,
+          "maximum": 100.19080003257841
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 65.76589995529503,
+          "p95": 67.0499000698328,
+          "maximum": 67.0499000698328
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 149.0339000010863,
+          "p95": 151.93960000760853,
+          "maximum": 151.93960000760853
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 65.33899996429682,
+          "p95": 67.62870005331933,
+          "maximum": 67.62870005331933
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 142.81290001235902,
+          "p95": 144.24749999307096,
+          "maximum": 144.24749999307096
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 129.34770004358143,
+          "p95": 131.90259994007647,
+          "maximum": 131.90259994007647
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 90.0723000522703,
+          "p95": 95.50659998785704,
+          "maximum": 95.50659998785704
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 62.86170007660985,
+          "p95": 62.89599998854101,
+          "maximum": 62.89599998854101
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 166.67890001554042,
+          "p95": 167.50590002629906,
+          "maximum": 167.50590002629906
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 130.46740007121116,
+          "p95": 132.92599993292242,
+          "maximum": 132.92599993292242
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 285.2553999982774,
+          "p95": 290.93339992687106,
+          "maximum": 290.93339992687106
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 201.40939997509122,
+          "p95": 204.09530005417764,
+          "maximum": 204.09530005417764
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 263.79340002313256,
+          "p95": 271.69840002898127,
+          "maximum": 271.69840002898127
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 258.53200000710785,
+          "p95": 258.6812999797985,
+          "maximum": 258.6812999797985
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 157.58730005472898,
+          "p95": 159.728099941276,
+          "maximum": 159.728099941276
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 129.76959999650717,
+          "p95": 129.92839992512017,
+          "maximum": 129.92839992512017
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 158.74890005216002,
+          "p95": 161.92069998942316,
+          "maximum": 161.92069998942316
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 127.43450002744794,
+          "p95": 127.65280005987734,
+          "maximum": 127.65280005987734
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 215.44729999732226,
+          "p95": 216.13959991373122,
+          "maximum": 216.13959991373122
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 132.0482000010088,
+          "p95": 133.36579990573227,
+          "maximum": 133.36579990573227
+        }
+      },
+      "comparison": {
+        "reference_sha256": "c0c3c5389d1060608d022dba63e89daa7e6a05f9aaeee3575eac93877781c9bb",
+        "changed_output_cases": [],
+        "startup_median_change_percent": -14.638991131894185,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": -0.061910304351053824,
+          "warmed_rss_bytes": -0.3958730237276442,
+          "sampled_peak_rss_bytes": -2.7399662731871888
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": -10.897367579565964,
+          "Predict/empty/hit": -18.314345150496713,
+          "Predict/message/miss": -16.23269341466872,
+          "Predict/message/hit": -14.725425712703155,
+          "Predict/prefix/miss": -14.10898422520528,
+          "Predict/prefix/hit": -14.433943322227538,
+          "Predict/long/miss": -17.55757072578408,
+          "Predict/long/hit": -19.118684720113098,
+          "Generate/empty/miss": -13.589121924626447,
+          "Generate/empty/hit": -13.281652238041453,
+          "Generate/message/miss": -15.193904082377795,
+          "Generate/message/hit": -17.468155220608462,
+          "Generate/prefix/miss": -13.930245263825135,
+          "Generate/prefix/hit": -16.865379387581612,
+          "Generate/long/miss": -15.650130751725932,
+          "Generate/long/hit": -19.426410032177145,
+          "GeneratePhrases/empty/miss": -18.01909535921404,
+          "GeneratePhrases/empty/hit": -18.037012257781914,
+          "GeneratePhrases/message/miss": -16.043888699125255,
+          "GeneratePhrases/message/hit": -15.170238561037053,
+          "GeneratePhrases/prefix/miss": -17.29333997304624,
+          "GeneratePhrases/prefix/hit": -20.415563109918423,
+          "GeneratePhrases/long/miss": -16.616592141371157,
+          "GeneratePhrases/long/hit": -17.99975035688388
+        }
+      }
+    },
+    {
+      "experiment": "ASCII constraints",
+      "decision": "reject: mixed/noise",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "832a8ec0fc263aa0d4ce5248763ddf2a5eacc769876a3912583877db06a507b3",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165302272,
+          "p95": 165302272,
+          "maximum": 165302272
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 164179968,
+          "p95": 164179968,
+          "maximum": 164179968
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 277823488,
+          "p95": 277823488,
+          "maximum": 277823488
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 112.53589997068048,
+          "p95": 113.43769996892661,
+          "maximum": 113.43769996892661
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 96.71119996346533,
+          "p95": 102.35950001515448,
+          "maximum": 102.35950001515448
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 90.41150007396936,
+          "p95": 92.72489999420941,
+          "maximum": 92.72489999420941
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 65.02510001882911,
+          "p95": 66.14560005255044,
+          "maximum": 66.14560005255044
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 97.97959995921701,
+          "p95": 99.59030000027269,
+          "maximum": 99.59030000027269
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 65.91929995920509,
+          "p95": 66.65329996030778,
+          "maximum": 66.65329996030778
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 147.08299993071705,
+          "p95": 148.60209997277707,
+          "maximum": 148.60209997277707
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 65.94030000269413,
+          "p95": 67.99550005234778,
+          "maximum": 67.99550005234778
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 139.58660000935197,
+          "p95": 140.17809997312725,
+          "maximum": 140.17809997312725
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 127.29440000839531,
+          "p95": 127.95100000221282,
+          "maximum": 127.95100000221282
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 91.79960004985332,
+          "p95": 92.21679996699095,
+          "maximum": 92.21679996699095
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 61.410600086674094,
+          "p95": 66.14649994298816,
+          "maximum": 66.14649994298816
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 163.61150005832314,
+          "p95": 163.65240002050996,
+          "maximum": 163.65240002050996
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 129.23209997825325,
+          "p95": 130.99649990908802,
+          "maximum": 130.99649990908802
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 280.61140002682805,
+          "p95": 281.62819996941835,
+          "maximum": 281.62819996941835
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 201.43769995775074,
+          "p95": 206.4184999326244,
+          "maximum": 206.4184999326244
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 270.65169997513294,
+          "p95": 270.8758999360725,
+          "maximum": 270.8758999360725
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 258.9801999274641,
+          "p95": 259.99029993545264,
+          "maximum": 259.99029993545264
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 156.94200003053993,
+          "p95": 159.07050005625933,
+          "maximum": 159.07050005625933
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 129.3927999213338,
+          "p95": 131.17219996638596,
+          "maximum": 131.17219996638596
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 161.62129992153496,
+          "p95": 161.92339989356697,
+          "maximum": 161.92339989356697
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 130.55540004279464,
+          "p95": 135.14799997210503,
+          "maximum": 135.14799997210503
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 216.54389996547252,
+          "p95": 219.20440008398145,
+          "maximum": 219.20440008398145
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 132.29510001838207,
+          "p95": 135.7878000708297,
+          "maximum": 135.7878000708297
+        }
+      },
+      "comparison": {
+        "reference_sha256": "46bd4b290cc7ed99c28aefae73831f259702155aff017bcedf2103397cd79942",
+        "changed_output_cases": [],
+        "startup_median_change_percent": 3.110910559891722,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": 0.0024779462781232553,
+          "warmed_rss_bytes": -0.43222296743423705,
+          "sampled_peak_rss_bytes": -5.9172746691819045
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": 1.1745994640066426,
+          "Predict/empty/hit": 0.909120190737478,
+          "Predict/message/miss": -1.920550537092447,
+          "Predict/message/hit": -1.1923754854258117,
+          "Predict/prefix/miss": -0.06191331173593939,
+          "Predict/prefix/hit": 0.23325158480966834,
+          "Predict/long/miss": -1.309031079744294,
+          "Predict/long/hit": 0.920277382154433,
+          "Generate/empty/miss": -2.2591096481675343,
+          "Generate/empty/hit": -1.5874267841595069,
+          "Generate/message/miss": 1.9176816808060382,
+          "Generate/message/hit": -2.30840080393514,
+          "Generate/prefix/miss": -1.840304895779421,
+          "Generate/prefix/hit": -0.946826634303799,
+          "Generate/long/miss": -1.6280147444982407,
+          "Generate/long/hit": 0.014050974116908144,
+          "GeneratePhrases/empty/miss": 2.5998754902127885,
+          "GeneratePhrases/empty/hit": 0.17336342129561366,
+          "GeneratePhrases/message/miss": -0.4094873279540612,
+          "GeneratePhrases/message/hit": -0.29036082039516353,
+          "GeneratePhrases/prefix/miss": 1.8093982814565424,
+          "GeneratePhrases/prefix/hit": 2.4490228428522,
+          "GeneratePhrases/long/miss": 0.5089875659448406,
+          "GeneratePhrases/long/hit": 0.18697719270037716
+        }
+      }
+    },
+    {
+      "experiment": "token-prefix sharing",
+      "decision": "reject: mixed",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 5,
+      "warmup": 1,
+      "worker_sha256": "8ec51ab848e814570f271315bc376aaef8861f2ed82c13d565b5aa99143da907",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "afc0304c37902bc36239513b4d32303c409ea594b452237b8707d98f9a484926",
+      "modes": [
+        "Predict"
+      ],
+      "cases": [
+        "empty",
+        "message"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 164978688,
+          "p95": 164978688,
+          "maximum": 164978688
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 168689664,
+          "p95": 168689664,
+          "maximum": 168689664
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 302772224,
+          "p95": 302772224,
+          "maximum": 302772224
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 5,
+          "median": 91.5783999953419,
+          "p95": 93.60460005700588,
+          "maximum": 93.60460005700588
+        },
+        "Predict/empty/hit": {
+          "samples": 5,
+          "median": 76.89430005848408,
+          "p95": 82.42460002657026,
+          "maximum": 82.42460002657026
+        },
+        "Predict/message/miss": {
+          "samples": 5,
+          "median": 93.4351000469178,
+          "p95": 96.74210008233786,
+          "maximum": 96.74210008233786
+        },
+        "Predict/message/hit": {
+          "samples": 5,
+          "median": 66.5022999746725,
+          "p95": 67.61160003952682,
+          "maximum": 67.61160003952682
+        }
+      },
+      "comparison": {
+        "reference_sha256": "a83637a3d6a6a8fe8d778cfafa37bd15572c00f99b46abf72c6e283605226dc9",
+        "changed_output_cases": [],
+        "startup_median_change_percent": -3.331020656327688,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": -0.6168574812475347,
+          "warmed_rss_bytes": -0.37253858435337683,
+          "sampled_peak_rss_bytes": 1.0664624892328334
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": -3.5849385220262486,
+          "Predict/empty/hit": -8.6219066372073,
+          "Predict/message/miss": 2.5399278585465312,
+          "Predict/message/hit": 3.005009105230605
+        }
+      }
+    },
+    {
+      "experiment": "fused exp loop",
+      "decision": "reject: slower",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "72a49fbfdcb5b16562d977d70d902f33e906362aa26c12eb05e410f79e8d7e18",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165158912,
+          "p95": 165158912,
+          "maximum": 165158912
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 165154816,
+          "p95": 165154816,
+          "maximum": 165154816
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 275058688,
+          "p95": 275058688,
+          "maximum": 275058688
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 133.0525999655947,
+          "p95": 135.41650003753603,
+          "maximum": 135.41650003753603
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 120.8976999623701,
+          "p95": 124.10709995310754,
+          "maximum": 124.10709995310754
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 116.36759992688894,
+          "p95": 117.5960999680683,
+          "maximum": 117.5960999680683
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 81.71679999213666,
+          "p95": 81.73849992454052,
+          "maximum": 81.73849992454052
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 119.76309993769974,
+          "p95": 124.2600999539718,
+          "maximum": 124.2600999539718
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 82.78739999514073,
+          "p95": 88.68129993788898,
+          "maximum": 88.68129993788898
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 192.36590003129095,
+          "p95": 194.77639999240637,
+          "maximum": 194.77639999240637
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 84.42570001352578,
+          "p95": 85.19969996996224,
+          "maximum": 85.19969996996224
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 170.04500003531575,
+          "p95": 172.82400000840425,
+          "maximum": 172.82400000840425
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 159.64640001766384,
+          "p95": 159.98300001956522,
+          "maximum": 159.98300001956522
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 114.55759999807924,
+          "p95": 115.78600003849715,
+          "maximum": 115.78600003849715
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 82.1232000598684,
+          "p95": 84.44840006995946,
+          "maximum": 84.44840006995946
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 203.72720004525036,
+          "p95": 203.86460004374385,
+          "maximum": 203.86460004374385
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 159.1515000909567,
+          "p95": 163.78320008516312,
+          "maximum": 163.78320008516312
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 359.09719998016953,
+          "p95": 370.8307999186218,
+          "maximum": 370.8307999186218
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 247.87610000930727,
+          "p95": 261.20850001461804,
+          "maximum": 261.20850001461804
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 332.9134000232443,
+          "p95": 336.82289998978376,
+          "maximum": 336.82289998978376
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 319.1675000125542,
+          "p95": 322.02049996703863,
+          "maximum": 322.02049996703863
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 193.527500028722,
+          "p95": 195.43210009578615,
+          "maximum": 195.43210009578615
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 165.1471999939531,
+          "p95": 167.30870003812015,
+          "maximum": 167.30870003812015
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 205.22619993425906,
+          "p95": 232.0968999993056,
+          "maximum": 232.0968999993056
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 161.20009997393936,
+          "p95": 163.55199995450675,
+          "maximum": 163.55199995450675
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 276.1383999604732,
+          "p95": 286.3377000903711,
+          "maximum": 286.3377000903711
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 172.14689997490495,
+          "p95": 175.12629996053874,
+          "maximum": 175.12629996053874
+        }
+      },
+      "comparison": {
+        "reference_sha256": "46bd4b290cc7ed99c28aefae73831f259702155aff017bcedf2103397cd79942",
+        "changed_output_cases": [],
+        "startup_median_change_percent": 27.082061129636315,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": -0.08425017345623509,
+          "warmed_rss_bytes": 0.15897856273443534,
+          "sampled_peak_rss_bytes": -6.853552306710686
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": 19.61999248836106,
+          "Predict/empty/hit": 26.145477885655488,
+          "Predict/message/miss": 26.236929227050588,
+          "Predict/message/hit": 24.171172175322543,
+          "Predict/prefix/miss": 22.157010935041544,
+          "Predict/prefix/hit": 25.88195409994576,
+          "Predict/long/miss": 29.07526410426675,
+          "Predict/long/hit": 29.211803149204172,
+          "Generate/empty/miss": 19.068375490309396,
+          "Generate/empty/hit": 23.424227847788394,
+          "Generate/message/miss": 27.184050958618535,
+          "Generate/message/hit": 30.64107391270752,
+          "Generate/prefix/miss": 22.22734852837145,
+          "Generate/prefix/hit": 21.985645459393922,
+          "Generate/long/miss": 25.886205829000254,
+          "Generate/long/hit": 23.07077030166551,
+          "GeneratePhrases/empty/miss": 26.20232348271432,
+          "GeneratePhrases/empty/hit": 23.453769747566767,
+          "GeneratePhrases/message/miss": 22.806533243168214,
+          "GeneratePhrases/message/hit": 27.261854855373024,
+          "GeneratePhrases/prefix/miss": 29.277242152120753,
+          "GeneratePhrases/prefix/hit": 26.496435375992135,
+          "GeneratePhrases/long/miss": 28.16981227609037,
+          "GeneratePhrases/long/hit": 30.366714558464114
+        }
+      }
+    },
+    {
+      "experiment": "context score cache",
+      "decision": "keep",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+      "threads": 1,
+      "runs": 1,
+      "repeats": 3,
+      "warmup": 1,
+      "worker_sha256": "22f6e88436b5cd4859071d5ce8f093843715d09684268e410a68e6c9a9459b72",
+      "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+      "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+      "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+      "modes": [
+        "Predict",
+        "Generate",
+        "GeneratePhrases"
+      ],
+      "cases": [
+        "empty",
+        "message",
+        "prefix",
+        "long"
+      ],
+      "memory": {
+        "ready_rss_bytes": {
+          "samples": 1,
+          "median": 165044224,
+          "p95": 165044224,
+          "maximum": 165044224
+        },
+        "warmed_rss_bytes": {
+          "samples": 1,
+          "median": 164552704,
+          "p95": 164552704,
+          "maximum": 164552704
+        },
+        "sampled_peak_rss_bytes": {
+          "samples": 1,
+          "median": 307286016,
+          "p95": 307286016,
+          "maximum": 307286016
+        }
+      },
+      "latency_ms": {
+        "Predict/empty/miss": {
+          "samples": 3,
+          "median": 132.3098000138998,
+          "p95": 137.13570008985698,
+          "maximum": 137.13570008985698
+        },
+        "Predict/empty/hit": {
+          "samples": 3,
+          "median": 0.2664000494405627,
+          "p95": 0.30990003142505884,
+          "maximum": 0.30990003142505884
+        },
+        "Predict/message/miss": {
+          "samples": 3,
+          "median": 112.85929998848587,
+          "p95": 123.39520000386983,
+          "maximum": 123.39520000386983
+        },
+        "Predict/message/hit": {
+          "samples": 3,
+          "median": 0.484699965454638,
+          "p95": 0.9973000269383192,
+          "maximum": 0.9973000269383192
+        },
+        "Predict/prefix/miss": {
+          "samples": 3,
+          "median": 118.84759995155036,
+          "p95": 122.14430002495646,
+          "maximum": 122.14430002495646
+        },
+        "Predict/prefix/hit": {
+          "samples": 3,
+          "median": 0.34959998447448015,
+          "p95": 0.5184999899938703,
+          "maximum": 0.5184999899938703
+        },
+        "Predict/long/miss": {
+          "samples": 3,
+          "median": 185.08279998786747,
+          "p95": 189.48080006521195,
+          "maximum": 189.48080006521195
+        },
+        "Predict/long/hit": {
+          "samples": 3,
+          "median": 0.3087000222876668,
+          "p95": 0.5982000147923827,
+          "maximum": 0.5982000147923827
+        },
+        "Generate/empty/miss": {
+          "samples": 3,
+          "median": 171.16969998460263,
+          "p95": 172.8049999801442,
+          "maximum": 172.8049999801442
+        },
+        "Generate/empty/hit": {
+          "samples": 3,
+          "median": 156.5892999060452,
+          "p95": 169.338500010781,
+          "maximum": 169.338500010781
+        },
+        "Generate/message/miss": {
+          "samples": 3,
+          "median": 117.89250001311302,
+          "p95": 122.08999996073544,
+          "maximum": 122.08999996073544
+        },
+        "Generate/message/hit": {
+          "samples": 3,
+          "median": 78.3540999982506,
+          "p95": 84.17519996874034,
+          "maximum": 84.17519996874034
+        },
+        "Generate/prefix/miss": {
+          "samples": 3,
+          "median": 204.89139994606376,
+          "p95": 216.34619997348636,
+          "maximum": 216.34619997348636
+        },
+        "Generate/prefix/hit": {
+          "samples": 3,
+          "median": 155.8284000493586,
+          "p95": 161.29640000872314,
+          "maximum": 161.29640000872314
+        },
+        "Generate/long/miss": {
+          "samples": 3,
+          "median": 355.55939993355423,
+          "p95": 364.4443000666797,
+          "maximum": 364.4443000666797
+        },
+        "Generate/long/hit": {
+          "samples": 3,
+          "median": 254.77670005057007,
+          "p95": 258.04250000510365,
+          "maximum": 258.04250000510365
+        },
+        "GeneratePhrases/empty/miss": {
+          "samples": 3,
+          "median": 344.88029999192804,
+          "p95": 347.9215999832377,
+          "maximum": 347.9215999832377
+        },
+        "GeneratePhrases/empty/hit": {
+          "samples": 3,
+          "median": 322.1826000371948,
+          "p95": 327.72810000460595,
+          "maximum": 327.72810000460595
+        },
+        "GeneratePhrases/message/miss": {
+          "samples": 3,
+          "median": 192.9313000291586,
+          "p95": 193.11840005684644,
+          "maximum": 193.11840005684644
+        },
+        "GeneratePhrases/message/hit": {
+          "samples": 3,
+          "median": 160.38919996935874,
+          "p95": 166.8595999944955,
+          "maximum": 166.8595999944955
+        },
+        "GeneratePhrases/prefix/miss": {
+          "samples": 3,
+          "median": 199.96789994183928,
+          "p95": 201.53570000547916,
+          "maximum": 201.53570000547916
+        },
+        "GeneratePhrases/prefix/hit": {
+          "samples": 3,
+          "median": 155.8958999812603,
+          "p95": 160.71590001229197,
+          "maximum": 160.71590001229197
+        },
+        "GeneratePhrases/long/miss": {
+          "samples": 3,
+          "median": 269.1136000212282,
+          "p95": 274.204200017266,
+          "maximum": 274.204200017266
+        },
+        "GeneratePhrases/long/hit": {
+          "samples": 3,
+          "median": 170.18949997145683,
+          "p95": 172.19539999496192,
+          "maximum": 172.19539999496192
+        }
+      },
+      "comparison": {
+        "reference_sha256": "46bd4b290cc7ed99c28aefae73831f259702155aff017bcedf2103397cd79942",
+        "changed_output_cases": [],
+        "startup_median_change_percent": 26.36613824736247,
+        "memory_median_change_percent": {
+          "ready_rss_bytes": -0.15363266924373065,
+          "warmed_rss_bytes": -0.20617532354622048,
+          "sampled_peak_rss_bytes": 4.05997725192111
+        },
+        "latency_median_change_percent": {
+          "Predict/empty/miss": 18.952183481509067,
+          "Predict/empty/hit": -99.72203638649948,
+          "Predict/message/miss": 22.431084547692205,
+          "Predict/message/hit": -99.263483605946,
+          "Predict/prefix/miss": 21.223211276571984,
+          "Predict/prefix/hit": -99.46841754661287,
+          "Predict/long/miss": 24.188389343980422,
+          "Predict/long/hit": -99.52754094421961,
+          "Generate/empty/miss": 19.85590935397965,
+          "Generate/empty/hit": 21.060753189492498,
+          "Generate/message/miss": 30.886521099936658,
+          "Generate/message/hit": 24.645213067352767,
+          "Generate/prefix/miss": 22.925817201193777,
+          "Generate/prefix/hit": 19.438572366970618,
+          "Generate/long/miss": 24.645983892224766,
+          "Generate/long/hit": 26.496926202093295,
+          "GeneratePhrases/empty/miss": 30.73879026605093,
+          "GeneratePhrases/empty/hit": 24.620008365825896,
+          "GeneratePhrases/message/miss": 22.42820326393997,
+          "GeneratePhrases/message/hit": 23.59535667342407,
+          "GeneratePhrases/prefix/miss": 25.964904245721353,
+          "GeneratePhrases/prefix/hit": 22.334140242777355,
+          "GeneratePhrases/long/miss": 24.90924695949912,
+          "GeneratePhrases/long/hit": 28.884377045773157
+        }
+      }
+    }
+  ]
+}

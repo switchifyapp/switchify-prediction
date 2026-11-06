@@ -5,6 +5,10 @@ database or desktop application. See the [benchmark instructions](../neural/READ
 for repeatable before-and-after runs. Existing corpus evaluations still measure
 accuracy and controller-inclusive latency.
 
+The subsequent [latency hill climb](neural-hill-climb.md) records additional
+optimizations, rejected experiments and their separate validation. The reports
+below describe the earlier memory/throttling implementation.
+
 ## Quantized embedding rows
 
 The worker previously expanded the entire 49,152 by 576 token embedding table
