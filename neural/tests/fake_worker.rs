@@ -6,6 +6,10 @@ use std::{
 };
 use switchify_prediction_neural::protocol::{self, Command, Reply};
 fn main() {
+    assert_eq!(
+        std::env::var("CANDLE_NUM_THREADS").unwrap(),
+        std::env::var("RAYON_NUM_THREADS").unwrap()
+    );
     let mode =
         std::fs::read_to_string(PathBuf::from(std::env::args_os().nth(1).unwrap()).join("mode"))
             .unwrap();

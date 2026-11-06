@@ -99,6 +99,34 @@ above, controller lifecycle tests, or end-to-end desktop measurements.
 The first measured change and its raw reports are in
 [neural worker performance](../docs/neural-performance.md).
 
+On Windows, add `--threads 1 --cpu-percent 50` to constrain the worker to
+half of one logical processor's CPU time, pinned to the first CPU allowed for
+the benchmark process. Override the CPU with `--cpu-affinity 2`, for example.
+The limit applies before model startup through a Windows Job Object hard cap.
+The benchmark process and the rest of the machine are unaffected. Machines
+with more than 64 logical processors are currently unsupported for throttling.
+
+```sh
+python scripts/neural_benchmark.py --worker BEFORE_WORKER --bundle MODEL_BUNDLE --threads 1 --cpu-percent 50 --runs 3 --repeats 1 --output throttled-before.json
+python scripts/neural_benchmark.py --worker AFTER_WORKER --bundle MODEL_BUNDLE --threads 1 --cpu-percent 50 --runs 3 --repeats 1 --output throttled-after.json --compare throttled-before.json
+```
+
+CPU percentages refer to one logical processor, so 50 means half a processor
+even on a 24-thread host. The report records the rounded Windows quota, actual
+affinity and observed worker CPU time divided by wall time. It also counts
+responses exceeding 2000 ms, empty responses and returned results. Requests go
+directly to the worker with a 35-second harness timeout; the 2000 ms counts
+indicate replies the controller would consider late, rather than testing the
+controller's termination or recovery behavior. Generation retains its real
+1600 ms search cutoff and can return fewer or different predictions under load.
+Comparisons with changed predictions exit nonzero after saving the report.
+
+The thread setting now controls both Rayon and Candle's separate thread pool,
+in the benchmark and companion controller. Older reports did not pin Candle's
+pool and cannot be compared directly with reports using the new thread settings.
+Throttling approximates CPU scarcity; cache, memory bandwidth and instruction-set
+performance still belong to the host machine.
+
 
 ## Asynchronous generation
 

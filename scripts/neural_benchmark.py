@@ -18,6 +18,8 @@ import subprocess
 import threading
 import time
 
+from neural_throttle import WindowsCpuLimit, creation_flags
+
 
 CASES = [
     ('empty', '', ''),
@@ -50,16 +52,33 @@ def read_exact(stream, size):
 
 
 class Worker:
-    def __init__(self, worker, bundle, threads):
+    def __init__(self, worker, bundle, threads, cpu_percent=None, affinity=None):
         import psutil
         self.stop = threading.Event()
         self.messages = queue.Queue()
         self.peak = 0
-        self.process = subprocess.Popen(
-            [str(worker.resolve()), str(bundle.resolve())], stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            env={**os.environ, 'RAYON_NUM_THREADS': str(threads)})
-        self.info = psutil.Process(self.process.pid)
+        self.limit = WindowsCpuLimit(cpu_percent) if cpu_percent is not None else None
+        self.affinity = affinity
+        self.process = None
+        try:
+            self.process = subprocess.Popen(
+                [str(worker.resolve()), str(bundle.resolve())], stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                env={**os.environ, 'RAYON_NUM_THREADS': str(threads),
+                     'CANDLE_NUM_THREADS': str(threads), 'TOKENIZERS_PARALLELISM': 'false'},
+                creationflags=creation_flags(self.limit is not None))
+            self.info = psutil.Process(self.process.pid)
+            if self.limit:
+                self.limit.start(self.process, self.info, affinity)
+        except BaseException:
+            if self.process:
+                self.process.kill()
+                self.process.wait()
+                self.process.stdin.close()
+                self.process.stdout.close()
+            if self.limit:
+                self.limit.close()
+            raise
 
         def read():
             try:
@@ -110,6 +129,8 @@ class Worker:
         self.monitor.join()
         self.reader.join(timeout=5)
         self.process.stdout.close()
+        if self.limit:
+            self.limit.close()
 
 
 def command(mode, before, prefix):
@@ -126,6 +147,10 @@ def compare(previous, current):
                 'capabilities', 'model_sha256', 'manifest_sha256', 'workload_sha256']:
         if previous[key] != current[key]:
             raise ValueError(f'Incompatible comparison: {key}')
+    if previous.get('throttle') != current.get('throttle'):
+        raise ValueError('Incompatible comparison: throttle')
+    if previous.get('thread_environment') != current.get('thread_environment'):
+        raise ValueError('Incompatible comparison: thread_environment')
     changed = [k for k in previous['output_hashes'].keys() | current['output_hashes'].keys()
                if previous['output_hashes'].get(k) != current['output_hashes'].get(k)]
     def change(old, new):
@@ -143,10 +168,13 @@ def benchmark(args):
     outputs = collections.defaultdict(set)
     memory = collections.defaultdict(list)
     startup = []
+    cpu_usage = []
+    deadline_exceeded = collections.Counter()
+    result_counts = collections.defaultdict(collections.Counter)
     capabilities = None
     for run in range(args.runs):
         started = time.perf_counter()
-        client = Worker(args.worker, args.bundle, args.threads)
+        client = Worker(args.worker, args.bundle, args.threads, args.cpu_percent, args.cpu_affinity)
         try:
             ready = client.receive()
             if not isinstance(ready, dict) or ready.get('Ready', {}).get('version') != 3:
@@ -156,6 +184,8 @@ def benchmark(args):
             capabilities = ready
             startup.append((time.perf_counter() - started) * 1000)
             memory['ready_rss_bytes'].append(client.rss())
+            request_started = time.perf_counter()
+            cpu_started = client.info.cpu_times()
             for iteration in range(args.warmup + args.repeats):
                 for mode in ['Predict', 'Generate', 'GeneratePhrases']:
                     for name, before, prefix in CASES:
@@ -173,15 +203,23 @@ def benchmark(args):
                             if iteration >= args.warmup:
                                 key = f'{mode}/{name}/{"hit" if cached else "miss"}'
                                 times[key].append(elapsed)
+                                deadline_exceeded[key] += elapsed > 2000
                                 words = result.get('words', result.get('phrases'))
+                                result_counts[key]['returned_results'] += len(words)
+                                result_counts[key]['empty_responses'] += not words
                                 outputs[key].add(hashlib.sha256(json.dumps(words).encode()).hexdigest())
             memory['warmed_rss_bytes'].append(client.rss())
             memory['sampled_peak_rss_bytes'].append(max(client.peak, client.rss()))
+            cpu_ended = client.info.cpu_times()
+            cpu_usage.append(100 * (cpu_ended.user + cpu_ended.system - cpu_started.user - cpu_started.system)
+                             / (time.perf_counter() - request_started))
         finally:
             client.close()
         print(f'Completed process {run + 1}/{args.runs}', flush=True)
     report = dict(format_version=1, platform=platform.platform(), processor=platform.processor(),
                   logical_cpus=os.cpu_count(), threads=args.threads, runs=args.runs,
+                  thread_environment=dict(RAYON_NUM_THREADS=str(args.threads),
+                                          CANDLE_NUM_THREADS=str(args.threads), TOKENIZERS_PARALLELISM='false'),
                   repeats=args.repeats, warmup=args.warmup, capabilities=capabilities,
                   worker_sha256=sha(args.worker), model_sha256=sha(args.bundle / 'model.gguf'),
                   manifest_sha256=sha(args.bundle / 'model-bundle.json'),
@@ -189,8 +227,18 @@ def benchmark(args):
                   startup_ms=summary(startup), memory={k: summary(v) for k, v in memory.items()},
                   latency_ms={k: summary(v) for k, v in times.items()},
                   output_hashes={k: sorted(v) for k, v in outputs.items()},
+                  requests_over_2000ms=dict(deadline_exceeded),
+                  result_counts={k: dict(v) for k, v in result_counts.items()},
+                  observed_cpu_percent_of_one_processor=summary(cpu_usage),
                   memory_method='Worker RSS sampled every 5 ms; brief peaks may be missed. '
                   'Startup uses a fresh process with OS file caches uncontrolled.')
+    if args.cpu_percent is not None:
+        from neural_throttle import cpu_rate
+        rate = cpu_rate(args.cpu_percent, os.cpu_count())
+        report['throttle'] = dict(method='Windows Job Object HARD_CAP; suspended startup',
+                                  requested_percent_of_one_processor=args.cpu_percent,
+                                  job_cpu_rate=rate, effective_percent_of_one_processor=rate * os.cpu_count() / 100,
+                                  affinity=args.cpu_affinity)
     if args.compare:
         previous = json.loads(args.compare.read_bytes())
         report['comparison'] = dict(reference_sha256=sha(args.compare), **compare(previous, report))
@@ -211,9 +259,25 @@ def main():
     parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--repeats', type=int, default=5)
     parser.add_argument('--warmup', type=int, default=1)
+    parser.add_argument('--cpu-percent', type=float,
+                        help='Windows hard CPU budget as percent of ONE logical processor, 0..100')
+    parser.add_argument('--cpu-affinity', type=int, nargs='+',
+                        help='Windows logical processor IDs; defaults to first allowed CPU when throttled')
     args = parser.parse_args()
     if min(args.runs, args.repeats) < 1 or args.warmup < 0:
         parser.error('runs/repeats must be positive and warmup nonnegative')
+    if args.cpu_percent is not None:
+        if os.name != 'nt' or not math.isfinite(args.cpu_percent) or not 0 < args.cpu_percent <= 100:
+            parser.error('--cpu-percent requires Windows and a finite value greater than 0 and at most 100')
+        import psutil
+        allowed = psutil.Process().cpu_affinity()
+        args.cpu_affinity = args.cpu_affinity or [allowed[0]]
+        if len(set(args.cpu_affinity)) != len(args.cpu_affinity) or not set(args.cpu_affinity) <= set(allowed):
+            parser.error('--cpu-affinity must name distinct allowed logical processors')
+        if not 1 <= os.cpu_count() <= 64:
+            parser.error('CPU caps currently support single-group machines with at most 64 logical processors')
+    elif args.cpu_affinity is not None:
+        parser.error('--cpu-affinity requires --cpu-percent')
     benchmark(args)
 
 
