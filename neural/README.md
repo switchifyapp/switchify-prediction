@@ -65,6 +65,81 @@ Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for th
 
 `python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release` packages binaries, hashes and dependency notices without model files. Omit the accelerated path for ARM. CI builds/tests Windows x64, Linux x64, macOS ARM64 and macOS x64. Build/test success is not a claim of measured model latency on those platforms. See `SECURITY.md` for the scoped dependency advisory exception and deployment boundaries.
 
+## Worker performance benchmark
+
+Use `scripts/neural_benchmark.py` for a repeatable speed and memory comparison
+without building a statistical database. It requires Python 3.11+ and `psutil==7.0.0`,
+an existing validated model bundle, and a release worker. It never downloads assets.
+
+```sh
+python scripts/neural_benchmark.py --worker BEFORE_WORKER --bundle MODEL_BUNDLE --output before.json
+python scripts/neural_benchmark.py --worker AFTER_WORKER --bundle MODEL_BUNDLE --output after.json --compare before.json
+```
+
+Keep a copy of the first worker before rebuilding. Use the same build flags,
+machine and thread count for both runs, with other heavy work stopped. Defaults
+are four inference threads, three fresh processes, one warm-up pass per process
+and five measured passes. `--threads 1..4`, `--runs`, `--warmup` and `--repeats`
+override these settings. Test portable and accelerated workers separately.
+
+The fixed synthetic workload covers reranking, word generation and phrase
+generation with empty, short and longer contexts, with and without typed prefixes.
+Each query runs after a reset and again with a cached context. JSON reports record
+median, p95 and maximum worker round-trip latency per case, startup-to-ready time,
+RSS at ready and after warm-up, and peak RSS sampled every 5 ms. Fresh processes
+do not clear the OS file cache. RSS and latency vary with desktop activity;
+sampling can miss brief peaks.
+
+Reports identify the worker, model and workload by SHA-256. `--compare` checks
+that settings and model match, reports percentage changes, and exits nonzero if
+any returned prediction hashes differ. Negative percentages mean lower time or
+memory. Predictions are hashed rather than saved as text. This small performance
+workload does not measure accuracy or replace the frozen corpus evaluations
+above, controller lifecycle tests, or end-to-end desktop measurements.
+The first measured change and its raw reports are in
+[neural worker performance](../docs/neural-performance.md).
+
+On Windows, add `--threads 1 --cpu-percent 50` to constrain the worker to
+half of one logical processor's CPU time, pinned to the first CPU allowed for
+the benchmark process. Override the CPU with `--cpu-affinity 2`, for example.
+The limit applies before model startup through a Windows Job Object hard cap.
+The benchmark process and the rest of the machine are unaffected. Machines
+with more than 64 logical processors are currently unsupported for throttling.
+
+```sh
+python scripts/neural_benchmark.py --worker BEFORE_WORKER --bundle MODEL_BUNDLE --threads 1 --cpu-percent 50 --runs 3 --repeats 1 --output throttled-before.json
+python scripts/neural_benchmark.py --worker AFTER_WORKER --bundle MODEL_BUNDLE --threads 1 --cpu-percent 50 --runs 3 --repeats 1 --output throttled-after.json --compare throttled-before.json
+```
+
+CPU percentages refer to one logical processor, so 50 means half a processor
+even on a 24-thread host. The report records the rounded Windows quota, actual
+affinity and observed worker CPU time divided by wall time. It also counts
+responses exceeding 2000 ms, empty responses and returned results. Requests go
+directly to the worker with a 35-second harness timeout; the 2000 ms counts
+indicate replies the controller would consider late, rather than testing the
+controller's termination or recovery behavior. Generation retains its real
+1600 ms search cutoff and can return fewer or different predictions under load.
+Comparisons with changed predictions exit nonzero after saving the report.
+
+The thread setting now controls both Rayon and Candle's separate thread pool,
+in the benchmark and companion controller. Older reports did not pin Candle's
+pool and cannot be compared directly with reports using the new thread settings.
+Throttling approximates CPU scarcity; cache, memory bandwidth and instruction-set
+performance still belong to the host machine.
+
+For short optimization experiments, `--modes Predict` selects reranking and
+`--cases empty message` selects contexts. `--candidate-set completions` uses a
+fixed shortlist of related completions. These selections are included in the
+workload hash, so incompatible subsets cannot be compared accidentally.
+
+Reranking evaluates independent candidates together at each token position.
+Their token scores still accumulate in sequence under the same whole-word policy.
+Up to 64 scores are retained for the prepared context, keyed by candidate token
+IDs and cleared with context/session changes or reset. An identical repeat can
+therefore avoid inference; changing shortlists reuse only overlapping candidates.
+Report fresh-context latency separately from warm repeats. Generation reuses each
+beam's probability normalizer instead of recomputing it at the next depth.
+
 
 ## Asynchronous generation
 

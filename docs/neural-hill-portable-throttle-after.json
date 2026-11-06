@@ -1,0 +1,467 @@
+{
+  "format_version": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+  "logical_cpus": 24,
+  "threads": 1,
+  "runs": 3,
+  "thread_environment": {
+    "RAYON_NUM_THREADS": "1",
+    "CANDLE_NUM_THREADS": "1",
+    "TOKENIZERS_PARALLELISM": "false"
+  },
+  "repeats": 1,
+  "warmup": 1,
+  "capabilities": {
+    "Ready": {
+      "version": 3,
+      "accelerated": false
+    }
+  },
+  "worker_sha256": "6d0c3c170b7424f59692be05997646e5e2e3d1bc89d97f7892ba1f1b94d2d29d",
+  "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+  "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+  "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+  "modes": [
+    "Predict",
+    "Generate",
+    "GeneratePhrases"
+  ],
+  "cases": [
+    "empty",
+    "message",
+    "prefix",
+    "long"
+  ],
+  "startup_ms": {
+    "samples": 3,
+    "median": 520.7328000105917,
+    "p95": 531.1856999760494,
+    "maximum": 531.1856999760494
+  },
+  "memory": {
+    "ready_rss_bytes": {
+      "samples": 3,
+      "median": 165601280,
+      "p95": 165654528,
+      "maximum": 165654528
+    },
+    "warmed_rss_bytes": {
+      "samples": 3,
+      "median": 171130880,
+      "p95": 171712512,
+      "maximum": 171712512
+    },
+    "sampled_peak_rss_bytes": {
+      "samples": 3,
+      "median": 285470720,
+      "p95": 307613696,
+      "maximum": 307613696
+    }
+  },
+  "latency_ms": {
+    "Predict/empty/miss": {
+      "samples": 3,
+      "median": 1275.2575000049546,
+      "p95": 1331.4749000128359,
+      "maximum": 1331.4749000128359
+    },
+    "Predict/empty/hit": {
+      "samples": 3,
+      "median": 0.2592999953776598,
+      "p95": 0.3070998936891556,
+      "maximum": 0.3070998936891556
+    },
+    "Predict/message/miss": {
+      "samples": 3,
+      "median": 1180.3381000645459,
+      "p95": 1251.4736000448465,
+      "maximum": 1251.4736000448465
+    },
+    "Predict/message/hit": {
+      "samples": 3,
+      "median": 0.36839989479631186,
+      "p95": 0.3730999305844307,
+      "maximum": 0.3730999305844307
+    },
+    "Predict/prefix/miss": {
+      "samples": 3,
+      "median": 1230.9585000621155,
+      "p95": 1235.5861000251025,
+      "maximum": 1235.5861000251025
+    },
+    "Predict/prefix/hit": {
+      "samples": 3,
+      "median": 0.36970002111047506,
+      "p95": 278.49530009552836,
+      "maximum": 278.49530009552836
+    },
+    "Predict/long/miss": {
+      "samples": 3,
+      "median": 2223.8005999242887,
+      "p95": 2279.190200031735,
+      "maximum": 2279.190200031735
+    },
+    "Predict/long/hit": {
+      "samples": 3,
+      "median": 0.3562000347301364,
+      "p95": 0.40520005859434605,
+      "maximum": 0.40520005859434605
+    },
+    "Generate/empty/miss": {
+      "samples": 3,
+      "median": 1123.3369999099523,
+      "p95": 1775.2351000672206,
+      "maximum": 1775.2351000672206
+    },
+    "Generate/empty/hit": {
+      "samples": 3,
+      "median": 1744.4607999641448,
+      "p95": 1826.7106000566855,
+      "maximum": 1826.7106000566855
+    },
+    "Generate/message/miss": {
+      "samples": 3,
+      "median": 1188.728499924764,
+      "p95": 1208.2793998997658,
+      "maximum": 1208.2793998997658
+    },
+    "Generate/message/hit": {
+      "samples": 3,
+      "median": 983.8364999741316,
+      "p95": 1061.1614000517875,
+      "maximum": 1061.1614000517875
+    },
+    "Generate/prefix/miss": {
+      "samples": 3,
+      "median": 1244.401999982074,
+      "p95": 1275.2939999336377,
+      "maximum": 1275.2939999336377
+    },
+    "Generate/prefix/hit": {
+      "samples": 3,
+      "median": 1009.8466000054032,
+      "p95": 1716.462399926968,
+      "maximum": 1716.462399926968
+    },
+    "Generate/long/miss": {
+      "samples": 3,
+      "median": 1925.3966000396758,
+      "p95": 1944.350600009784,
+      "maximum": 1944.350600009784
+    },
+    "Generate/long/hit": {
+      "samples": 3,
+      "median": 995.9903999697417,
+      "p95": 1017.4882999854162,
+      "maximum": 1017.4882999854162
+    },
+    "GeneratePhrases/empty/miss": {
+      "samples": 3,
+      "median": 1775.254899985157,
+      "p95": 1778.0555998906493,
+      "maximum": 1778.0555998906493
+    },
+    "GeneratePhrases/empty/hit": {
+      "samples": 3,
+      "median": 1445.9351000841707,
+      "p95": 1450.8143999846652,
+      "maximum": 1450.8143999846652
+    },
+    "GeneratePhrases/message/miss": {
+      "samples": 3,
+      "median": 1193.0845000315458,
+      "p95": 1194.141099927947,
+      "maximum": 1194.141099927947
+    },
+    "GeneratePhrases/message/hit": {
+      "samples": 3,
+      "median": 1411.759200040251,
+      "p95": 1722.1970999380574,
+      "maximum": 1722.1970999380574
+    },
+    "GeneratePhrases/prefix/miss": {
+      "samples": 3,
+      "median": 1223.4516000607982,
+      "p95": 1233.5567000554875,
+      "maximum": 1233.5567000554875
+    },
+    "GeneratePhrases/prefix/hit": {
+      "samples": 3,
+      "median": 1009.4446999719366,
+      "p95": 1715.9774000756443,
+      "maximum": 1715.9774000756443
+    },
+    "GeneratePhrases/long/miss": {
+      "samples": 3,
+      "median": 1942.288199905306,
+      "p95": 1951.1838000034913,
+      "maximum": 1951.1838000034913
+    },
+    "GeneratePhrases/long/hit": {
+      "samples": 3,
+      "median": 1007.5288000516593,
+      "p95": 1008.51660000626,
+      "maximum": 1008.51660000626
+    }
+  },
+  "output_hashes": {
+    "Predict/empty/miss": [
+      "0f8e45eb0e68c86e91679da14897a4a50fb1d2ab091e5fd6c98e0a210c3facff"
+    ],
+    "Predict/empty/hit": [
+      "0f8e45eb0e68c86e91679da14897a4a50fb1d2ab091e5fd6c98e0a210c3facff"
+    ],
+    "Predict/message/miss": [
+      "12fecf094b2b3cbf5eb1f38d648016a72c7f97505d398905831ac1f0e2360e1a"
+    ],
+    "Predict/message/hit": [
+      "12fecf094b2b3cbf5eb1f38d648016a72c7f97505d398905831ac1f0e2360e1a"
+    ],
+    "Predict/prefix/miss": [
+      "34c03c4d35f705d1c73a3f56d63723fdf5c74de6d5613d7396bf23083608922c"
+    ],
+    "Predict/prefix/hit": [
+      "34c03c4d35f705d1c73a3f56d63723fdf5c74de6d5613d7396bf23083608922c"
+    ],
+    "Predict/long/miss": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ],
+    "Predict/long/hit": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ],
+    "Generate/empty/miss": [
+      "1bd4461cc54578db706518aa1c5c61fef2442ca86283d087c4f578b7c1e4e983"
+    ],
+    "Generate/empty/hit": [
+      "1bd4461cc54578db706518aa1c5c61fef2442ca86283d087c4f578b7c1e4e983"
+    ],
+    "Generate/message/miss": [
+      "df1135a43f4900ad1d5993b704fdd3219721ee30358f962e05d8f81b0ea31f0b"
+    ],
+    "Generate/message/hit": [
+      "df1135a43f4900ad1d5993b704fdd3219721ee30358f962e05d8f81b0ea31f0b"
+    ],
+    "Generate/prefix/miss": [
+      "d8522986d776b29daecbfdd29ff0b007fa7958ce959531be19dd585049b5c50c"
+    ],
+    "Generate/prefix/hit": [
+      "d8522986d776b29daecbfdd29ff0b007fa7958ce959531be19dd585049b5c50c"
+    ],
+    "Generate/long/miss": [
+      "9d372ee709a4fce1f7b8b4b3ff09f7e32d24e805c90dcdfe0c1db6630aabaad4"
+    ],
+    "Generate/long/hit": [
+      "9d372ee709a4fce1f7b8b4b3ff09f7e32d24e805c90dcdfe0c1db6630aabaad4"
+    ],
+    "GeneratePhrases/empty/miss": [
+      "c2827d6d483effc13c14626297f7b6d3ff811038bd588b9e603c92612c0ef89f"
+    ],
+    "GeneratePhrases/empty/hit": [
+      "c2827d6d483effc13c14626297f7b6d3ff811038bd588b9e603c92612c0ef89f"
+    ],
+    "GeneratePhrases/message/miss": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "GeneratePhrases/message/hit": [
+      "1e3e58d41d6241aab234e8008a37906901d40778f2c02948b0a5a8b598ecce4f",
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "GeneratePhrases/prefix/miss": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "GeneratePhrases/prefix/hit": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "814603c8873883ed808a5559737ca131710a42f7fd45599a59778e9ea3820ec8"
+    ],
+    "GeneratePhrases/long/miss": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "GeneratePhrases/long/hit": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
+  },
+  "requests_over_2000ms": {
+    "Predict/empty/miss": 0,
+    "Predict/empty/hit": 0,
+    "Predict/message/miss": 0,
+    "Predict/message/hit": 0,
+    "Predict/prefix/miss": 0,
+    "Predict/prefix/hit": 0,
+    "Predict/long/miss": 2,
+    "Predict/long/hit": 0,
+    "Generate/empty/miss": 0,
+    "Generate/empty/hit": 0,
+    "Generate/message/miss": 0,
+    "Generate/message/hit": 0,
+    "Generate/prefix/miss": 0,
+    "Generate/prefix/hit": 0,
+    "Generate/long/miss": 0,
+    "Generate/long/hit": 0,
+    "GeneratePhrases/empty/miss": 0,
+    "GeneratePhrases/empty/hit": 0,
+    "GeneratePhrases/message/miss": 0,
+    "GeneratePhrases/message/hit": 0,
+    "GeneratePhrases/prefix/miss": 0,
+    "GeneratePhrases/prefix/hit": 0,
+    "GeneratePhrases/long/miss": 0,
+    "GeneratePhrases/long/hit": 0
+  },
+  "result_counts": {
+    "Predict/empty/miss": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/empty/hit": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/message/miss": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/message/hit": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/prefix/miss": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/prefix/hit": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/long/miss": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Predict/long/hit": {
+      "returned_results": 15,
+      "empty_responses": 0
+    },
+    "Generate/empty/miss": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/empty/hit": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/message/miss": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/message/hit": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/prefix/miss": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/prefix/hit": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/long/miss": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "Generate/long/hit": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "GeneratePhrases/empty/miss": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "GeneratePhrases/empty/hit": {
+      "returned_results": 9,
+      "empty_responses": 0
+    },
+    "GeneratePhrases/message/miss": {
+      "returned_results": 0,
+      "empty_responses": 3
+    },
+    "GeneratePhrases/message/hit": {
+      "returned_results": 6,
+      "empty_responses": 1
+    },
+    "GeneratePhrases/prefix/miss": {
+      "returned_results": 0,
+      "empty_responses": 3
+    },
+    "GeneratePhrases/prefix/hit": {
+      "returned_results": 3,
+      "empty_responses": 2
+    },
+    "GeneratePhrases/long/miss": {
+      "returned_results": 0,
+      "empty_responses": 3
+    },
+    "GeneratePhrases/long/hit": {
+      "returned_results": 0,
+      "empty_responses": 3
+    }
+  },
+  "observed_cpu_percent_of_one_processor": {
+    "samples": 3,
+    "median": 50.55044033280026,
+    "p95": 50.617928210685044,
+    "maximum": 50.617928210685044
+  },
+  "memory_method": "Worker RSS sampled every 5 ms; brief peaks may be missed. Startup uses a fresh process with OS file caches uncontrolled.",
+  "throttle": {
+    "method": "Windows Job Object HARD_CAP; suspended startup",
+    "requested_percent_of_one_processor": 50.0,
+    "job_cpu_rate": 208,
+    "effective_percent_of_one_processor": 49.92,
+    "affinity": [
+      0
+    ]
+  },
+  "comparison": {
+    "reference_sha256": "507f7384a848dde36eb99b024008a4e68d7f3a56e94b17680ef2d4751264d156",
+    "changed_output_cases": [
+      "GeneratePhrases/empty/hit",
+      "GeneratePhrases/empty/miss",
+      "GeneratePhrases/long/hit",
+      "GeneratePhrases/message/hit",
+      "GeneratePhrases/message/miss",
+      "GeneratePhrases/prefix/hit"
+    ],
+    "startup_median_change_percent": 78.30469520014802,
+    "memory_median_change_percent": {
+      "ready_rss_bytes": 0.17840329054958914,
+      "warmed_rss_bytes": 3.741961115387471,
+      "sampled_peak_rss_bytes": 16.95950594908455
+    },
+    "latency_median_change_percent": {
+      "Predict/empty/miss": 3.3383374066706883,
+      "Predict/empty/hit": -99.97799549986401,
+      "Predict/message/miss": 1.7959949240514028,
+      "Predict/message/hit": -99.96236571253736,
+      "Predict/prefix/miss": 3.7273676608935213,
+      "Predict/prefix/hit": -99.94684546147997,
+      "Predict/long/miss": 19.009145040793474,
+      "Predict/long/hit": -99.96379875660678,
+      "Generate/empty/miss": -33.7166191798866,
+      "Generate/empty/hit": 27.159263107285646,
+      "Generate/message/miss": 5.070671959601025,
+      "Generate/message/hit": 40.97857973285346,
+      "Generate/prefix/miss": 4.413064266678135,
+      "Generate/prefix/hit": 2.8494019481501764,
+      "Generate/long/miss": 2.3174839469096264,
+      "Generate/long/hit": -28.731408271703184,
+      "GeneratePhrases/empty/miss": 25.374854064553908,
+      "GeneratePhrases/empty/hit": 46.87099444536871,
+      "GeneratePhrases/message/miss": -34.32050205688799,
+      "GeneratePhrases/message/hit": 1.5876789779761813,
+      "GeneratePhrases/prefix/miss": 4.183159804060188,
+      "GeneratePhrases/prefix/hit": 2.632361816035411,
+      "GeneratePhrases/long/miss": 4.309972686179031,
+      "GeneratePhrases/long/hit": -39.3503783491004
+    }
+  }
+}

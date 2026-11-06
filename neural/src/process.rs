@@ -28,6 +28,7 @@ impl Worker {
         command
             .arg(&config.bundle)
             .env("RAYON_NUM_THREADS", config.threads.to_string())
+            .env("CANDLE_NUM_THREADS", config.threads.to_string())
             .env("TOKENIZERS_PARALLELISM", "false")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

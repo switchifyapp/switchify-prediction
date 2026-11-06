@@ -150,6 +150,7 @@ fn completed(bytes: &[u8], target: &Target) -> Option<Vec<String>> {
 
 struct Beam {
     logits: Vec<f32>,
+    normalizer: f64,
     bytes: Vec<u8>,
     score: f64,
     /// Upper bound on the log probability of every later completion through
@@ -172,14 +173,14 @@ fn log_sum_exp(a: f64, b: f64) -> f64 {
 }
 
 /// Fraction of the next-token distribution on word boundaries.
-fn boundary_mass(logits: &[f32], boundaries: &[usize]) -> f64 {
+fn normalizer_and_boundary_mass(logits: &[f32], boundaries: &[usize]) -> (f64, f64) {
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
     let all: f64 = logits.iter().map(|v| (*v as f64 - max).exp()).sum();
     let mass: f64 = boundaries
         .iter()
         .map(|&id| (logits[id] as f64 - max).exp())
         .sum();
-    mass / all
+    (max + all.ln(), mass / all)
 }
 
 /// Whether further search can no longer change the ranked result. All later
@@ -249,6 +250,7 @@ fn run(
         .filter(|&id| boundary(&pieces[id], id))
         .collect();
     let mut beams = vec![Beam {
+        normalizer: normalizer_and_boundary_mass(&logits, &[]).0,
         logits,
         bytes: Vec::new(),
         score: 0.,
@@ -263,23 +265,11 @@ fn run(
                 beam.logits.len() == pieces.len() && beam.logits.iter().all(|v| v.is_finite()),
                 "logits"
             );
-            let max = beam
-                .logits
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max) as f64;
-            let normalizer = max
-                + beam
-                    .logits
-                    .iter()
-                    .map(|v| (*v as f64 - max).exp())
-                    .sum::<f64>()
-                    .ln();
             for (token, piece) in pieces.iter().enumerate() {
                 if piece.is_empty() {
                     continue;
                 }
-                let score = beam.score + beam.logits[token] as f64 - normalizer;
+                let score = beam.score + beam.logits[token] as f64 - beam.normalizer;
                 if candidates.len() == WIDTH && score <= candidates.last().unwrap().score {
                     continue;
                 }
@@ -329,7 +319,7 @@ fn run(
                 logits.len() == pieces.len() && logits.iter().all(|v| v.is_finite()),
                 "logits"
             );
-            let mass = boundary_mass(&logits, &boundaries);
+            let (normalizer, mass) = normalizer_and_boundary_mass(&logits, &boundaries);
             if let Some(words) = completed(&candidate.bytes, target) {
                 // A token fragment is not a completed word merely because EOS
                 // has nonzero probability. Require a probable word boundary.
@@ -352,6 +342,7 @@ fn run(
             };
             next.push(Beam {
                 logits,
+                normalizer,
                 bytes: candidate.bytes,
                 score: candidate.score,
                 open,
@@ -376,6 +367,7 @@ fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn byte_prefix_and_word_shapes() {
         assert!(partial(b" caf\xc3", true, "café", 1));
@@ -596,6 +588,7 @@ mod tests {
             .collect();
         let beam = |open: f64| Beam {
             logits: vec![],
+            normalizer: 0.,
             bytes: vec![],
             score: 0.,
             open: open.ln(),
