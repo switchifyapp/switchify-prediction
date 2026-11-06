@@ -5,10 +5,11 @@
 //! values. Only dense Llama layers with interleaved RoPE are supported. Rows of
 //! the attention cache can be selected, so beam extensions sharing a length run
 //! as one batched forward pass.
+use crate::linear::Linear;
 use anyhow::{Result, ensure};
 use candle_core::{
     DType, Device, IndexOp, Module, Tensor,
-    quantized::{QMatMul, QTensor, gguf_file},
+    quantized::{QTensor, gguf_file},
 };
 use candle_transformers::{quantized_nn::RmsNorm, utils};
 use std::sync::Arc;
@@ -17,14 +18,14 @@ const MAX_SEQ_LEN: usize = 4096;
 
 #[derive(Clone)]
 struct Layer {
-    wq: QMatMul,
-    wk: QMatMul,
-    wv: QMatMul,
-    wo: QMatMul,
+    wq: Linear,
+    wk: Linear,
+    wv: Linear,
+    wo: Linear,
     attention_norm: RmsNorm,
-    w1: QMatMul,
-    w2: QMatMul,
-    w3: QMatMul,
+    w1: Linear,
+    w2: Linear,
+    w3: Linear,
     ffn_norm: RmsNorm,
     kv_cache: Option<(Tensor, Tensor)>,
 }
@@ -34,7 +35,7 @@ pub struct Llama {
     embeddings: Arc<QTensor>,
     layers: Vec<Layer>,
     norm: RmsNorm,
-    output: QMatMul,
+    output: Linear,
     n_head: usize,
     n_kv_head: usize,
     head_dim: usize,
@@ -82,21 +83,21 @@ impl Llama {
         let embeddings = Arc::new(ct.tensor(reader, "token_embd.weight", device)?);
         let norm = RmsNorm::from_qtensor(ct.tensor(reader, "output_norm.weight", device)?, eps)?;
         let output = match ct.tensor(reader, "output.weight", device) {
-            Ok(tensor) => QMatMul::from_qtensor(tensor)?,
-            Err(_) => QMatMul::from_arc(embeddings.clone())?,
+            Ok(tensor) => Linear::from_qtensor(tensor)?,
+            Err(_) => Linear::from_arc(embeddings.clone())?,
         };
         let mut layers = Vec::with_capacity(blocks);
         for i in 0..blocks {
             let mut weight =
                 |name: &str| ct.tensor(reader, &format!("blk.{i}.{name}.weight"), device);
             layers.push(Layer {
-                wq: QMatMul::from_qtensor(weight("attn_q")?)?,
-                wk: QMatMul::from_qtensor(weight("attn_k")?)?,
-                wv: QMatMul::from_qtensor(weight("attn_v")?)?,
-                wo: QMatMul::from_qtensor(weight("attn_output")?)?,
-                w1: QMatMul::from_qtensor(weight("ffn_gate")?)?,
-                w2: QMatMul::from_qtensor(weight("ffn_down")?)?,
-                w3: QMatMul::from_qtensor(weight("ffn_up")?)?,
+                wq: Linear::from_qtensor(weight("attn_q")?)?,
+                wk: Linear::from_qtensor(weight("attn_k")?)?,
+                wv: Linear::from_qtensor(weight("attn_v")?)?,
+                wo: Linear::from_qtensor(weight("attn_output")?)?,
+                w1: Linear::from_qtensor(weight("ffn_gate")?)?,
+                w2: Linear::from_qtensor(weight("ffn_down")?)?,
+                w3: Linear::from_qtensor(weight("ffn_up")?)?,
                 attention_norm: RmsNorm::from_qtensor(weight("attn_norm")?, eps)?,
                 ffn_norm: RmsNorm::from_qtensor(weight("ffn_norm")?, eps)?,
                 kv_cache: None,

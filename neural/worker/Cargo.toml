@@ -12,6 +12,8 @@ accelerated = []
 [dependencies]
 switchify-prediction-neural = { path = ".." }
 anyhow = "1"
+half = "2"
+rayon = "1"
 switchify-prediction = { path = "../.." }
 unicode-normalization = "0.1"
 candle-core = "=0.11.0"

@@ -140,6 +140,11 @@ therefore avoid inference; changing shortlists reuse only overlapping candidates
 Report fresh-context latency separately from warm repeats. Generation reuses each
 beam's probability normalizer instead of recomputing it at the next depth.
 
+For a focused cold-context test, add `--fresh-only` to omit the identical
+cache-hit request after each reset. This is a distinct workload in the comparison
+hash. Reports also include per-request worker CPU time, whose OS accounting
+resolution can be coarser than wall-clock timing.
+
 
 ## Asynchronous generation
 

@@ -7,11 +7,20 @@ import subprocess
 import sys
 import unittest
 
-from neural_benchmark import compare, read_exact, summary
+from neural_benchmark import CASES, CANDIDATES, compare, read_exact, summary, workload_hash
 from neural_throttle import WindowsCpuLimit, cpu_rate, creation_flags
 
 
 class BenchmarkTests(unittest.TestCase):
+    def test_fresh_only_is_a_distinct_workload(self):
+        modes = ['Predict', 'Generate', 'GeneratePhrases']
+        cases = [c[0] for c in CASES]
+        import hashlib
+        legacy = hashlib.sha256(json.dumps([CASES, CANDIDATES]).encode()).hexdigest()
+        self.assertEqual(workload_hash(CANDIDATES, modes, cases, False), legacy)
+        self.assertNotEqual(workload_hash(CANDIDATES, modes, cases, True), legacy)
+        self.assertNotEqual(workload_hash(CANDIDATES, ['Predict'], ['long'], False),
+                            workload_hash(CANDIDATES, ['Predict'], ['long'], True))
     def test_cpu_budget_is_scaled_to_the_whole_machine(self):
         self.assertEqual(cpu_rate(50, 24), 208)
         self.assertEqual(cpu_rate(100, 8), 1250)
