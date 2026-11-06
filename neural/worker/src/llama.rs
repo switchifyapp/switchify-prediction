@@ -8,9 +8,10 @@
 use anyhow::{Result, ensure};
 use candle_core::{
     DType, Device, IndexOp, Module, Tensor,
-    quantized::{QMatMul, gguf_file},
+    quantized::{QMatMul, QTensor, gguf_file},
 };
 use candle_transformers::{quantized_nn::RmsNorm, utils};
+use std::sync::Arc;
 
 const MAX_SEQ_LEN: usize = 4096;
 
@@ -30,7 +31,7 @@ struct Layer {
 
 #[derive(Clone)]
 pub struct Llama {
-    embeddings: QMatMul,
+    embeddings: Arc<QTensor>,
     layers: Vec<Layer>,
     norm: RmsNorm,
     output: QMatMul,
@@ -78,11 +79,11 @@ impl Llama {
             .matmul(&theta.reshape((1, theta.elem_count()))?)?;
         // Decode only requested rows. Keeping a dense copy of this tied table
         // would cost another 108 MiB for the pinned 49152 x 576 model.
-        let embeddings = QMatMul::from_qtensor(ct.tensor(reader, "token_embd.weight", device)?)?;
+        let embeddings = Arc::new(ct.tensor(reader, "token_embd.weight", device)?);
         let norm = RmsNorm::from_qtensor(ct.tensor(reader, "output_norm.weight", device)?, eps)?;
         let output = match ct.tensor(reader, "output.weight", device) {
             Ok(tensor) => QMatMul::from_qtensor(tensor)?,
-            Err(_) => embeddings.clone(),
+            Err(_) => QMatMul::from_arc(embeddings.clone())?,
         };
         let mut layers = Vec::with_capacity(blocks);
         for i in 0..blocks {
@@ -217,7 +218,7 @@ impl Llama {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use candle_core::quantized::{GgmlDType, QTensor};
+    use candle_core::quantized::GgmlDType;
 
     #[test]
     fn quantized_embeddings_match_dense_rows_exactly() -> Result<()> {
@@ -227,7 +228,7 @@ mod tests {
         let tensor = Tensor::from_vec(values, (8, 64), &Device::Cpu)?;
         let quantized = QTensor::quantize(&tensor, GgmlDType::Q8_0)?;
         let dense = quantized.dequantize(&Device::Cpu)?;
-        let embeddings = QMatMul::from_qtensor(quantized)?;
+        let embeddings = Arc::new(quantized);
         for (ids, shape) in [(vec![7u32, 0, 7, 3], (2, 2)), (vec![1, 5, 2], (1, 3))] {
             let ids = Tensor::from_vec(ids, shape, &Device::Cpu)?;
             let actual = embeddings

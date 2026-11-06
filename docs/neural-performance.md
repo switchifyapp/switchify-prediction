@@ -10,6 +10,8 @@ accuracy and controller-inclusive latency.
 The worker previously expanded the entire 49,152 by 576 token embedding table
 to F32, in addition to keeping its tied Q8 output weights. It now shares the
 quantized table and decodes only requested rows through Candle's embedding API.
+Embedding rows remain F32 even when an inherited Candle setting changes matrix
+multiplication precision.
 It also releases the original GGUF file bytes immediately after loading weights,
 before constructing tokenizer lookup tables. Model bytes and search settings are
 unchanged.
@@ -25,13 +27,13 @@ timing runs. OS file caches were uncontrolled.
 | Metric | Before | After |
 | --- | ---: | ---: |
 | Worker RSS at ready, median | 265.5 MiB | 157.8 MiB |
-| Worker RSS after measured requests, median | 265.7 MiB | 157.7 MiB |
-| Sampled peak worker RSS, median | 403.8 MiB | 281.0 MiB |
-| Fresh-process startup to ready, median | 341.9 ms | 325.1 ms |
+| Worker RSS after measured requests, median | 265.7 MiB | 157.5 MiB |
+| Sampled peak worker RSS, median | 403.8 MiB | 275.6 MiB |
+| Fresh-process startup to ready, median | 341.9 ms | 320.6 ms |
 
-Warmed RSS fell 40.6%, and sampled peak RSS fell 30.4%. Request medians changed
-between -3.2% and +2.3% across cases, consistent with essentially unchanged
-inference speed in this small desktop run. Startup was 4.9% faster by median,
+Warmed RSS fell 40.7%, and sampled peak RSS fell 31.7%. Request medians changed
+between -1.5% and +4.9% across cases, consistent with essentially unchanged
+inference speed in this small desktop run. Startup was 6.2% faster by median,
 but three samples and uncontrolled file caches do not establish a reliable
 startup speedup.
 
@@ -39,7 +41,8 @@ All returned prediction hashes matched across builds and were stable within each
 build. This workload is performance evidence, not accuracy qualification.
 The exact embedding-row test, both explicit local-model tests, the neural
 workspace tests and Clippy passed. RSS covers the worker only, sampled every
-5 ms; it excludes the controller and can miss brief peaks. These are portable
+5 ms; it excludes the controller and can miss brief peaks. An explicit inference
+check with `CANDLE_DEQUANTIZE_ALL_F16=1` also passed. These are portable
 Windows measurements, not accelerated or cross-platform results.
 
 Raw reports retain model, worker and workload hashes and all per-case timing
