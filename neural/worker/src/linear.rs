@@ -154,8 +154,8 @@ mod tests {
 
     #[test]
     fn q8_shapes_match_candle_bit_for_bit() -> Result<()> {
-        for n in [1, 3, 63, 64, 65, 192, 576] {
-            for k in [32, 64, 576] {
+        for n in [1, 3, 63, 64, 65, 192, 576, 1536] {
+            for k in [32, 64, 576, 1536] {
                 let values: Vec<f32> = (0..n * k)
                     .map(|i| ((i * 37 % 257) as f32 - 128.) / 17.)
                     .collect();
@@ -202,6 +202,36 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn full_vocabulary_projection_matches_candle() -> Result<()> {
+        let (n, k) = (49152, 576);
+        let weights = Tensor::from_vec(
+            (0..n * k)
+                .map(|i| ((i * 37 % 257) as f32 - 128.) / 17.)
+                .collect(),
+            (n, k),
+            &Device::Cpu,
+        )?;
+        let q = Arc::new(QTensor::quantize(&weights, GgmlDType::Q8_0)?);
+        drop(weights);
+        let actual = Linear(QMatMul::QTensor(q.clone()));
+        let expected = QMatMul::QTensor(q);
+        let input = Tensor::from_vec(
+            (0..2 * k)
+                .map(|i| ((i * 13 % 97) as f32 - 48.) / 9.)
+                .collect(),
+            (2, k),
+            &Device::Cpu,
+        )?;
+        let got = actual.forward(&input)?.flatten_all()?.to_vec1::<f32>()?;
+        let want = expected.forward(&input)?.flatten_all()?.to_vec1::<f32>()?;
+        assert_eq!(
+            got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+            want.iter().map(|x| x.to_bits()).collect::<Vec<_>>()
+        );
         Ok(())
     }
 
