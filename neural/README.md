@@ -65,6 +65,40 @@ Add `--accelerated-worker target/smol-avx2/release/switchify-smol-worker` for th
 
 `python scripts/package_neural.py --portable target/smol-portable/release --accelerated target/smol-avx2/release` packages binaries, hashes and dependency notices without model files. Omit the accelerated path for ARM. CI builds/tests Windows x64, Linux x64, macOS ARM64 and macOS x64. Build/test success is not a claim of measured model latency on those platforms. See `SECURITY.md` for the scoped dependency advisory exception and deployment boundaries.
 
+## Worker performance benchmark
+
+Use `scripts/neural_benchmark.py` for a repeatable speed and memory comparison
+without building a statistical database. It requires Python 3.11+ and `psutil==7.0.0`,
+an existing validated model bundle, and a release worker. It never downloads assets.
+
+```sh
+python scripts/neural_benchmark.py --worker BEFORE_WORKER --bundle MODEL_BUNDLE --output before.json
+python scripts/neural_benchmark.py --worker AFTER_WORKER --bundle MODEL_BUNDLE --output after.json --compare before.json
+```
+
+Keep a copy of the first worker before rebuilding. Use the same build flags,
+machine and thread count for both runs, with other heavy work stopped. Defaults
+are four inference threads, three fresh processes, one warm-up pass per process
+and five measured passes. `--threads 1..4`, `--runs`, `--warmup` and `--repeats`
+override these settings. Test portable and accelerated workers separately.
+
+The fixed synthetic workload covers reranking, word generation and phrase
+generation with empty, short and longer contexts, with and without typed prefixes.
+Each query runs after a reset and again with a cached context. JSON reports record
+median, p95 and maximum worker round-trip latency per case, startup-to-ready time,
+RSS at ready and after warm-up, and peak RSS sampled every 5 ms. Fresh processes
+do not clear the OS file cache. RSS and latency vary with desktop activity;
+sampling can miss brief peaks.
+
+Reports identify the worker, model and workload by SHA-256. `--compare` checks
+that settings and model match, reports percentage changes, and exits nonzero if
+any returned prediction hashes differ. Negative percentages mean lower time or
+memory. Predictions are hashed rather than saved as text. This small performance
+workload does not measure accuracy or replace the frozen corpus evaluations
+above, controller lifecycle tests, or end-to-end desktop measurements.
+The first measured change and its raw reports are in
+[neural worker performance](../docs/neural-performance.md).
+
 
 ## Asynchronous generation
 

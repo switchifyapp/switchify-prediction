@@ -52,6 +52,9 @@ impl Model {
         let mut reader = std::io::Cursor::new(bundle.weights);
         let content = candle_core::quantized::gguf_file::Content::read(&mut reader)?;
         let empty = Llama::from_gguf(content, &mut reader)?;
+        // All weights are now owned by the model. Release the source file's
+        // 136 MiB before constructing the tokenizer lookup tables.
+        drop(reader);
         let mut boundaries = vec![0];
         for id in 1..49152 {
             let text = tokenizer.decode(&[id], false).map_err(anyhow::Error::msg)?;

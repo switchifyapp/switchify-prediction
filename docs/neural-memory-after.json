@@ -1,0 +1,303 @@
+{
+  "format_version": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+  "logical_cpus": 24,
+  "threads": 4,
+  "runs": 3,
+  "repeats": 5,
+  "warmup": 1,
+  "capabilities": {
+    "Ready": {
+      "version": 3,
+      "accelerated": false
+    }
+  },
+  "worker_sha256": "b9ce69f574cb1a51ffa502f236143cf0423dca083676d80c38fbf2fc92015e95",
+  "model_sha256": "8d75e9b96c4b64e8a1180224cbaefbbc7744f21ca2e0be2319a429f2c589d342",
+  "manifest_sha256": "c73e1b802743cf1649a6f825450f8994cbd732f4c179634885630756efa10f79",
+  "workload_sha256": "f350332d0add495e2b4480bd2e68859179681a98501fb57137ed790a3b94fa4e",
+  "startup_ms": {
+    "samples": 3,
+    "median": 325.07009990513325,
+    "p95": 548.3479000395164,
+    "maximum": 548.3479000395164
+  },
+  "memory": {
+    "ready_rss_bytes": {
+      "samples": 3,
+      "median": 165453824,
+      "p95": 165933056,
+      "maximum": 165933056
+    },
+    "warmed_rss_bytes": {
+      "samples": 3,
+      "median": 165380096,
+      "p95": 166125568,
+      "maximum": 166125568
+    },
+    "sampled_peak_rss_bytes": {
+      "samples": 3,
+      "median": 294612992,
+      "p95": 296460288,
+      "maximum": 296460288
+    }
+  },
+  "latency_ms": {
+    "Predict/empty/miss": {
+      "samples": 15,
+      "median": 187.95080005656928,
+      "p95": 195.05850004497916,
+      "maximum": 195.05850004497916
+    },
+    "Predict/empty/hit": {
+      "samples": 15,
+      "median": 170.30310002155602,
+      "p95": 179.95389993302524,
+      "maximum": 179.95389993302524
+    },
+    "Predict/message/miss": {
+      "samples": 15,
+      "median": 160.04660003818572,
+      "p95": 167.58250002749264,
+      "maximum": 167.58250002749264
+    },
+    "Predict/message/hit": {
+      "samples": 15,
+      "median": 112.93929989915341,
+      "p95": 128.80559999030083,
+      "maximum": 128.80559999030083
+    },
+    "Predict/prefix/miss": {
+      "samples": 15,
+      "median": 170.76080001424998,
+      "p95": 183.07739996816963,
+      "maximum": 183.07739996816963
+    },
+    "Predict/prefix/hit": {
+      "samples": 15,
+      "median": 114.16290001943707,
+      "p95": 122.87000007927418,
+      "maximum": 122.87000007927418
+    },
+    "Predict/long/miss": {
+      "samples": 15,
+      "median": 265.99059998989105,
+      "p95": 282.9083000542596,
+      "maximum": 282.9083000542596
+    },
+    "Predict/long/hit": {
+      "samples": 15,
+      "median": 116.91540002357215,
+      "p95": 127.43730004876852,
+      "maximum": 127.43730004876852
+    },
+    "Generate/empty/miss": {
+      "samples": 15,
+      "median": 220.834800042212,
+      "p95": 234.31430000346154,
+      "maximum": 234.31430000346154
+    },
+    "Generate/empty/hit": {
+      "samples": 15,
+      "median": 203.12610000837594,
+      "p95": 211.91140008158982,
+      "maximum": 211.91140008158982
+    },
+    "Generate/message/miss": {
+      "samples": 15,
+      "median": 146.96089993230999,
+      "p95": 159.2036000220105,
+      "maximum": 159.2036000220105
+    },
+    "Generate/message/hit": {
+      "samples": 15,
+      "median": 100.79580009914935,
+      "p95": 109.79999997653067,
+      "maximum": 109.79999997653067
+    },
+    "Generate/prefix/miss": {
+      "samples": 15,
+      "median": 259.7757999319583,
+      "p95": 278.99350004736334,
+      "maximum": 278.99350004736334
+    },
+    "Generate/prefix/hit": {
+      "samples": 15,
+      "median": 204.72289994359016,
+      "p95": 216.2643000483513,
+      "maximum": 216.2643000483513
+    },
+    "Generate/long/miss": {
+      "samples": 15,
+      "median": 459.0306000318378,
+      "p95": 491.54059996362776,
+      "maximum": 491.54059996362776
+    },
+    "Generate/long/hit": {
+      "samples": 15,
+      "median": 312.562600011006,
+      "p95": 342.70949999336153,
+      "maximum": 342.70949999336153
+    },
+    "GeneratePhrases/empty/miss": {
+      "samples": 15,
+      "median": 317.67570006195456,
+      "p95": 345.2758000930771,
+      "maximum": 345.2758000930771
+    },
+    "GeneratePhrases/empty/hit": {
+      "samples": 15,
+      "median": 305.86880003102124,
+      "p95": 324.61089990101755,
+      "maximum": 324.61089990101755
+    },
+    "GeneratePhrases/message/miss": {
+      "samples": 15,
+      "median": 249.50289994012564,
+      "p95": 257.66580004710704,
+      "maximum": 257.66580004710704
+    },
+    "GeneratePhrases/message/hit": {
+      "samples": 15,
+      "median": 203.17130000330508,
+      "p95": 211.574999964796,
+      "maximum": 211.574999964796
+    },
+    "GeneratePhrases/prefix/miss": {
+      "samples": 15,
+      "median": 257.3140000458807,
+      "p95": 274.8657000483945,
+      "maximum": 274.8657000483945
+    },
+    "GeneratePhrases/prefix/hit": {
+      "samples": 15,
+      "median": 204.23929998651147,
+      "p95": 222.06980001647025,
+      "maximum": 222.06980001647025
+    },
+    "GeneratePhrases/long/miss": {
+      "samples": 15,
+      "median": 356.28670000005513,
+      "p95": 380.08909998461604,
+      "maximum": 380.08909998461604
+    },
+    "GeneratePhrases/long/hit": {
+      "samples": 15,
+      "median": 210.2926999796182,
+      "p95": 221.03180002886802,
+      "maximum": 221.03180002886802
+    }
+  },
+  "output_hashes": {
+    "Predict/empty/miss": [
+      "0f8e45eb0e68c86e91679da14897a4a50fb1d2ab091e5fd6c98e0a210c3facff"
+    ],
+    "Predict/empty/hit": [
+      "0f8e45eb0e68c86e91679da14897a4a50fb1d2ab091e5fd6c98e0a210c3facff"
+    ],
+    "Predict/message/miss": [
+      "12fecf094b2b3cbf5eb1f38d648016a72c7f97505d398905831ac1f0e2360e1a"
+    ],
+    "Predict/message/hit": [
+      "12fecf094b2b3cbf5eb1f38d648016a72c7f97505d398905831ac1f0e2360e1a"
+    ],
+    "Predict/prefix/miss": [
+      "34c03c4d35f705d1c73a3f56d63723fdf5c74de6d5613d7396bf23083608922c"
+    ],
+    "Predict/prefix/hit": [
+      "34c03c4d35f705d1c73a3f56d63723fdf5c74de6d5613d7396bf23083608922c"
+    ],
+    "Predict/long/miss": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ],
+    "Predict/long/hit": [
+      "819ec6e6f0a974b202b91b84db0464afea818ec3f3e73363a2fdc4c9b5c4cd22"
+    ],
+    "Generate/empty/miss": [
+      "1bd4461cc54578db706518aa1c5c61fef2442ca86283d087c4f578b7c1e4e983"
+    ],
+    "Generate/empty/hit": [
+      "1bd4461cc54578db706518aa1c5c61fef2442ca86283d087c4f578b7c1e4e983"
+    ],
+    "Generate/message/miss": [
+      "df1135a43f4900ad1d5993b704fdd3219721ee30358f962e05d8f81b0ea31f0b"
+    ],
+    "Generate/message/hit": [
+      "df1135a43f4900ad1d5993b704fdd3219721ee30358f962e05d8f81b0ea31f0b"
+    ],
+    "Generate/prefix/miss": [
+      "d8522986d776b29daecbfdd29ff0b007fa7958ce959531be19dd585049b5c50c"
+    ],
+    "Generate/prefix/hit": [
+      "d8522986d776b29daecbfdd29ff0b007fa7958ce959531be19dd585049b5c50c"
+    ],
+    "Generate/long/miss": [
+      "9d372ee709a4fce1f7b8b4b3ff09f7e32d24e805c90dcdfe0c1db6630aabaad4"
+    ],
+    "Generate/long/hit": [
+      "9d372ee709a4fce1f7b8b4b3ff09f7e32d24e805c90dcdfe0c1db6630aabaad4"
+    ],
+    "GeneratePhrases/empty/miss": [
+      "c2827d6d483effc13c14626297f7b6d3ff811038bd588b9e603c92612c0ef89f"
+    ],
+    "GeneratePhrases/empty/hit": [
+      "c2827d6d483effc13c14626297f7b6d3ff811038bd588b9e603c92612c0ef89f"
+    ],
+    "GeneratePhrases/message/miss": [
+      "1e3e58d41d6241aab234e8008a37906901d40778f2c02948b0a5a8b598ecce4f"
+    ],
+    "GeneratePhrases/message/hit": [
+      "1e3e58d41d6241aab234e8008a37906901d40778f2c02948b0a5a8b598ecce4f"
+    ],
+    "GeneratePhrases/prefix/miss": [
+      "814603c8873883ed808a5559737ca131710a42f7fd45599a59778e9ea3820ec8"
+    ],
+    "GeneratePhrases/prefix/hit": [
+      "814603c8873883ed808a5559737ca131710a42f7fd45599a59778e9ea3820ec8"
+    ],
+    "GeneratePhrases/long/miss": [
+      "fe3bc6aa95f4f00c3aab4486afc0821f2035145a119a156a51b1771b110bc467"
+    ],
+    "GeneratePhrases/long/hit": [
+      "fe3bc6aa95f4f00c3aab4486afc0821f2035145a119a156a51b1771b110bc467"
+    ]
+  },
+  "memory_method": "Worker RSS sampled every 5 ms; brief peaks may be missed. Startup uses a fresh process with OS file caches uncontrolled.",
+  "comparison": {
+    "reference_sha256": "15b90eff54907c51f2321092ecee98874f0798d37e37459a5b16f986781cd243",
+    "changed_output_cases": [],
+    "startup_median_change_percent": -4.92730118725172,
+    "memory_median_change_percent": {
+      "ready_rss_bytes": -40.576959854068285,
+      "warmed_rss_bytes": -40.64796848356559,
+      "sampled_peak_rss_bytes": -30.41791622327561
+    },
+    "latency_median_change_percent": {
+      "Predict/empty/miss": 0.34526742061404825,
+      "Predict/empty/hit": -1.3038892504159127,
+      "Predict/message/miss": -0.4392461347316967,
+      "Predict/message/hit": -2.015658156023259,
+      "Predict/prefix/miss": 0.3700083525593145,
+      "Predict/prefix/hit": -0.6918166795061853,
+      "Predict/long/miss": 0.2500686623387871,
+      "Predict/long/hit": -0.519121372744058,
+      "Generate/empty/miss": 2.298386303602995,
+      "Generate/empty/hit": 0.14509554838051386,
+      "Generate/message/miss": 0.607157936731828,
+      "Generate/message/hit": 1.1796757909607436,
+      "Generate/prefix/miss": -1.978054359316106,
+      "Generate/prefix/hit": -0.7194248674002757,
+      "Generate/long/miss": -1.8307452431974403,
+      "Generate/long/hit": -2.6097236105205868,
+      "GeneratePhrases/empty/miss": -3.180742177949325,
+      "GeneratePhrases/empty/hit": -0.13383234875788963,
+      "GeneratePhrases/message/miss": -1.4384291721415865,
+      "GeneratePhrases/message/hit": -1.4568691348091911,
+      "GeneratePhrases/prefix/miss": -1.613143124062555,
+      "GeneratePhrases/prefix/hit": -1.7618853026906467,
+      "GeneratePhrases/long/miss": -0.9211644732766922,
+      "GeneratePhrases/long/hit": -0.15743676306579912
+    }
+  }
+}

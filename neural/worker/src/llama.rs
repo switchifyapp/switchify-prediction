@@ -10,7 +10,6 @@ use candle_core::{
     DType, Device, IndexOp, Module, Tensor,
     quantized::{QMatMul, gguf_file},
 };
-use candle_nn::Embedding;
 use candle_transformers::{quantized_nn::RmsNorm, utils};
 
 const MAX_SEQ_LEN: usize = 4096;
@@ -31,7 +30,7 @@ struct Layer {
 
 #[derive(Clone)]
 pub struct Llama {
-    embeddings: Embedding,
+    embeddings: QMatMul,
     layers: Vec<Layer>,
     norm: RmsNorm,
     output: QMatMul,
@@ -77,12 +76,13 @@ impl Llama {
             .to_dtype(DType::F32)?
             .reshape((MAX_SEQ_LEN, 1))?
             .matmul(&theta.reshape((1, theta.elem_count()))?)?;
-        let embeddings_q = ct.tensor(reader, "token_embd.weight", device)?;
-        let embeddings = embeddings_q.dequantize(device)?;
+        // Decode only requested rows. Keeping a dense copy of this tied table
+        // would cost another 108 MiB for the pinned 49152 x 576 model.
+        let embeddings = QMatMul::from_qtensor(ct.tensor(reader, "token_embd.weight", device)?)?;
         let norm = RmsNorm::from_qtensor(ct.tensor(reader, "output_norm.weight", device)?, eps)?;
         let output = match ct.tensor(reader, "output.weight", device) {
-            Ok(tensor) => tensor,
-            Err(_) => embeddings_q,
+            Ok(tensor) => QMatMul::from_qtensor(tensor)?,
+            Err(_) => embeddings.clone(),
         };
         let mut layers = Vec::with_capacity(blocks);
         for i in 0..blocks {
@@ -102,10 +102,10 @@ impl Llama {
             });
         }
         Ok(Self {
-            embeddings: Embedding::new(embeddings, embedding),
+            embeddings,
             layers,
             norm,
-            output: QMatMul::from_qtensor(output)?,
+            output,
             n_head,
             n_kv_head,
             head_dim: embedding / n_head,
@@ -134,7 +134,7 @@ impl Llama {
         } else {
             Some(utils::build_causal_mask(seq_len, index_pos, &Device::Cpu)?)
         };
-        let mut x = self.embeddings.forward(ids)?;
+        let mut x = self.embeddings.embedding(ids)?;
         for i in 0..self.layers.len() {
             let residual = &x;
             let h = self.layers[i].attention_norm.forward(&x)?;
@@ -211,5 +211,35 @@ impl Llama {
         let y = att.matmul(&v.contiguous()?)?;
         let y = y.transpose(1, 2)?.reshape(&[b, seq_len, n_embd])?;
         Ok(layer.wo.forward(&y)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_core::quantized::{GgmlDType, QTensor};
+
+    #[test]
+    fn quantized_embeddings_match_dense_rows_exactly() -> Result<()> {
+        let values: Vec<f32> = (0..8 * 64)
+            .map(|i| ((i * 37 % 101) as f32 - 50.) / 17.)
+            .collect();
+        let tensor = Tensor::from_vec(values, (8, 64), &Device::Cpu)?;
+        let quantized = QTensor::quantize(&tensor, GgmlDType::Q8_0)?;
+        let dense = quantized.dequantize(&Device::Cpu)?;
+        let embeddings = QMatMul::from_qtensor(quantized)?;
+        for (ids, shape) in [(vec![7u32, 0, 7, 3], (2, 2)), (vec![1, 5, 2], (1, 3))] {
+            let ids = Tensor::from_vec(ids, shape, &Device::Cpu)?;
+            let actual = embeddings
+                .embedding(&ids)?
+                .flatten_all()?
+                .to_vec1::<f32>()?;
+            let expected = dense
+                .index_select(&ids.flatten_all()?, 0)?
+                .flatten_all()?
+                .to_vec1::<f32>()?;
+            assert_eq!(actual, expected);
+        }
+        Ok(())
     }
 }
