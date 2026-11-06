@@ -144,6 +144,9 @@ For a focused cold-context test, add `--fresh-only` to omit the identical
 cache-hit request after each reset. This is a distinct workload in the comparison
 hash. Reports also include per-request worker CPU time, whose OS accounting
 resolution can be coarser than wall-clock timing.
+Reports capture UTC start/end times and hashes of the benchmark and throttling
+helper at the start of a run. New comparisons require matching script hashes.
+Run paired builds sequentially with the same final scripts and CPU affinity.
 
 
 ## Asynchronous generation

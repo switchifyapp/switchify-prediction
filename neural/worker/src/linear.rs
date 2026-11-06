@@ -1,6 +1,7 @@
 //! Portable x86-64 Q8 dot products using the baseline SSE2 instruction set.
 //! Other targets, quantizations, precision overrides and accelerated builds
-//! continue through Candle's QMatMul.
+//! continue through Candle's QMatMul. The SSE2 path also accepts rank-one and
+//! noncontiguous logical inputs; Candle's fallback retains its own restrictions.
 use candle_core::{
     Module, Result, Tensor,
     quantized::{QMatMul, QTensor},
@@ -21,7 +22,11 @@ impl Linear {
 
 impl Module for Linear {
     fn forward(&self, x: &Tensor) -> Result<Tensor> {
-        #[cfg(all(target_arch = "x86_64", not(feature = "accelerated")))]
+        #[cfg(all(
+            target_arch = "x86_64",
+            not(feature = "accelerated"),
+            not(target_feature = "avx2")
+        ))]
         if let QMatMul::QTensor(weight) = &self.0
             && weight.dtype() == candle_core::quantized::GgmlDType::Q8_0
             && matches!(x.device(), candle_core::Device::Cpu)
@@ -34,7 +39,11 @@ impl Module for Linear {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", not(feature = "accelerated")))]
+#[cfg(all(
+    target_arch = "x86_64",
+    not(feature = "accelerated"),
+    not(target_feature = "avx2")
+))]
 mod portable {
     use super::*;
     use candle_core::{Device, quantized::GgmlDType};
@@ -131,7 +140,11 @@ mod tests {
     use super::*;
     use candle_core::{DType, Device, quantized::GgmlDType};
 
-    #[cfg(all(target_arch = "x86_64", not(feature = "accelerated")))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        not(feature = "accelerated"),
+        not(target_feature = "avx2")
+    ))]
     #[test]
     fn all_signed_byte_extremes_match_scalar_products() {
         for x in -128i16..=127 {
@@ -183,7 +196,11 @@ mod tests {
                         &Device::Cpu,
                     )?;
                     let view = extended.narrow(1, 1, seq)?;
-                    let view = if cfg!(all(target_arch = "x86_64", not(feature = "accelerated"))) {
+                    let view = if cfg!(all(
+                        target_arch = "x86_64",
+                        not(feature = "accelerated"),
+                        not(target_feature = "avx2")
+                    )) {
                         view
                     } else {
                         // Candle's unchanged fallback requires contiguous input.

@@ -6,6 +6,7 @@ not prompts. This measures worker IPC, not the desktop/controller or accuracy.
 """
 import argparse
 import collections
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -161,6 +162,9 @@ def compare(previous, current):
         raise ValueError('Incompatible comparison: throttle')
     if previous.get('thread_environment') != current.get('thread_environment'):
         raise ValueError('Incompatible comparison: thread_environment')
+    for key in ['benchmark_sha256', 'throttle_helper_sha256']:
+        if previous.get(key) != current.get(key):
+            raise ValueError(f'Incompatible comparison: {key}')
     changed = [k for k in previous['output_hashes'].keys() | current['output_hashes'].keys()
                if previous['output_hashes'].get(k) != current['output_hashes'].get(k)]
     def change(old, new):
@@ -178,6 +182,9 @@ def compare(previous, current):
 
 
 def benchmark(args):
+    started_at = datetime.now(timezone.utc).isoformat()
+    benchmark_sha = sha(Path(__file__))
+    throttle_sha = sha(Path(__file__).with_name('neural_throttle.py'))
     candidates = CANDIDATES if args.candidate_set == 'default' else COMPLETIONS
     times = collections.defaultdict(list)
     request_cpu = collections.defaultdict(list)
@@ -251,6 +258,8 @@ def benchmark(args):
                   latency_ms={k: summary(v) for k, v in times.items()},
                   request_cpu_ms={k: summary(v) for k, v in request_cpu.items()},
                   cpu_time_method='Per-request delta of worker user+system CPU time; OS accounting resolution may be coarse.',
+                  benchmark_sha256=benchmark_sha, throttle_helper_sha256=throttle_sha,
+                  started_at_utc=started_at, finished_at_utc=datetime.now(timezone.utc).isoformat(),
                   output_hashes={k: sorted(v) for k, v in outputs.items()},
                   requests_over_2000ms=dict(deadline_exceeded),
                   result_counts={k: dict(v) for k, v in result_counts.items()},
