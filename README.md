@@ -12,6 +12,9 @@ two characters is **85.17%**, compared with 78.11% for the earlier model. Genera
 English improves from 65.59% to 66.40%; Taskmaster falls from 86.56% to 86.24%.
 These are offline corpus measurements, not observed AAC-user outcomes.
 
+The [corpus source benchmark](docs/corpus-benchmark.md) compares each current
+dataset alone and measures what changes when a source is removed from the blend.
+
 ## Download and use
 
 Choose a successful run for the desired commit in
