@@ -28,8 +28,7 @@ resolver = "3"
 # fp16 target feature only once inlined into a runtime-detected caller.
 # Unoptimised builds don't inline them, so the asm fails to assemble on
 # targets without fp16 in their baseline, such as aarch64-pc-windows-msvc.
-# Optimising these crates in dev and test builds only changes nothing in
-# release builds.
+# This applies only to dev and test builds; release builds are unchanged.
 [profile.dev.package.gemm-common]
 opt-level = 3
 
