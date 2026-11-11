@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sources": {
+    "wordfreq": {
+      "filename": "wordfreq-3.1.1-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/24/61/62835c475d69872d30689f284497853fe33fe1d6dd18f57346d13305861d/wordfreq-3.1.1-py3-none-any.whl",
+      "sha256": "4b1c6ecffc6198be3396d5cf871c4423ca71c907c231348d352dd54d62b97473",
+      "data_member": "wordfreq/data/large_en.msgpack.gz",
+      "author": "Robyn Speer and the credited source-corpus authors",
+      "terms": "Code Apache-2.0; bundled frequency data CC-BY-SA-4.0 with additional source attribution. Retain the original wheel and its complete dist-info notices. Experimental models and extracted lists are local only; no promotion or redistribution is authorized by this experiment.",
+      "documentation": "https://github.com/rspeer/wordfreq",
+      "citation": "Robyn Speer (2022), rspeer/wordfreq v3.0, https://doi.org/10.5281/zenodo.7199437"
+    },
+    "msgpack": {
+      "filename": "msgpack-1.1.2.tar.gz",
+      "url": "https://files.pythonhosted.org/packages/4d/f2/bfb55a6236ed8725a96b0aa3acbd0ec17588e6a2c3b62a93eb513ed8783f/msgpack-1.1.2.tar.gz",
+      "sha256": "3b60763c1373dd60f398488069bcdc703cd08a711477b5d480eecc9f9626f47e",
+      "terms": "Apache-2.0. Only the pure Python reader is used, with the source archive and notices retained."
+    }
+  },
+  "inspiration": {
+    "project": "RMANOV/smartkey",
+    "url": "https://github.com/RMANOV/smartkey/blob/master/corpus/generate_full_corpus.py",
+    "note": "Broad unigram frequencies are separate from domain-specific phrase counts. No SmartKey source code or corpus is copied."
+  }
+}
