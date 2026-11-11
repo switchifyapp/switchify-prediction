@@ -60,3 +60,31 @@ prove independence from every upstream source. The selection proxy assumes one
 action to choose a suggestion and does not measure actual switch scan/search
 time. Personal learning must be evaluated separately before shipping a changed
 unigram scale. Model payload is not measured process RSS.
+
+## Reproduction
+
+Use Python 3.11 or later and Rust 1.97.1. Build with `cargo build --release
+--locked`, and prepare the pinned existing corpora with `python
+scripts/aac_experiment.py --prepare-only` if they are not already available.
+Extract `english.sqlite` from an official en-aac-oanc-v1 model bundle. Then run:
+
+```sh
+python scripts/frequency_experiment.py --baseline /path/to/english.sqlite --output artifacts/broad-frequency-v1
+```
+
+The output directory must be new. Sources are downloaded into a reusable,
+checksum-verified cache; `--source-cache` can select another cache directory.
+The script retains the full source wheel and parser archive, extracts the pinned
+pure-Python MessagePack reader locally, and does not install packages into Python.
+It round-trips source tokens through the CLI, validates every candidate, verifies
+that contextual counts are unchanged, and independently rebuilds the selected
+candidate to compare logical hashes. The original baseline's file hash must stay
+unchanged. `selection.json` is written before test scoring; `report.json` contains
+the completed aggregate results and whether a separate promotion review is
+recommended. Interrupted or failed runs remain incomplete and are not results.
+
+Run the synthetic isolation and selection tests with:
+
+```sh
+python -m unittest discover -s scripts -p test_frequency_experiment.py
+```
