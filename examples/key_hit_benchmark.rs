@@ -62,6 +62,43 @@ fn percentile(values: &mut [f64], quantile: f64) -> f64 {
     values[((values.len() - 1) as f64 * quantile).ceil() as usize]
 }
 
+fn short_prefix_probes(predictor: &Predictor, map: &KeyHitMap) -> Vec<serde_json::Value> {
+    let options = Options {
+        limit: 5,
+        min_chars: 0,
+        ..Options::default()
+    };
+    ["", "s"]
+        .into_iter()
+        .map(|prefix| {
+            let mut exact_times = Vec::new();
+            let mut hit_times = Vec::new();
+            // These fixed probes are separate from the corpus accuracy sample.
+            predictor.predict("i want ", prefix, options);
+            predictor.predict_with_hit_map("i want ", prefix, options, map);
+            for _ in 0..50 {
+                let started = Instant::now();
+                let exact = predictor.predict("i want ", prefix, options);
+                exact_times.push(started.elapsed().as_secs_f64() * 1000.);
+                let started = Instant::now();
+                let hits = predictor.predict_with_hit_map("i want ", prefix, options, map);
+                hit_times.push(started.elapsed().as_secs_f64() * 1000.);
+                if prefix.is_empty() {
+                    assert_eq!(
+                        exact.iter().map(|s| (&s.word, s.score)).collect::<Vec<_>>(),
+                        hits.iter().map(|s| (&s.word, s.score)).collect::<Vec<_>>()
+                    );
+                }
+            }
+            serde_json::json!({"prefix":prefix,"prefix_graphemes":prefix.len(),"queries":50,
+            "exact_p50_ms":percentile(&mut exact_times,0.5),
+            "exact_p95_ms":percentile(&mut exact_times,0.95),
+            "hit_map_p50_ms":percentile(&mut hit_times,0.5),
+            "hit_map_p95_ms":percentile(&mut hit_times,0.95)})
+        })
+        .collect()
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = env::args_os().skip(1).collect();
     if args.len() != 2 {
@@ -92,10 +129,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut counts = [[0usize; 2]; 4];
         let mut exact_times = Vec::new();
         let mut soft_times = Vec::new();
+        let mut clean_times = Vec::new();
         for case in &queries {
             let clean = predictor.predict(&case.before, &case.clean, options);
+            let started = Instant::now();
             let soft_clean =
                 predictor.predict_with_hit_map(&case.before, &case.clean, options, &map);
+            clean_times.push(started.elapsed().as_secs_f64() * 1000.);
             let started = Instant::now();
             let noisy = predictor.predict(&case.before, &case.noisy, options);
             exact_times.push(started.elapsed().as_secs_f64() * 1000.);
@@ -129,6 +169,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "clean_exact":accuracy[0],"clean_hit_map":accuracy[1],
             "noisy_exact":accuracy[2],"noisy_hit_map":accuracy[3],
             "noisy_exact_p95_ms":percentile(&mut exact_times,0.95),
+            "clean_hit_map_p50_ms":percentile(&mut clean_times,0.5),
+            "clean_hit_map_p95_ms":percentile(&mut clean_times,0.95),
             "noisy_hit_map_p50_ms":percentile(&mut soft_times,0.5),
             "noisy_hit_map_p95_ms":percentile(&mut soft_times,0.95)}),
         );
@@ -136,11 +178,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
-            "protocol":"key-hits-v1", "evaluation_sha256":digest(text.as_bytes()),
+            "protocol":"key-hits-v2", "sampling_seed":"key-hits-v1",
+            "evaluation_sha256":digest(text.as_bytes()),
             "baseline":validated,"metrics":metrics,
-            "layout":"QWERTY radius 1.25 spread 0.45; one uniform retained-neighbor substitution",
+            "layout":"QWERTY radius 1.3 spread 0.45; one uniform retained-neighbor substitution",
+            "short_prefix_probes":short_prefix_probes(&predictor,&map),
             "sampling":"hash-rank at most 1000 eligible targets per prefix; target longer than prefix",
-            "limitations":"Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Timing describes this machine."
+            "limitations":"Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Corpus timing covers clean/noisy 2-4 graphemes. Short-prefix probes use only fixed i-want contexts, not a representative workload. Timing describes this machine, not a latency ceiling."
         }))?
     );
     Ok(())
