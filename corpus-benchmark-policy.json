@@ -1,0 +1,13 @@
+{
+  "protocol": "corpus-sources-v1",
+  "selection": "All ten comparisons fixed before scoring. Descriptive benchmark only; no automatic model promotion. Use development for future tuning and confirm any selected change separately on test.",
+  "sources": ["tatoeba", "taskmaster", "aac", "oanc"],
+  "production_weights": {"tatoeba": 3, "taskmaster": 1, "aac": 10, "oanc": 1},
+  "models": ["production", "tatoeba", "taskmaster", "aac", "oanc", "without-tatoeba", "without-taskmaster", "without-aac", "without-oanc", "full-oanc-blend"],
+  "suites": ["aac", "general", "conversation"],
+  "primary_metric": "top-five accuracy after two graphemes, reported separately for each suite",
+  "secondary_metrics": ["top-one and top-five accuracy at zero through four graphemes", "vocabulary coverage", "modeled selection savings", "model bytes", "vocabulary and n-gram counts", "warm p50/p95 latency"],
+  "oanc_sample_sentences": 20000,
+  "oanc_min_words": 2,
+  "oanc_max_words": 30
+}
