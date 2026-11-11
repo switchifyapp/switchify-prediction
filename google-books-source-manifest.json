@@ -1,0 +1,155 @@
+{
+  "files": {
+    "googlebooks-eng-1M-1gram-20090715-0.csv.zip": {
+      "order": 1,
+      "shard": 0,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-0.csv.zip",
+      "bytes": 111513290,
+      "sha256": "f667d70b491c350db1bbd22e4694161e68b20cbcf38eb249e34e8094b936ed49",
+      "md5": "f7c83509ae5dac729e11e3a342dd935b"
+    },
+    "googlebooks-eng-1M-1gram-20090715-1.csv.zip": {
+      "order": 1,
+      "shard": 1,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-1.csv.zip",
+      "bytes": 111565982,
+      "sha256": "2a9e53640c8d925e3c3d4d32430bc224e90b3c7f55a7fba58a6038d8a5d49749",
+      "md5": "bce62786fc1cdad6168e9eefcc9dcf2a"
+    },
+    "googlebooks-eng-1M-1gram-20090715-2.csv.zip": {
+      "order": 1,
+      "shard": 2,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-2.csv.zip",
+      "bytes": 111407905,
+      "sha256": "541c3a3178041082522225039f5783f16a95554794a0cd51cbf6c0a9725daad5",
+      "md5": "a99f8b0effd918b5c67c851a9d189cba"
+    },
+    "googlebooks-eng-1M-1gram-20090715-3.csv.zip": {
+      "order": 1,
+      "shard": 3,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-3.csv.zip",
+      "bytes": 111073178,
+      "sha256": "630e90e373732d003b655227b1bdd48531235f1225ddfb4c06317405b143f35d",
+      "md5": "2b8dd4868e3d8c253ab9dbfba02ca857"
+    },
+    "googlebooks-eng-1M-1gram-20090715-4.csv.zip": {
+      "order": 1,
+      "shard": 4,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-4.csv.zip",
+      "bytes": 110931938,
+      "sha256": "1fa20d5b26cb608c0961d50a381b9f2fe077d910730617338798b96428f7c04a",
+      "md5": "6f0da8eab96df8d1a0c23b6228abe629"
+    },
+    "googlebooks-eng-1M-1gram-20090715-5.csv.zip": {
+      "order": 1,
+      "shard": 5,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-5.csv.zip",
+      "bytes": 111300191,
+      "sha256": "20972b3a67307d65aaa4f9b23cd8df99751916e0441b5bf5772e245abbad4158",
+      "md5": "cb138b77de94181157b7ca3f5f5ed8bd"
+    },
+    "googlebooks-eng-1M-1gram-20090715-6.csv.zip": {
+      "order": 1,
+      "shard": 6,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-6.csv.zip",
+      "bytes": 110987057,
+      "sha256": "e926439e5ad38954d2d53868ee4933481059ee5fb4b9b1e092c30b28ecfb27d7",
+      "md5": "f3abfca64f5d390b177e605057e9559a"
+    },
+    "googlebooks-eng-1M-1gram-20090715-7.csv.zip": {
+      "order": 1,
+      "shard": 7,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-7.csv.zip",
+      "bytes": 110946171,
+      "sha256": "4f97c47b00d226427d18c23ad10729629589a737082e0787779d1c9141f7f7ff",
+      "md5": "dd1dd771e16aec9bf0e31d848d1f8f77"
+    },
+    "googlebooks-eng-1M-1gram-20090715-8.csv.zip": {
+      "order": 1,
+      "shard": 8,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-8.csv.zip",
+      "bytes": 111005645,
+      "sha256": "7802b30d65f25fc280e02940a96da011361a778d2a1225f1027f87ebfb918b7f",
+      "md5": "cd486733b49a07254f8b8fbfa6679857"
+    },
+    "googlebooks-eng-1M-1gram-20090715-9.csv.zip": {
+      "order": 1,
+      "shard": 9,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-9.csv.zip",
+      "bytes": 110853641,
+      "sha256": "9952fc3b946094bde05a15ba25452732661eef04169defb6b644e681ed0bf1f6",
+      "md5": "6bff68d2082b80296e6910ed58a61252"
+    },
+    "googlebooks-eng-1M-2gram-20090715-0.csv.zip": {
+      "order": 2,
+      "shard": 0,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-0.csv.zip",
+      "bytes": 134542154,
+      "sha256": "141ebc59ae496743471bbff4fbcd389c8f66b983fe66ffef3dc0751ee3b4b1fb",
+      "md5": "2f6ec10ef453a4618278b4aa31aec63c"
+    },
+    "googlebooks-eng-1M-2gram-20090715-25.csv.zip": {
+      "order": 2,
+      "shard": 25,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-25.csv.zip",
+      "bytes": 134295340,
+      "sha256": "47fd420250aea3172109d5321399b4b9d4c8e2416bd36bcb4f8fb4d979f9742e",
+      "md5": "7952af9d043215760d4f3f243bc2804b"
+    },
+    "googlebooks-eng-1M-2gram-20090715-50.csv.zip": {
+      "order": 2,
+      "shard": 50,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-50.csv.zip",
+      "bytes": 134262982,
+      "sha256": "69e1ca8f311018f67872aaf2ddb51f7f0c528efca5bb68055ad5773dccffb456",
+      "md5": "50d38362a70f318b451e14862579f66c"
+    },
+    "googlebooks-eng-1M-2gram-20090715-75.csv.zip": {
+      "order": 2,
+      "shard": 75,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-75.csv.zip",
+      "bytes": 134693467,
+      "sha256": "213d779e45e612245e83edec9c599f551470f8d6b711de22c63ab68cd22411ff",
+      "md5": "2f8d365c6dfbb6212545c2b9e70d390a"
+    },
+    "googlebooks-eng-1M-3gram-20090715-0.csv.zip": {
+      "order": 3,
+      "shard": 0,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-3gram-20090715-0.csv.zip",
+      "bytes": 198802128,
+      "sha256": "b2d337e4e3c97c524fabe96ada014c159dc46fc3596c52d40e439b59280f8896",
+      "md5": "81cfd9d4c26d9b082a35942446b7419e"
+    },
+    "googlebooks-eng-1M-3gram-20090715-50.csv.zip": {
+      "order": 3,
+      "shard": 50,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-3gram-20090715-50.csv.zip",
+      "bytes": 199650370,
+      "sha256": "7ca3fa207a294023f7c54cf4373bc263227bc8012e9ff018992c96bdae5623ca",
+      "md5": "4180ef217ce6c6addf37f47a075b6cd1"
+    },
+    "googlebooks-eng-1M-3gram-20090715-100.csv.zip": {
+      "order": 3,
+      "shard": 100,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-3gram-20090715-100.csv.zip",
+      "bytes": 199526663,
+      "sha256": "b1a4f37df241712941c216ae28d8cf3ee297c47087a1348dcd92c47f1bc69d52",
+      "md5": "f4dbe6aed6914056107333223470f0ad"
+    },
+    "googlebooks-eng-1M-3gram-20090715-150.csv.zip": {
+      "order": 3,
+      "shard": 150,
+      "url": "https://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-3gram-20090715-150.csv.zip",
+      "bytes": 198375201,
+      "sha256": "583982a71d38947516d5ba0f7be8f13eba383c6a31174965d86b08e102285d7a",
+      "md5": "4697539fe0e7437cf620614f269cb1c0"
+    }
+  },
+  "source": "Google Books English One Million 20090715",
+  "source_page": "https://storage.googleapis.com/books/ngrams/books/datasetsv3.html",
+  "publisher_page_sha256": "b2f66a50d5713f91e181c8b5f685e03c9ceda80c2ce9ab7d69083d69a0f4bf50",
+  "license": "CC-BY-3.0",
+  "license_url": "https://creativecommons.org/licenses/by/3.0/",
+  "sampling": "All unigram shards; bigram shards 0,25,50,75 of 100; trigram shards 0,50,100,150 of 200. Shard coverage does not imply random sampling.",
+  "notice_sha256": "ec7298e2a633dd04d2b6eaf9018cef3f38a6017f5bc35527da0f95c44a4a43bf"
+}

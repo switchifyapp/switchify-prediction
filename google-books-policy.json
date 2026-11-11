@@ -1,0 +1,19 @@
+{
+  "protocol": "google-books-1m-pilot-v1",
+  "source": "Google Books English One Million, version 20090715",
+  "selection": "Fixed source sample, filters and blend shares before scoring. Development only. Descriptive pilot, no automatic promotion or test selection.",
+  "publication_year_min": 1980,
+  "publication_year_max": 2008,
+  "shards": {"1": [0,1,2,3,4,5,6,7,8,9], "2": [0,25,50,75], "3": [0,50,100,150]},
+  "available_shards": {"1": 10, "2": 100, "3": 200},
+  "vocabulary_limit": 40000,
+  "max_word_characters": 32,
+  "contextual_min_count": 20,
+  "contextual_limit_per_order": 200000,
+  "normalization": "lowercase ASCII English words, internal apostrophes only; curly apostrophe converted to ASCII; reject punctuation tokens, digits, tags and non-ASCII words",
+  "google_unigram_share_percent": [5,20,50],
+  "unigram_control_share_percent": 20,
+  "suites": ["aac", "general", "conversation"],
+  "primary_metric": "top-five accuracy after two graphemes, separately per suite",
+  "limitations": "All ten unigram shards, four of 100 bigram shards, four of 200 trigram shards. Shards are not assumed to be random samples. Counts are not upsampled to pretend full coverage. Source is older book language, not conversation. Version 1 may cross sentence boundaries. Pruning and sparse contextual coverage limit any conclusions about the full Google Books corpus."
+}

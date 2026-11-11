@@ -65,3 +65,12 @@ transcripts. Original URLs and exact hashes are in `aac-source-manifest.json`.
 No author or institution endorses Switchify. Retain this attribution, the
 source manifests and accompanying notices when redistributing the production or experimental
 model. The MIT code licence does not relicense these sources.
+
+## Experimental Google Books counts
+
+The separate Google Books pilot uses Google Books English One Million, version
+20090715, under CC BY 3.0. It selects publication years and archive shards,
+normalizes and filters tokens, aggregates counts, prunes the vocabulary and
+combines counts for an offline benchmark. See `google-books-source-manifest.json`
+and `corpus-notices/google-books-notice.txt` for source links, credit, changes
+and licence terms. This experiment is not part of the default production model.
