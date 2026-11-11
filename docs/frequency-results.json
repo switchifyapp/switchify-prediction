@@ -1,0 +1,1779 @@
+{
+  "algorithm_changed": false,
+  "assessments": {
+    "all-01": {
+      "aac_prefix2_delta": 0.0,
+      "checks": {
+        "aac_prefix2": true,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": 0.00011271419799793427,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.001255230125523088,
+      "worst_selection_savings_delta": -0.00030857848179388636
+    },
+    "all-05": {
+      "aac_prefix2_delta": 0.0005296610169491789,
+      "checks": {
+        "aac_prefix2": true,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": 0.00026413980096424213,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.001255230125523088,
+      "worst_selection_savings_delta": -0.0002057189878625909
+    },
+    "all-20": {
+      "aac_prefix2_delta": 0.0,
+      "checks": {
+        "aac_prefix2": true,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": 0.00029141986709871646,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.001897018970189679,
+      "worst_selection_savings_delta": 0.00030857848179388636
+    },
+    "missing-01": {
+      "aac_prefix2_delta": 0.0005296610169491789,
+      "checks": {
+        "aac_prefix2": true,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": 4.334157710502964e-05,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.00013958682300391212,
+      "worst_selection_savings_delta": 0.0006171569635876617
+    },
+    "missing-05": {
+      "aac_prefix2_delta": 0.0005296610169491789,
+      "checks": {
+        "aac_prefix2": true,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": -4.9299276651722694e-06,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.0007132667617688604,
+      "worst_selection_savings_delta": 0.0007034115459980672
+    },
+    "missing-20": {
+      "aac_prefix2_delta": -0.0005296610169491789,
+      "checks": {
+        "aac_prefix2": false,
+        "mean_early_top5": false,
+        "selection_savings": true,
+        "worst_early_top5": true
+      },
+      "latency_target_met": true,
+      "mean_early_top5_delta": -0.00032133550939031054,
+      "quality_passed": false,
+      "worst_early_top5_delta": -0.0044579172610555995,
+      "worst_selection_savings_delta": -0.00020097472742808264
+    }
+  },
+  "baseline": {
+    "contextual_sha256": "7b869827852b95a403d235ce20b74bf2603f397af554cabc664f65e311b5721d",
+    "sha256": "222253417d0a7a705823ffb7e599a3bcf5d5d3daf4a9d76161ac6b3e555aeaad",
+    "unigram_mass": 1076617,
+    "validation": {
+      "format": "sqlite",
+      "kind": "baseline",
+      "language": "en",
+      "logical_sha256": "e7d83562681951d4b1a1c12a598c3f9934b211bc697d210cb787672e18c7ec64",
+      "ngrams": 539151,
+      "schema_version": 1,
+      "vocabulary": 21674
+    }
+  },
+  "cli_sha256": "35d893bacce0568cc5f89271e8bbed551c5d80dacd3897701fa1b10fb20dc735",
+  "coverage_audit": {
+    "baseline_words": 21674,
+    "missing_source_frequency_mass": 0.05813581239647683,
+    "source_words": 50000,
+    "source_words_missing_from_baseline": 33181
+  },
+  "deterministic_logical_counts": true,
+  "development": {
+    "all-01": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.9923400995787055
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4794979079497908,
+            "top5": 0.7292887029288703,
+            "vocabulary_coverage": 0.9916317991631799
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.6027542372881356,
+            "top5": 0.8416313559322034,
+            "vocabulary_coverage": 0.989406779661017
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7359073359073359,
+            "top5": 0.9312741312741313,
+            "vocabulary_coverage": 0.9868725868725868
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7847919655667145,
+            "top5": 0.9569583931133429,
+            "vocabulary_coverage": 0.975609756097561
+          }
+        ],
+        "cold_load_ms": 21.3653,
+        "database_bytes": 8467832,
+        "database_sha256": "b931c64aebaa53c851402ce3cf94dd256ff203dfa7625c4cf8ffed2619314786",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8467832,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18380991565521498,
+          "simulated_selections_with_prediction": 7935
+        },
+        "warm_p50_ms": 0.11,
+        "warm_p95_ms": 4.0331
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.24924864756561813,
+            "top5": 0.4604287717892206,
+            "vocabulary_coverage": 0.9885794429973953
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.49732047159699894,
+            "top5": 0.7543408360128617,
+            "vocabulary_coverage": 0.9877813504823151
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6588075880758808,
+            "top5": 0.8615176151761518,
+            "vocabulary_coverage": 0.9848238482384823
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7694599627560521,
+            "top5": 0.939292364990689,
+            "vocabulary_coverage": 0.9798882681564246
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.806592039800995,
+            "top5": 0.9533582089552238,
+            "vocabulary_coverage": 0.9689054726368159
+          }
+        ],
+        "cold_load_ms": 21.7145,
+        "database_bytes": 8467832,
+        "database_sha256": "b931c64aebaa53c851402ce3cf94dd256ff203dfa7625c4cf8ffed2619314786",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8467832,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.23654725418278655,
+          "simulated_selections_with_prediction": 15195
+        },
+        "warm_p50_ms": 0.1052,
+        "warm_p95_ms": 4.1125
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16150195421552205,
+            "top5": 0.2989949748743719,
+            "vocabulary_coverage": 0.9537967615857063
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.3300913645741232,
+            "top5": 0.56307102858827,
+            "vocabulary_coverage": 0.9512231063955202
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.4416904422253923,
+            "top5": 0.6768901569186876,
+            "vocabulary_coverage": 0.9413338088445078
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5435684647302904,
+            "top5": 0.7954600927507932,
+            "vocabulary_coverage": 0.9209177446912374
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5939086294416244,
+            "top5": 0.8364757070340827,
+            "vocabulary_coverage": 0.8861493836113126
+          }
+        ],
+        "cold_load_ms": 21.2151,
+        "database_bytes": 8467832,
+        "database_sha256": "b931c64aebaa53c851402ce3cf94dd256ff203dfa7625c4cf8ffed2619314786",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8467832,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.1844234980481767,
+          "simulated_selections_with_prediction": 25698
+        },
+        "warm_p50_ms": 0.0901,
+        "warm_p95_ms": 4.0045
+      }
+    },
+    "all-05": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.9942550746840291
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4794979079497908,
+            "top5": 0.7292887029288703,
+            "vocabulary_coverage": 0.9937238493723849
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.6027542372881356,
+            "top5": 0.8421610169491526,
+            "vocabulary_coverage": 0.9920550847457628
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7366795366795367,
+            "top5": 0.932046332046332,
+            "vocabulary_coverage": 0.9899613899613899
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7847919655667145,
+            "top5": 0.9626972740315638,
+            "vocabulary_coverage": 0.9813486370157819
+          }
+        ],
+        "cold_load_ms": 22.0687,
+        "database_bytes": 8511629,
+        "database_sha256": "d12af4054c1195f789de161de5c1647cf2ac76ad79ed788bc3fd5e8aa139ba5f",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8511629,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18391277514914628,
+          "simulated_selections_with_prediction": 7934
+        },
+        "warm_p50_ms": 0.1248,
+        "warm_p95_ms": 4.6837
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.24924864756561813,
+            "top5": 0.4602284111400521,
+            "vocabulary_coverage": 0.9895812462432378
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.497534833869239,
+            "top5": 0.7541264737406217,
+            "vocabulary_coverage": 0.9888531618435156
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6588075880758808,
+            "top5": 0.8617886178861789,
+            "vocabulary_coverage": 0.9861788617886179
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7679702048417132,
+            "top5": 0.9396648044692737,
+            "vocabulary_coverage": 0.9817504655493482
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8059701492537313,
+            "top5": 0.9546019900497512,
+            "vocabulary_coverage": 0.9720149253731343
+          }
+        ],
+        "cold_load_ms": 22.2749,
+        "database_bytes": 8511629,
+        "database_sha256": "d12af4054c1195f789de161de5c1647cf2ac76ad79ed788bc3fd5e8aa139ba5f",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8511629,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.23659749786464357,
+          "simulated_selections_with_prediction": 15194
+        },
+        "warm_p50_ms": 0.1129,
+        "warm_p95_ms": 4.5244
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16122278056951425,
+            "top5": 0.29955332216638747,
+            "vocabulary_coverage": 0.9610552763819096
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.3300913645741232,
+            "top5": 0.5627763041556145,
+            "vocabulary_coverage": 0.9588859416445623
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.44204707560627676,
+            "top5": 0.6776034236804565,
+            "vocabulary_coverage": 0.9504279600570613
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5457651940444227,
+            "top5": 0.7981449841347328,
+            "vocabulary_coverage": 0.9333658774713205
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5949963741841915,
+            "top5": 0.8462654097171863,
+            "vocabulary_coverage": 0.9042784626540972
+          }
+        ],
+        "cold_load_ms": 23.357699999999998,
+        "database_bytes": 8511629,
+        "database_sha256": "d12af4054c1195f789de161de5c1647cf2ac76ad79ed788bc3fd5e8aa139ba5f",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8511629,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18626424196261382,
+          "simulated_selections_with_prediction": 25640
+        },
+        "warm_p50_ms": 0.09899999999999999,
+        "warm_p95_ms": 4.6034
+      }
+    },
+    "all-20": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.19877441593259287,
+            "top5": 0.42091152815013405,
+            "vocabulary_coverage": 0.9965530448104175
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4719665271966527,
+            "top5": 0.7301255230125523,
+            "vocabulary_coverage": 0.996234309623431
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.604343220338983,
+            "top5": 0.8416313559322034,
+            "vocabulary_coverage": 0.9952330508474576
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.738996138996139,
+            "top5": 0.932046332046332,
+            "vocabulary_coverage": 0.9938223938223938
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7847919655667145,
+            "top5": 0.9684361549497847,
+            "vocabulary_coverage": 0.9885222381635581
+          }
+        ],
+        "cold_load_ms": 27.145300000000002,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18442707261880276,
+          "simulated_selections_with_prediction": 7929
+        },
+        "warm_p50_ms": 0.15789999999999998,
+        "warm_p95_ms": 6.3437
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.23362051693047486,
+            "top5": 0.4606291324383891,
+            "vocabulary_coverage": 0.9911841314365859
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.4960342979635584,
+            "top5": 0.7545551982851019,
+            "vocabulary_coverage": 0.9905680600214363
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6588075880758808,
+            "top5": 0.8596205962059621,
+            "vocabulary_coverage": 0.9883468834688347
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7672253258845437,
+            "top5": 0.9378026070763501,
+            "vocabulary_coverage": 0.9843575418994414
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8059701492537313,
+            "top5": 0.9558457711442786,
+            "vocabulary_coverage": 0.9763681592039801
+          }
+        ],
+        "cold_load_ms": 27.8581,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.2369492036376426,
+          "simulated_selections_with_prediction": 15187
+        },
+        "warm_p50_ms": 0.146,
+        "warm_p95_ms": 6.5125
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.1587102177554439,
+            "top5": 0.2998324958123953,
+            "vocabulary_coverage": 0.9733389168062535
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.3272914824638963,
+            "top5": 0.5646920129678751,
+            "vocabulary_coverage": 0.9718538166814029
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.443830242510699,
+            "top5": 0.6770684736091298,
+            "vocabulary_coverage": 0.9659415121255349
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5460092750793263,
+            "top5": 0.7998535513790579,
+            "vocabulary_coverage": 0.9538686844032219
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.6004350978970269,
+            "top5": 0.8651196519216824,
+            "vocabulary_coverage": 0.9332849891225525
+          }
+        ],
+        "cold_load_ms": 27.785600000000002,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18997746675553018,
+          "simulated_selections_with_prediction": 25523
+        },
+        "warm_p50_ms": 0.1241,
+        "warm_p95_ms": 6.2993
+      }
+    },
+    "baseline": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.991574109536576
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4803347280334728,
+            "top5": 0.7305439330543934,
+            "vocabulary_coverage": 0.9907949790794979
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.6038135593220338,
+            "top5": 0.8416313559322034,
+            "vocabulary_coverage": 0.9883474576271186
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7351351351351352,
+            "top5": 0.9305019305019305,
+            "vocabulary_coverage": 0.9853281853281853
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7833572453371592,
+            "top5": 0.9540889526542324,
+            "vocabulary_coverage": 0.9727403156384505
+          }
+        ],
+        "cold_load_ms": 21.4399,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18411849413700887,
+          "simulated_selections_with_prediction": 7932
+        },
+        "warm_p50_ms": 0.1149,
+        "warm_p95_ms": 4.2109
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.24924864756561813,
+            "top5": 0.4604287717892206,
+            "vocabulary_coverage": 0.9885794429973953
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.49732047159699894,
+            "top5": 0.7541264737406217,
+            "vocabulary_coverage": 0.9877813504823151
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6585365853658537,
+            "top5": 0.8615176151761518,
+            "vocabulary_coverage": 0.9848238482384823
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7694599627560521,
+            "top5": 0.939292364990689,
+            "vocabulary_coverage": 0.9798882681564246
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8072139303482587,
+            "top5": 0.9533582089552238,
+            "vocabulary_coverage": 0.9689054726368159
+          }
+        ],
+        "cold_load_ms": 21.4468,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.23659749786464357,
+          "simulated_selections_with_prediction": 15194
+        },
+        "warm_p50_ms": 0.104,
+        "warm_p95_ms": 4.2445
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16150195421552205,
+            "top5": 0.29885538805136797,
+            "vocabulary_coverage": 0.9530988274706867
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.32964927792514,
+            "top5": 0.5611553197760094,
+            "vocabulary_coverage": 0.9504862953138815
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.43901569186875894,
+            "top5": 0.6768901569186876,
+            "vocabulary_coverage": 0.9404422253922967
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5430803026604832,
+            "top5": 0.7944837686111789,
+            "vocabulary_coverage": 0.9196973395167195
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5939086294416244,
+            "top5": 0.8368382886149384,
+            "vocabulary_coverage": 0.8846990572878898
+          }
+        ],
+        "cold_load_ms": 20.9599,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.1842330762639246,
+          "simulated_selections_with_prediction": 25704
+        },
+        "warm_p50_ms": 0.0892,
+        "warm_p95_ms": 4.026
+      }
+    },
+    "missing-01": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.9961700497893528
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4794979079497908,
+            "top5": 0.7305439330543934,
+            "vocabulary_coverage": 0.99581589958159
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.604343220338983,
+            "top5": 0.8421610169491526,
+            "vocabulary_coverage": 0.9947033898305084
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7359073359073359,
+            "top5": 0.9305019305019305,
+            "vocabulary_coverage": 0.993050193050193
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7847919655667145,
+            "top5": 0.9655667144906743,
+            "vocabulary_coverage": 0.9870875179340028
+          }
+        ],
+        "cold_load_ms": 27.149,
+        "database_bytes": 8667250,
+        "database_sha256": "3f15df4a3e2a565bc8d99903690fe40dcaefbe227ccc7000f4dfefcbed8b88c6",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8667250,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18473565110059653,
+          "simulated_selections_with_prediction": 7926
+        },
+        "warm_p50_ms": 0.1605,
+        "warm_p95_ms": 6.4245
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.2496493688639551,
+            "top5": 0.4604287717892206,
+            "vocabulary_coverage": 0.9911841314365859
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.49732047159699894,
+            "top5": 0.7541264737406217,
+            "vocabulary_coverage": 0.9905680600214363
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6585365853658537,
+            "top5": 0.8615176151761518,
+            "vocabulary_coverage": 0.9883468834688347
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7694599627560521,
+            "top5": 0.9385474860335196,
+            "vocabulary_coverage": 0.9843575418994414
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8078358208955224,
+            "top5": 0.9558457711442786,
+            "vocabulary_coverage": 0.9763681592039801
+          }
+        ],
+        "cold_load_ms": 26.249000000000002,
+        "database_bytes": 8667250,
+        "database_sha256": "3f15df4a3e2a565bc8d99903690fe40dcaefbe227ccc7000f4dfefcbed8b88c6",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8667250,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.2375018841380696,
+          "simulated_selections_with_prediction": 15176
+        },
+        "warm_p50_ms": 0.1444,
+        "warm_p95_ms": 6.1909
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16150195421552205,
+            "top5": 0.29871580122836405,
+            "vocabulary_coverage": 0.9727805695142379
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.3297966401414677,
+            "top5": 0.5611553197760094,
+            "vocabulary_coverage": 0.9712643678160919
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.43883737517831667,
+            "top5": 0.6768901569186876,
+            "vocabulary_coverage": 0.9652282453637661
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5428362216255797,
+            "top5": 0.7976568220649256,
+            "vocabulary_coverage": 0.9528923602636075
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5971718636693256,
+            "top5": 0.8585931834662799,
+            "vocabulary_coverage": 0.9318346627991299
+          }
+        ],
+        "cold_load_ms": 28.269,
+        "database_bytes": 8667250,
+        "database_sha256": "3f15df4a3e2a565bc8d99903690fe40dcaefbe227ccc7000f4dfefcbed8b88c6",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8667250,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.188041511948967,
+          "simulated_selections_with_prediction": 25584
+        },
+        "warm_p50_ms": 0.12449999999999999,
+        "warm_p95_ms": 6.166600000000001
+      }
+    },
+    "missing-05": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.2386058981233244,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.9973190348525469
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4794979079497908,
+            "top5": 0.7309623430962343,
+            "vocabulary_coverage": 0.997071129707113
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.6048728813559322,
+            "top5": 0.8421610169491526,
+            "vocabulary_coverage": 0.996292372881356
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7374517374517374,
+            "top5": 0.9289575289575289,
+            "vocabulary_coverage": 0.9953667953667954
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7847919655667145,
+            "top5": 0.9612625538020086,
+            "vocabulary_coverage": 0.9913916786226685
+          }
+        ],
+        "cold_load_ms": 35.4454,
+        "database_bytes": 9040747,
+        "database_sha256": "878b2360a6a8d8f1d9fb8ab80b57b742ff60cadc473fd6c99c54ea520fdc1251",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9040747,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18504422958239042,
+          "simulated_selections_with_prediction": 7923
+        },
+        "warm_p50_ms": 0.2496,
+        "warm_p95_ms": 10.5466
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.2496493688639551,
+            "top5": 0.4604287717892206,
+            "vocabulary_coverage": 0.9933880985774394
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.497534833869239,
+            "top5": 0.7541264737406217,
+            "vocabulary_coverage": 0.9929260450160772
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6582655826558266,
+            "top5": 0.8615176151761518,
+            "vocabulary_coverage": 0.9910569105691057
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.7687150837988826,
+            "top5": 0.9378026070763501,
+            "vocabulary_coverage": 0.9880819366852887
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.8072139303482587,
+            "top5": 0.9558457711442786,
+            "vocabulary_coverage": 0.9813432835820896
+          }
+        ],
+        "cold_load_ms": 39.391299999999994,
+        "database_bytes": 9040747,
+        "database_sha256": "878b2360a6a8d8f1d9fb8ab80b57b742ff60cadc473fd6c99c54ea520fdc1251",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9040747,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.23730090941064164,
+          "simulated_selections_with_prediction": 15180
+        },
+        "warm_p50_ms": 0.2228,
+        "warm_p95_ms": 10.6793
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16150195421552205,
+            "top5": 0.29857621440536014,
+            "vocabulary_coverage": 0.9838079285315466
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.3297966401414677,
+            "top5": 0.5611553197760094,
+            "vocabulary_coverage": 0.9829059829059829
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.43937232524964337,
+            "top5": 0.6761768901569187,
+            "vocabulary_coverage": 0.9793152639087018
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5423480595557725,
+            "top5": 0.794971930680986,
+            "vocabulary_coverage": 0.972174762020991
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5989847715736041,
+            "top5": 0.8622189992748368,
+            "vocabulary_coverage": 0.9601160261058739
+          }
+        ],
+        "cold_load_ms": 38.5723,
+        "database_bytes": 9040747,
+        "database_sha256": "878b2360a6a8d8f1d9fb8ab80b57b742ff60cadc473fd6c99c54ea520fdc1251",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9040747,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.19051699514424447,
+          "simulated_selections_with_prediction": 25506
+        },
+        "warm_p50_ms": 0.1888,
+        "warm_p95_ms": 10.4535
+      }
+    },
+    "missing-20": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2611,
+            "top1": 0.23822290310225966,
+            "top5": 0.42129452317119875,
+            "vocabulary_coverage": 0.9977020298736117
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2390,
+            "top1": 0.4803347280334728,
+            "top5": 0.7317991631799163,
+            "vocabulary_coverage": 0.9974895397489539
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1888,
+            "top1": 0.607521186440678,
+            "top5": 0.8411016949152542,
+            "vocabulary_coverage": 0.996822033898305
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1295,
+            "top1": 0.7359073359073359,
+            "top5": 0.9250965250965251,
+            "vocabulary_coverage": 0.9961389961389961
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 697,
+            "top1": 0.7776183644189383,
+            "top5": 0.9497847919655668,
+            "vocabulary_coverage": 0.9928263988522238
+          }
+        ],
+        "cold_load_ms": 44.8709,
+        "database_bytes": 9239307,
+        "database_sha256": "d47c1b4e4eb65ecd25f3f67aaf5725742518bcd24c28640bdb9cf78db7021425",
+        "evaluated_sentences": 451,
+        "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9239307,
+        "selection_proxy": {
+          "characters_without_prediction": 9722,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18473565110059653,
+          "simulated_selections_with_prediction": 7926
+        },
+        "warm_p50_ms": 0.2889,
+        "warm_p95_ms": 13.3919
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4991,
+            "top1": 0.25025045081146063,
+            "top5": 0.4610298537367261,
+            "vocabulary_coverage": 0.9939891805249449
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4665,
+            "top1": 0.4981779206859593,
+            "top5": 0.754983922829582,
+            "vocabulary_coverage": 0.9935691318327974
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3690,
+            "top1": 0.6588075880758808,
+            "top5": 0.8601626016260162,
+            "vocabulary_coverage": 0.991869918699187
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2685,
+            "top1": 0.762756052141527,
+            "top5": 0.9288640595903166,
+            "vocabulary_coverage": 0.9891992551210428
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1608,
+            "top1": 0.802860696517413,
+            "top5": 0.9490049751243781,
+            "vocabulary_coverage": 0.9832089552238806
+          }
+        ],
+        "cold_load_ms": 44.150099999999995,
+        "database_bytes": 9239307,
+        "database_sha256": "d47c1b4e4eb65ecd25f3f67aaf5725742518bcd24c28640bdb9cf78db7021425",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9239307,
+        "selection_proxy": {
+          "characters_without_prediction": 19903,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.2363965231372155,
+          "simulated_selections_with_prediction": 15198
+        },
+        "warm_p50_ms": 0.25680000000000003,
+        "warm_p95_ms": 13.674499999999998
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 7164,
+            "top1": 0.16164154103852596,
+            "top5": 0.29885538805136797,
+            "vocabulary_coverage": 0.9865996649916248
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6786,
+            "top1": 0.32964927792514,
+            "top5": 0.5618921308576481,
+            "vocabulary_coverage": 0.9858532272325375
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5608,
+            "top1": 0.43883737517831667,
+            "top5": 0.672432239657632,
+            "vocabulary_coverage": 0.9828815977175464
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 4097,
+            "top1": 0.5338052233341469,
+            "top5": 0.7742250427141811,
+            "vocabulary_coverage": 0.9770563827190627
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2758,
+            "top1": 0.5768672951414068,
+            "top5": 0.8437273386511965,
+            "vocabulary_coverage": 0.9673676577229877
+          }
+        ],
+        "cold_load_ms": 43.8268,
+        "database_bytes": 9239307,
+        "database_sha256": "d47c1b4e4eb65ecd25f3f67aaf5725742518bcd24c28640bdb9cf78db7021425",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 9239307,
+        "selection_proxy": {
+          "characters_without_prediction": 31509,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18505823732901716,
+          "simulated_selections_with_prediction": 25678
+        },
+        "warm_p50_ms": 0.2205,
+        "warm_p95_ms": 13.4559
+      }
+    }
+  },
+  "experiment_script_sha256": "f6700bcb67f51bc30dbfd5021d9f7f76eda68ac1e748ea2437b4729530d59fc4",
+  "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+  "implementation_commit": "7e33276724e6df0724f1fef3f21e5058878b4afb",
+  "limitations": "Known regression partitions, external source overlap cannot be excluded, no actual switch-user evaluation, no personal-learning validation, local experimental models are not for redistribution.",
+  "models": {
+    "all-01": {
+      "added_mass": 10766,
+      "mass_fraction": 0.01,
+      "mode": "all",
+      "new_words": 96,
+      "ngrams_bytes": 8467832,
+      "ngrams_sha256": "b931c64aebaa53c851402ce3cf94dd256ff203dfa7625c4cf8ffed2619314786",
+      "supplemented_words": 3852,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "61741f635f4aedd0c2a4038d9021b45666cb8fc0ac933a19f7133ad3101d92d7",
+        "ngrams": 539247,
+        "schema_version": 1,
+        "vocabulary": 21770
+      }
+    },
+    "all-05": {
+      "added_mass": 53831,
+      "mass_fraction": 0.05,
+      "mode": "all",
+      "new_words": 1968,
+      "ngrams_bytes": 8511629,
+      "ngrams_sha256": "d12af4054c1195f789de161de5c1647cf2ac76ad79ed788bc3fd5e8aa139ba5f",
+      "supplemented_words": 10600,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "cbd4eb5e12fa59e5fea22d57c84eeaaef00ebbdd98768007db37f50023b2021e",
+        "ngrams": 541119,
+        "schema_version": 1,
+        "vocabulary": 23642
+      }
+    },
+    "all-20": {
+      "added_mass": 215323,
+      "mass_fraction": 0.2,
+      "mode": "all",
+      "new_words": 9158,
+      "ngrams_bytes": 8678963,
+      "ngrams_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+      "supplemented_words": 22179,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "5a43935f48c4f8f509cd1e020e3569a1b0754ec29ac4dd87b61ca6a65915bd31",
+        "ngrams": 548309,
+        "schema_version": 1,
+        "vocabulary": 30832
+      }
+    },
+    "missing-01": {
+      "added_mass": 10766,
+      "mass_fraction": 0.01,
+      "mode": "missing",
+      "new_words": 8656,
+      "ngrams_bytes": 8667250,
+      "ngrams_sha256": "3f15df4a3e2a565bc8d99903690fe40dcaefbe227ccc7000f4dfefcbed8b88c6",
+      "supplemented_words": 8656,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "79477d446d64418739342d2547995d58386cd52425ad4d101c88a9a3eab3ddcd",
+        "ngrams": 547807,
+        "schema_version": 1,
+        "vocabulary": 30330
+      }
+    },
+    "missing-05": {
+      "added_mass": 53831,
+      "mass_fraction": 0.05,
+      "mode": "missing",
+      "new_words": 24673,
+      "ngrams_bytes": 9040747,
+      "ngrams_sha256": "878b2360a6a8d8f1d9fb8ab80b57b742ff60cadc473fd6c99c54ea520fdc1251",
+      "supplemented_words": 24673,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "885efe455fb9f040c4c158456c98d1f3c0bbfc2c1d3a3639b254866ef34be6e4",
+        "ngrams": 563824,
+        "schema_version": 1,
+        "vocabulary": 46347
+      }
+    },
+    "missing-20": {
+      "added_mass": 215323,
+      "mass_fraction": 0.2,
+      "mode": "missing",
+      "new_words": 33181,
+      "ngrams_bytes": 9239307,
+      "ngrams_sha256": "d47c1b4e4eb65ecd25f3f67aaf5725742518bcd24c28640bdb9cf78db7021425",
+      "supplemented_words": 33181,
+      "validation": {
+        "format": "sqlite",
+        "kind": "baseline",
+        "language": "en",
+        "logical_sha256": "d24514d6500b653ffdf39d27abd7b54bba4d84e1234a69b67b4c5327e9f738e6",
+        "ngrams": 572332,
+        "schema_version": 1,
+        "vocabulary": 54855
+      }
+    }
+  },
+  "original_baseline_unchanged": true,
+  "partitions": {
+    "aac-dev": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
+    "aac-test": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11",
+    "conversation-dev": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
+    "conversation-test": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3",
+    "general-dev": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
+    "general-test": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292"
+  },
+  "personal_learning": false,
+  "policy": {
+    "acceptance": {
+      "aac_prefix2_loss_max": 0.0,
+      "mean_early_top5_gain_min": 0.002,
+      "warm_p95_target_ms": 20.0,
+      "worst_early_top5_loss_max": 0.005,
+      "worst_selection_savings_loss_max": 0.001
+    },
+    "frozen": "2026-11-11 before scoring",
+    "mass_fractions": [
+      0.01,
+      0.05,
+      0.2
+    ],
+    "maximum_word_codepoints": 32,
+    "minimum_word_codepoints": 2,
+    "modes": [
+      "missing",
+      "all"
+    ],
+    "protocol": "broad-frequency-v1",
+    "vocabulary_limit": 50000
+  },
+  "policy_sha256": "ad45e1c84ebe011ad17497ca0c52912d7bca8109fbd911cd28d51cc5e772fb90",
+  "production_model_changed": false,
+  "protocol": "broad-frequency-v1",
+  "recommend_separate_promotion_review": false,
+  "selection": {
+    "candidate": "all-20",
+    "development_sha256": "6a4cef76bb3bb923411f8f716dfd2e757c3e6b6607ccb9b784261f89dafb43b3",
+    "diagnostic_only": true,
+    "eligible": [],
+    "model_fingerprints": {
+      "all-01": "61741f635f4aedd0c2a4038d9021b45666cb8fc0ac933a19f7133ad3101d92d7",
+      "all-05": "cbd4eb5e12fa59e5fea22d57c84eeaaef00ebbdd98768007db37f50023b2021e",
+      "all-20": "5a43935f48c4f8f509cd1e020e3569a1b0754ec29ac4dd87b61ca6a65915bd31",
+      "missing-01": "79477d446d64418739342d2547995d58386cd52425ad4d101c88a9a3eab3ddcd",
+      "missing-05": "885efe455fb9f040c4c158456c98d1f3c0bbfc2c1d3a3639b254866ef34be6e4",
+      "missing-20": "d24514d6500b653ffdf39d27abd7b54bba4d84e1234a69b67b4c5327e9f738e6"
+    },
+    "policy_sha256": "ad45e1c84ebe011ad17497ca0c52912d7bca8109fbd911cd28d51cc5e772fb90",
+    "source_manifest_sha256": "4b2b746d78d0b5f8c5f5984b3ec6649986bfea6bb58eac19c897a01b5314d7e2"
+  },
+  "selection_file_sha256": "4d3dbbad16f11683efd5b1ba565ad6e0d286923f4658d6a422b21c93090170e3",
+  "source": {
+    "data_member_sha256": "dffae8066b78dce0a6667cf5f58e567054f902674667090a7ac8a8a44628b05c",
+    "reader_sha256": "3b60763c1373dd60f398488069bcdc703cd08a711477b5d480eecc9f9626f47e",
+    "wheel_sha256": "4b1c6ecffc6198be3396d5cf871c4423ca71c907c231348d352dd54d62b97473"
+  },
+  "source_manifest_sha256": "4b2b746d78d0b5f8c5f5984b3ec6649986bfea6bb58eac19c897a01b5314d7e2",
+  "test": {
+    "all-20": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2239,
+            "top1": 0.18758374274229567,
+            "top5": 0.41089772219740955,
+            "vocabulary_coverage": 0.9973202322465387
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2074,
+            "top1": 0.47878495660559306,
+            "top5": 0.733847637415622,
+            "vocabulary_coverage": 0.9971070395371263
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1672,
+            "top1": 0.6327751196172249,
+            "top5": 0.8510765550239234,
+            "vocabulary_coverage": 0.9964114832535885
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1124,
+            "top1": 0.7562277580071174,
+            "top5": 0.9341637010676157,
+            "vocabulary_coverage": 0.994661921708185
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 577,
+            "top1": 0.7850953206239168,
+            "top5": 0.9601386481802426,
+            "vocabulary_coverage": 0.9913344887348353
+          }
+        ],
+        "cold_load_ms": 28.083099999999998,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 424,
+        "evaluation_sha256": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 8340,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18093525179856118,
+          "simulated_selections_with_prediction": 6831
+        },
+        "warm_p50_ms": 0.15259999999999999,
+        "warm_p95_ms": 6.5021
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4689,
+            "top1": 0.23587118788654296,
+            "top5": 0.45318831307314994,
+            "vocabulary_coverage": 0.9904030710172744
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4369,
+            "top1": 0.4950789654383154,
+            "top5": 0.7475394827191577,
+            "vocabulary_coverage": 0.98970016021973
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3437,
+            "top1": 0.6424207157404713,
+            "top5": 0.8623799825429154,
+            "vocabulary_coverage": 0.9869071864998545
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2486,
+            "top1": 0.7634754625905068,
+            "top5": 0.9372485921158488,
+            "vocabulary_coverage": 0.9831053901850362
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1492,
+            "top1": 0.8103217158176944,
+            "top5": 0.9564343163538874,
+            "vocabulary_coverage": 0.975201072386059
+          }
+        ],
+        "cold_load_ms": 27.114800000000002,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 18455,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.2308317529124898,
+          "simulated_selections_with_prediction": 14195
+        },
+        "warm_p50_ms": 0.14559999999999998,
+        "warm_p95_ms": 6.339499999999999
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 6859,
+            "top1": 0.14827234290712932,
+            "top5": 0.2857559410992856,
+            "vocabulary_coverage": 0.9712786120425718
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6542,
+            "top1": 0.32023845918679306,
+            "top5": 0.5559461938245185,
+            "vocabulary_coverage": 0.9698868847447264
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5411,
+            "top1": 0.4331916466457217,
+            "top5": 0.6647569765292922,
+            "vocabulary_coverage": 0.963777490297542
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 3898,
+            "top1": 0.5320677270395074,
+            "top5": 0.7950230887634685,
+            "vocabulary_coverage": 0.9507439712673166
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2679,
+            "top1": 0.593505039193729,
+            "top5": 0.8630085852930198,
+            "vocabulary_coverage": 0.9320642030608436
+          }
+        ],
+        "cold_load_ms": 28.3695,
+        "database_bytes": 8678963,
+        "database_sha256": "3e05d4fb6f2534a806095e8ffabff10f17e8a4d5a01e80897bbaf284da804396",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8678963,
+        "selection_proxy": {
+          "characters_without_prediction": 30558,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.1906211139472479,
+          "simulated_selections_with_prediction": 24733
+        },
+        "warm_p50_ms": 0.12219999999999999,
+        "warm_p95_ms": 6.2512
+      }
+    },
+    "baseline": {
+      "aac": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 2239,
+            "top1": 0.2219740955783832,
+            "top5": 0.41089772219740955,
+            "vocabulary_coverage": 0.9910674408217954
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 2074,
+            "top1": 0.4831243972999036,
+            "top5": 0.7343297974927676,
+            "vocabulary_coverage": 0.9903567984570878
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 1672,
+            "top1": 0.6339712918660287,
+            "top5": 0.8516746411483254,
+            "vocabulary_coverage": 0.9886363636363636
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 1124,
+            "top1": 0.7508896797153025,
+            "top5": 0.9279359430604982,
+            "vocabulary_coverage": 0.9830960854092526
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 577,
+            "top1": 0.7746967071057193,
+            "top5": 0.9428076256499134,
+            "vocabulary_coverage": 0.9722703639514731
+          }
+        ],
+        "cold_load_ms": 22.5337,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 424,
+        "evaluation_sha256": "eda6e129d1f6e45e4e5ac27cf19d1a5ab18a4cd1dd3829e92db99cb9d6fafe11",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 8340,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.17937649880095918,
+          "simulated_selections_with_prediction": 6844
+        },
+        "warm_p50_ms": 0.1066,
+        "warm_p95_ms": 4.1744
+      },
+      "conversation": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 4689,
+            "top1": 0.25037321390488376,
+            "top5": 0.4523352527191299,
+            "vocabulary_coverage": 0.9872040946896993
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 4369,
+            "top1": 0.49576562142366676,
+            "top5": 0.7523460746166171,
+            "vocabulary_coverage": 0.9862668802929733
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 3437,
+            "top1": 0.6424207157404713,
+            "top5": 0.8623799825429154,
+            "vocabulary_coverage": 0.9825429153331393
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 2486,
+            "top1": 0.7642799678197908,
+            "top5": 0.9392598551890587,
+            "vocabulary_coverage": 0.9774738535800482
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 1492,
+            "top1": 0.8109919571045576,
+            "top5": 0.9537533512064343,
+            "vocabulary_coverage": 0.9664879356568364
+          }
+        ],
+        "cold_load_ms": 21.1175,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 599,
+        "evaluation_sha256": "17fb860b67c0a65da61af4c18011f4968d741a62bcf0fadd0ec67eb4275189a3",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 18455,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.23077756705499863,
+          "simulated_selections_with_prediction": 14196
+        },
+        "warm_p50_ms": 0.1056,
+        "warm_p95_ms": 4.194
+      },
+      "general": {
+        "accuracy": [
+          {
+            "prefix_chars": 0,
+            "queries": 6859,
+            "top1": 0.1494386936871264,
+            "top5": 0.2853185595567867,
+            "vocabulary_coverage": 0.9470768333576323
+          },
+          {
+            "prefix_chars": 1,
+            "queries": 6542,
+            "top1": 0.32130846835830024,
+            "top5": 0.5498318557016203,
+            "vocabulary_coverage": 0.9445123815346989
+          },
+          {
+            "prefix_chars": 2,
+            "queries": 5411,
+            "top1": 0.4304195158011458,
+            "top5": 0.6640177416374052,
+            "vocabulary_coverage": 0.9332840510072076
+          },
+          {
+            "prefix_chars": 3,
+            "queries": 3898,
+            "top1": 0.5282195997947665,
+            "top5": 0.7914315033350436,
+            "vocabulary_coverage": 0.9099538224730631
+          },
+          {
+            "prefix_chars": 4,
+            "queries": 2679,
+            "top1": 0.5841731989548339,
+            "top5": 0.8324001493094438,
+            "vocabulary_coverage": 0.8756998880179171
+          }
+        ],
+        "cold_load_ms": 20.7303,
+        "database_bytes": 8477752,
+        "database_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+        "evaluated_sentences": 804,
+        "evaluation_sha256": "a5ade2d5cf0217a6aab881877e26ebe66837ff31f75ec622c0642984d9b58292",
+        "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+        "model_payload_bytes": 8477752,
+        "selection_proxy": {
+          "characters_without_prediction": 30558,
+          "definition": "Optimistic offline rank-sensitive proxy: each typed grapheme costs one selection; accept costs rank+1 among five slots; choose cheapest completion after >=2 graphemes, or type word fully. Excludes spaces, scan navigation/timing, errors and cognitive effort; not measured AAC switch savings.",
+          "savings_fraction": 0.18348713921068138,
+          "simulated_selections_with_prediction": 24951
+        },
+        "warm_p50_ms": 0.0896,
+        "warm_p95_ms": 4.0739
+      }
+    }
+  },
+  "test_assessment": {
+    "aac_prefix2_delta": -0.0005980861244019309,
+    "checks": {
+      "aac_prefix2": false,
+      "mean_early_top5": false,
+      "selection_savings": true,
+      "worst_early_top5": true
+    },
+    "latency_target_met": true,
+    "mean_early_top5_delta": 0.00025079742358857793,
+    "quality_passed": false,
+    "worst_early_top5_delta": -0.004806591897459356,
+    "worst_selection_savings_delta": 5.418585749117355e-05
+  }
+}

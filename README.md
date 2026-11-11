@@ -217,6 +217,13 @@ The `prepare` and `evaluate` commands retain the earlier comparison workflows;
 above for production. A new model-selection exercise needs a new protocol; these
 test sets are now known regression sets.
 
+The [broad-frequency experiment](docs/frequency-results.md) evaluates six
+SmartKey-inspired unigram supplements with the same prediction engine. It found
+better vocabulary coverage and later completion, but insufficient early gains
+and an AAC regression, so the production model remains unchanged. The
+[frozen protocol](docs/frequency-protocol.md) and aggregate results make the
+rejected candidates reproducible.
+
 New code is MIT licensed. Corpus licences are separate: retain
 [ATTRIBUTION.md](ATTRIBUTION.md), source manifests and `corpus-notices` with model
 distributions. [Production guidance](docs/production.md) covers the recorded
