@@ -228,3 +228,6 @@ and CLI for immediate statistical results followed by offline neural refinement.
 It has its own dependencies and model bundle. It remains opt-in and is not yet
 production-qualified: the frozen comparison found two development-cell quality
 regressions. See the [qualification report](docs/smol-production-results.md).
+
+The [key hit-map development benchmark](docs/key-hit-benchmark.md) measures
+synthetic typo recovery, clean-input changes and latency separately.
