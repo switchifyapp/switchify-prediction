@@ -12,8 +12,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub mod corpus;
 pub mod evaluation;
+pub mod key_hits;
 pub mod ngrams;
 pub mod production;
+
+pub use key_hits::{HitSuggestion, KeyAlternative, KeyHitMap, KeyPosition, KeySubstitution};
 
 /// The largest stored count, as the SQLite schema's check constraint allows.
 pub(crate) const MAX_COUNT: u64 = (i64::MAX / 10) as u64;
