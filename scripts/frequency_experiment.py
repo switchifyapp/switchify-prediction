@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Frozen broad-unigram experiment. Never modifies a production model."""
 import argparse
+from contextlib import closing
 import gzip
 import hashlib
 import json
@@ -144,9 +145,9 @@ def contextual_hash(db):
 def supplement(baseline, destination, added, provenance):
     if destination.exists() or baseline.resolve() == destination.resolve():
         raise ValueError('Candidate output must be new and separate')
-    with readonly(baseline) as source:
+    with closing(readonly(baseline)) as source:
         before = contextual_hash(source)
-        with sqlite3.connect(destination) as db:
+        with closing(sqlite3.connect(destination)) as db, db:
             source.backup(db)
             db.executemany('INSERT OR IGNORE INTO vocabulary(word) VALUES (?)',
                            ((word,) for word in sorted(added)))
@@ -239,12 +240,14 @@ def main():
     subprocess.run([str(args.cli), 'normalize', '--input', str(raw_path), '--output', str(normalized_path)], check=True)
     if normalized_path.read_text(encoding='utf-8').splitlines() != words:
         raise ValueError('Source tokenization differs from predictor')
-    with readonly(args.baseline) as db:
+    with closing(readonly(args.baseline)) as db:
         baseline_counts = dict(db.execute("SELECT word,count FROM counts WHERE context='[]'"))
         baseline_contexts = contextual_hash(db)
     total = sum(baseline_counts.values())
     missing = {word: freq for word, freq in source_frequencies.items() if word not in baseline_counts}
     report = {'protocol': policy['protocol'], 'policy': policy,
+              'implementation_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+              'experiment_script_sha256': sha(Path(__file__)), 'cli_sha256': sha(args.cli),
               'policy_sha256': sha(policy_path), 'source_manifest_sha256': sha(manifest_path),
               'source': source_info, 'partitions': partition_hashes,
               'baseline': {'sha256': initial_hash, 'validation': baseline_validation,
@@ -317,7 +320,7 @@ def main():
 
 
 def read_json_value(path, key):
-    with readonly(path) as db:
+    with closing(readonly(path)) as db:
         return json.loads(db.execute('SELECT value FROM metadata WHERE key=?', (key,)).fetchone()[0])
 
 

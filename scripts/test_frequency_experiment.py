@@ -1,4 +1,5 @@
 import copy
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -37,7 +38,7 @@ class FrequencyExperimentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             original, candidate = root / 'original.sqlite', root / 'candidate.sqlite'
-            with sqlite3.connect(original) as db:
+            with closing(sqlite3.connect(original)) as db, db:
                 db.executescript('CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT);'
                                  'CREATE TABLE vocabulary(word TEXT PRIMARY KEY);'
                                  'CREATE TABLE counts(context TEXT,word TEXT,count INTEGER,PRIMARY KEY(context,word));')
@@ -49,7 +50,7 @@ class FrequencyExperimentTests(unittest.TestCase):
             digest = sha(original)
             self.assertEqual(supplement(original, candidate, {'hello': 5, 'new': 2}, {'source': 'synthetic'}), before)
             self.assertEqual(sha(original), digest)
-            with sqlite3.connect(candidate) as db:
+            with closing(sqlite3.connect(candidate)) as db:
                 self.assertEqual(contextual_hash(db), before)
                 self.assertEqual(dict(db.execute("SELECT word,count FROM counts WHERE context='[]'")),
                                  {'hello': 15, 'world': 4, 'new': 2})
