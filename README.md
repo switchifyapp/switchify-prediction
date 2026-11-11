@@ -14,6 +14,8 @@ These are offline corpus measurements, not observed AAC-user outcomes.
 
 The [corpus source benchmark](docs/corpus-benchmark.md) compares each current
 dataset alone and measures what changes when a source is removed from the blend.
+The [Google Books pilot](docs/google-books-experiment.md) adds a fixed sample of
+published n-gram counts and compares several mixture weights on development.
 
 ## Download and use
 

@@ -1,5 +1,14 @@
 # Corpus attribution
 
+## Experimental Google Books counts
+
+The separate Google Books pilot uses Google Books English One Million, version
+20090715, under CC BY 3.0. It selects publication years and archive shards,
+normalizes and filters tokens, aggregates counts, prunes the vocabulary and
+combines counts for an offline benchmark. See `google-books-source-manifest.json`
+and `corpus-notices/google-books-notice.txt` for source links, credit, changes
+and licence terms. This experiment is not part of the default production model.
+
 The baseline derives from the English sentence corpus in
 [AACTools/WorldAlphabets](https://github.com/AACTools/WorldAlphabets), pinned to
 `dfec80e9d5641b2ad080f0780a72fc108333d164`.
