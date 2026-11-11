@@ -1,7 +1,17 @@
 {
-  "git_head": "463719622e12f5eb6826745dba1a761f0b21f5df",
-  "executable_sha256": "a699752b8549eff7827d1de96df3670f3c28e3cc99876683938cd96606667e60",
+  "git_head": "6ca07fecbd5e3e470b12914c4fe52b0827d19481",
+  "git_dirty": false,
+  "executable_sha256": "43177fad7b9a1f63929613b5e9096b6c3843eca7be6dd66862e025960373a234",
+  "baseline_file_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
+  "source_hashes": {
+    "src/key_hits.rs": "8724307f47e9fbfbe7de0c729cee5949167635a87f701687aa7275cf66bb6ca4",
+    "examples/key_hit_benchmark.rs": "c5ea354239e116aad39bdde307ca81578d11352641a53f4eb2f14ecd0ce39833",
+    "scripts/key_hit_benchmark.py": "4a5cd81274f7df62603ac9afd66167015c4351d540433c3032a70dc1dd4e1bc4",
+    "production-model.json": "70be7dc26a372eef4e8731ef8a2ea4ef19fb9dc5d93803d14e65b02b232b7424"
+  },
   "hardware": "Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs",
+  "python_version": "3.13.9",
+  "rust_version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
   "complete": true,
   "suites": {
     "aac": {
@@ -15,8 +25,8 @@
         "vocabulary": 21674
       },
       "evaluation_sha256": "d85649bf5f81343b7cf32d5d930c39c482a378c64e711c7b3c1c46cbccbbe77d",
-      "layout": "QWERTY radius 1.25 spread 0.45; one uniform retained-neighbor substitution",
-      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Timing describes this machine.",
+      "layout": "QWERTY radius 1.3 spread 0.45; one uniform retained-neighbor substitution",
+      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Corpus timing covers clean/noisy 2-4 graphemes. Short-prefix probes use only fixed i-want contexts, not a representative workload. Timing describes this machine, not a latency ceiling.",
       "metrics": [
         {
           "case_ids_sha256": "025ace80bd3e202c991b6a5cf787a356c375d7709d241d0fdb5d9010a5f92b0b",
@@ -28,17 +38,19 @@
             "top1": 0.576,
             "top5": 0.819
           },
+          "clean_hit_map_p50_ms": 0.2731,
+          "clean_hit_map_p95_ms": 0.8501,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0354,
+          "noisy_exact_p95_ms": 0.031,
           "noisy_hit_map": {
             "top1": 0.43,
             "top5": 0.722
           },
-          "noisy_hit_map_p50_ms": 0.2943,
-          "noisy_hit_map_p95_ms": 0.8742,
+          "noisy_hit_map_p50_ms": 0.2155,
+          "noisy_hit_map_p95_ms": 0.6539999999999999,
           "prefix_graphemes": 2,
           "queries": 1000
         },
@@ -52,17 +64,19 @@
             "top1": 0.721,
             "top5": 0.909
           },
+          "clean_hit_map_p50_ms": 0.048,
+          "clean_hit_map_p95_ms": 0.1033,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.004,
+          "noisy_exact_p95_ms": 0.0036,
           "noisy_hit_map": {
             "top1": 0.636,
             "top5": 0.856
           },
-          "noisy_hit_map_p50_ms": 0.047,
-          "noisy_hit_map_p95_ms": 0.1172,
+          "noisy_hit_map_p50_ms": 0.039400000000000004,
+          "noisy_hit_map_p95_ms": 0.093,
           "prefix_graphemes": 3,
           "queries": 1000
         },
@@ -76,23 +90,46 @@
             "top1": 0.7776183644189383,
             "top5": 0.9440459110473458
           },
+          "clean_hit_map_p50_ms": 0.034499999999999996,
+          "clean_hit_map_p95_ms": 0.0484,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0018,
+          "noisy_exact_p95_ms": 0.0017000000000000001,
           "noisy_hit_map": {
             "top1": 0.7317073170731707,
             "top5": 0.9354375896700143
           },
-          "noisy_hit_map_p50_ms": 0.0334,
-          "noisy_hit_map_p95_ms": 0.045599999999999995,
+          "noisy_hit_map_p50_ms": 0.0309,
+          "noisy_hit_map_p95_ms": 0.041999999999999996,
           "prefix_graphemes": 4,
           "queries": 697
         }
       ],
-      "protocol": "key-hits-v1",
-      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix"
+      "protocol": "key-hits-v2",
+      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix",
+      "sampling_seed": "key-hits-v1",
+      "short_prefix_probes": [
+        {
+          "exact_p50_ms": 4.030200000000001,
+          "exact_p95_ms": 4.2287,
+          "hit_map_p50_ms": 4.0943000000000005,
+          "hit_map_p95_ms": 4.1898,
+          "prefix": "",
+          "prefix_graphemes": 0,
+          "queries": 50
+        },
+        {
+          "exact_p50_ms": 0.3836,
+          "exact_p95_ms": 0.41140000000000004,
+          "hit_map_p50_ms": 3.9446000000000003,
+          "hit_map_p95_ms": 4.1062,
+          "prefix": "s",
+          "prefix_graphemes": 1,
+          "queries": 50
+        }
+      ]
     },
     "general": {
       "baseline": {
@@ -105,8 +142,8 @@
         "vocabulary": 21674
       },
       "evaluation_sha256": "99cb104dbe893608313b300cca933600c97f2c1bedc9799c6e12e148dcd01f3e",
-      "layout": "QWERTY radius 1.25 spread 0.45; one uniform retained-neighbor substitution",
-      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Timing describes this machine.",
+      "layout": "QWERTY radius 1.3 spread 0.45; one uniform retained-neighbor substitution",
+      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Corpus timing covers clean/noisy 2-4 graphemes. Short-prefix probes use only fixed i-want contexts, not a representative workload. Timing describes this machine, not a latency ceiling.",
       "metrics": [
         {
           "case_ids_sha256": "8289daab882bd3a6ef2da575ecf862e4c3d8b446612018cb658d8781211c6575",
@@ -118,17 +155,19 @@
             "top1": 0.404,
             "top5": 0.622
           },
+          "clean_hit_map_p50_ms": 0.2635,
+          "clean_hit_map_p95_ms": 0.7676000000000001,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0268,
+          "noisy_exact_p95_ms": 0.0259,
           "noisy_hit_map": {
             "top1": 0.33,
             "top5": 0.532
           },
-          "noisy_hit_map_p50_ms": 0.25310000000000005,
-          "noisy_hit_map_p95_ms": 0.6627,
+          "noisy_hit_map_p50_ms": 0.2074,
+          "noisy_hit_map_p95_ms": 0.5608,
           "prefix_graphemes": 2,
           "queries": 1000
         },
@@ -142,17 +181,19 @@
             "top1": 0.525,
             "top5": 0.78
           },
+          "clean_hit_map_p50_ms": 0.05,
+          "clean_hit_map_p95_ms": 0.1137,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0037,
+          "noisy_exact_p95_ms": 0.0036,
           "noisy_hit_map": {
             "top1": 0.446,
             "top5": 0.7
           },
-          "noisy_hit_map_p50_ms": 0.0434,
-          "noisy_hit_map_p95_ms": 0.1008,
+          "noisy_hit_map_p50_ms": 0.039799999999999995,
+          "noisy_hit_map_p95_ms": 0.0856,
           "prefix_graphemes": 3,
           "queries": 1000
         },
@@ -166,6 +207,8 @@
             "top1": 0.566,
             "top5": 0.823
           },
+          "clean_hit_map_p50_ms": 0.0363,
+          "clean_hit_map_p95_ms": 0.0524,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
@@ -175,14 +218,35 @@
             "top1": 0.537,
             "top5": 0.791
           },
-          "noisy_hit_map_p50_ms": 0.0327,
-          "noisy_hit_map_p95_ms": 0.0479,
+          "noisy_hit_map_p50_ms": 0.0331,
+          "noisy_hit_map_p95_ms": 0.0462,
           "prefix_graphemes": 4,
           "queries": 1000
         }
       ],
-      "protocol": "key-hits-v1",
-      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix"
+      "protocol": "key-hits-v2",
+      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix",
+      "sampling_seed": "key-hits-v1",
+      "short_prefix_probes": [
+        {
+          "exact_p50_ms": 4.0616,
+          "exact_p95_ms": 4.8107999999999995,
+          "hit_map_p50_ms": 4.2124,
+          "hit_map_p95_ms": 5.261,
+          "prefix": "",
+          "prefix_graphemes": 0,
+          "queries": 50
+        },
+        {
+          "exact_p50_ms": 0.3656,
+          "exact_p95_ms": 0.3986,
+          "hit_map_p50_ms": 3.9601999999999995,
+          "hit_map_p95_ms": 4.1962,
+          "prefix": "s",
+          "prefix_graphemes": 1,
+          "queries": 50
+        }
+      ]
     },
     "conversation": {
       "baseline": {
@@ -195,8 +259,8 @@
         "vocabulary": 21674
       },
       "evaluation_sha256": "8991ecbdeb263e6345b2e4e0b2301cf3287930ea4289cca9d649aad89144faac",
-      "layout": "QWERTY radius 1.25 spread 0.45; one uniform retained-neighbor substitution",
-      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Timing describes this machine.",
+      "layout": "QWERTY radius 1.3 spread 0.45; one uniform retained-neighbor substitution",
+      "limitations": "Synthetic one-substitution errors, not observed switch-user mistakes. No empirical calibration or user-benefit claim. Exact noisy target recovery is zero by construction. Known development corpus, personal learning disabled. Corpus timing covers clean/noisy 2-4 graphemes. Short-prefix probes use only fixed i-want contexts, not a representative workload. Timing describes this machine, not a latency ceiling.",
       "metrics": [
         {
           "case_ids_sha256": "a00af703449bef39d2096d803970f5ca220a8dfdaf4c8aedbf1e743bc9a0895c",
@@ -208,17 +272,19 @@
             "top1": 0.635,
             "top5": 0.839
           },
+          "clean_hit_map_p50_ms": 0.25789999999999996,
+          "clean_hit_map_p95_ms": 0.6679999999999999,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.027299999999999998,
+          "noisy_exact_p95_ms": 0.026699999999999998,
           "noisy_hit_map": {
             "top1": 0.522,
             "top5": 0.76
           },
-          "noisy_hit_map_p50_ms": 0.2367,
-          "noisy_hit_map_p95_ms": 0.675,
+          "noisy_hit_map_p50_ms": 0.1963,
+          "noisy_hit_map_p95_ms": 0.5854,
           "prefix_graphemes": 2,
           "queries": 1000
         },
@@ -232,17 +298,19 @@
             "top1": 0.767,
             "top5": 0.939
           },
+          "clean_hit_map_p50_ms": 0.046900000000000004,
+          "clean_hit_map_p95_ms": 0.1067,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0034000000000000002,
+          "noisy_exact_p95_ms": 0.0035,
           "noisy_hit_map": {
             "top1": 0.706,
             "top5": 0.9
           },
-          "noisy_hit_map_p50_ms": 0.0429,
-          "noisy_hit_map_p95_ms": 0.1004,
+          "noisy_hit_map_p50_ms": 0.04,
+          "noisy_hit_map_p95_ms": 0.08839999999999999,
           "prefix_graphemes": 3,
           "queries": 1000
         },
@@ -256,23 +324,46 @@
             "top1": 0.806,
             "top5": 0.953
           },
+          "clean_hit_map_p50_ms": 0.0361,
+          "clean_hit_map_p95_ms": 0.0518,
           "noisy_exact": {
             "top1": 0.0,
             "top5": 0.0
           },
-          "noisy_exact_p95_ms": 0.0017000000000000001,
+          "noisy_exact_p95_ms": 0.0018,
           "noisy_hit_map": {
             "top1": 0.788,
             "top5": 0.946
           },
           "noisy_hit_map_p50_ms": 0.0331,
-          "noisy_hit_map_p95_ms": 0.0479,
+          "noisy_hit_map_p95_ms": 0.0462,
           "prefix_graphemes": 4,
           "queries": 1000
         }
       ],
-      "protocol": "key-hits-v1",
-      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix"
+      "protocol": "key-hits-v2",
+      "sampling": "hash-rank at most 1000 eligible targets per prefix; target longer than prefix",
+      "sampling_seed": "key-hits-v1",
+      "short_prefix_probes": [
+        {
+          "exact_p50_ms": 4.1231,
+          "exact_p95_ms": 4.3772,
+          "hit_map_p50_ms": 4.1764,
+          "hit_map_p95_ms": 4.335,
+          "prefix": "",
+          "prefix_graphemes": 0,
+          "queries": 50
+        },
+        {
+          "exact_p50_ms": 0.3773,
+          "exact_p95_ms": 0.40299999999999997,
+          "hit_map_p50_ms": 3.9226,
+          "hit_map_p95_ms": 4.096299999999999,
+          "prefix": "s",
+          "prefix_graphemes": 1,
+          "queries": 50
+        }
+      ]
     }
   }
 }
