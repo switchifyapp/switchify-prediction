@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import platform
 import subprocess
+import sys
 
 from aac_experiment import sha
 from quality import json_run
@@ -13,6 +14,35 @@ from quality import json_run
 ROOT = Path(__file__).resolve().parent.parent
 SUITES = {name: f'data/aac-oanc/prepared/{name}-dev.txt'
           for name in ['aac', 'general', 'conversation']}
+
+
+def example_executable(messages, root):
+    artifacts = [message['executable'] for message in messages
+                 if message.get('reason') == 'compiler-artifact'
+                 and message.get('target', {}).get('name') == 'key_hit_benchmark'
+                 and 'example' in message.get('target', {}).get('kind', [])
+                 and message.get('executable')]
+    if len(artifacts) != 1:
+        raise ValueError('Cargo did not report exactly one benchmark executable')
+    path = Path(artifacts[0])
+    return (path if path.is_absolute() else root / path).resolve()
+
+
+def build_example():
+    build = subprocess.run(['cargo', 'build', '--release', '--locked', '--example',
+                            'key_hit_benchmark', '--message-format=json'],
+                           cwd=ROOT, stdout=subprocess.PIPE, text=True, encoding='utf-8')
+    messages = [json.loads(line) for line in build.stdout.splitlines() if line.strip()]
+    for message in messages:
+        if message.get('reason') == 'compiler-message':
+            rendered = message.get('message', {}).get('rendered')
+            if rendered:
+                print(rendered, end='', file=sys.stderr)
+    build.check_returncode()
+    executable = example_executable(messages, ROOT)
+    if not executable.is_file():
+        raise ValueError('Cargo-reported benchmark executable does not exist')
+    return executable
 
 
 def verify_inputs(root, production):
@@ -52,15 +82,14 @@ def main():
         parser.error('Choose an empty output directory')
     production = json.loads((ROOT / 'production-model.json').read_text(encoding='utf-8'))
     inputs = verify_inputs(ROOT, production)
-    subprocess.run(['cargo', 'build', '--release', '--locked', '--example', 'key_hit_benchmark'],
-                   cwd=ROOT, check=True)
-    exe = ROOT / 'target/release/examples' / ('key_hit_benchmark.exe' if os.name == 'nt' else 'key_hit_benchmark')
+    exe = build_example()
     sources = ['src/key_hits.rs', 'examples/key_hit_benchmark.rs',
                'scripts/key_hit_benchmark.py', 'production-model.json']
     report = {
         'git_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'git_dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip()),
-        'executable_sha256': sha(exe), 'baseline_file_sha256': sha(args.baseline.resolve()),
+        'executable_path': str(exe), 'executable_sha256': sha(exe),
+        'baseline_file_sha256': sha(args.baseline.resolve()),
         'source_hashes': {name: sha(ROOT / name) for name in sources},
         'hardware': f'{platform.platform()}; {platform.machine()}; {os.cpu_count()} logical CPUs',
         'python_version': platform.python_version(),

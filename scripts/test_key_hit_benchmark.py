@@ -1,13 +1,57 @@
 from copy import deepcopy
 import hashlib
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from key_hit_benchmark import SUITES, check_result, verify_inputs
+from key_hit_benchmark import SUITES, build_example, check_result, example_executable, verify_inputs
 
 
 class KeyHitBenchmarkTests(unittest.TestCase):
+    def test_cargo_reported_executable_respects_both_target_directory_overrides(self):
+        for mode in ['environment', 'configuration']:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / 'examples').mkdir()
+                (root / 'Cargo.toml').write_text(
+                    '[package]\nname="key-hit-path-fixture"\nversion="0.1.0"\nedition="2024"\n',
+                    encoding='utf-8')
+                (root / 'Cargo.lock').write_text(
+                    'version = 4\n\n[[package]]\nname = "key-hit-path-fixture"\nversion = "0.1.0"\n',
+                    encoding='utf-8')
+                (root / 'examples/key_hit_benchmark.rs').write_text(
+                    'fn main() { println!("fresh fixture"); }\n', encoding='utf-8')
+                binary_name = 'key_hit_benchmark.exe' if os.name == 'nt' else 'key_hit_benchmark'
+                stale = root / 'target/release/examples' / binary_name
+                stale.parent.mkdir(parents=True)
+                stale.write_bytes(b'stale default-target binary')
+                target = root / 'custom-output-\u00e9'
+                with patch('key_hit_benchmark.ROOT', root), patch.dict(os.environ):
+                    os.environ.pop('CARGO_TARGET_DIR', None)
+                    if mode == 'environment':
+                        os.environ['CARGO_TARGET_DIR'] = str(target)
+                    else:
+                        (root / '.cargo').mkdir()
+                        (root / '.cargo/config.toml').write_text(
+                            f'[build]\ntarget-dir = "{target.name}"\n', encoding='utf-8')
+                    executable = build_example()
+                self.assertEqual(executable, (target / 'release/examples' / binary_name).resolve())
+                self.assertEqual(subprocess.check_output([str(executable)], text=True).strip(), 'fresh fixture')
+                self.assertEqual(stale.read_bytes(), b'stale default-target binary')
+
+    def test_missing_or_ambiguous_cargo_artifacts_never_fall_back(self):
+        artifact = {'reason': 'compiler-artifact', 'target': {'name': 'key_hit_benchmark', 'kind': ['example']},
+                    'executable': 'custom/release/examples/key_hit_benchmark'}
+        self.assertEqual(example_executable([artifact], Path.cwd()),
+                         (Path.cwd() / artifact['executable']).resolve())
+        for messages in [[], [artifact, artifact], [dict(artifact, executable=None)],
+                         [dict(artifact, target={'name': 'other', 'kind': ['example']})]]:
+            with self.assertRaises(ValueError):
+                example_executable(messages, Path.cwd())
+
     def test_pinned_inputs_cannot_silently_use_the_other_general_partition(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
