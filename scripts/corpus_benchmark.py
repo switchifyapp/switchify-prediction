@@ -56,15 +56,24 @@ def reject_leakage(training, evaluations):
         raise ValueError('Evaluation partitions overlap')
 
 
+def verify_prepared(prepared, info, production, evaluation_names):
+    for name, item in info['files'].items():
+        if sha(prepared / (name + '.txt')) != item['sha256']:
+            raise ValueError(f'Prepared input checksum mismatch: {name}')
+    # Local preparation metadata is not the authority for frozen evaluation.
+    for name in evaluation_names:
+        if sha(prepared / (name + '.txt')) != production['partitions'][name]['sha256']:
+            raise ValueError(f'Frozen evaluation checksum mismatch: {name}')
+
+
 def prepare(policy, work):
     """Use checksum-pinned prepared inputs; never rewrite production preparation."""
     prepared = ROOT / 'data/aac-oanc/prepared'
     production = json.loads((ROOT / 'production-model.json').read_text())
     info = json.loads((prepared / 'partitions.json').read_text())
     read = lambda name: (prepared / name).read_text(encoding='utf-8').splitlines()
-    for name, item in info['files'].items():
-        if sha(prepared / (name + '.txt')) != item['sha256']:
-            raise ValueError(f'Prepared input checksum mismatch: {name}')
+    verify_prepared(prepared, info, production,
+                    [f'{s}-{p}' for s in policy['suites'] for p in ['dev', 'test']])
     if sha(prepared / 'candidate.txt') != production['training_sha256']:
         raise ValueError('Prepared training is not the production corpus')
     world_path = ROOT / 'data/prepared/baseline.txt'

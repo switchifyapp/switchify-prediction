@@ -4,6 +4,9 @@ This benchmark compares the data used by the existing predictor. It keeps the
 unigram/bigram/trigram scoring weights at 0.1/0.3/0.6 and disables personal
 learning. It does not change the production model.
 
+See the [first development results](corpus-benchmark-results.md) for the ten-model
+comparison and source-removal measurements.
+
 ## Comparisons
 
 The ten models in `corpus-benchmark-policy.json` are fixed before scoring:
@@ -22,6 +25,11 @@ scores do not isolate data quality at a fixed training budget. Removing a source
 also changes the relative proportions of the remaining sources. Ablations show
 the effect of removing the source at the current weights, not its best possible
 weight or its value in every other mixture.
+
+These are the prepared components of the shipped mixture, not the complete raw
+upstream corpora. In particular, the OANC component already excludes sentences
+present in the other training sources. This matrix measures our current data
+choices; it does not rank the full upstream datasets.
 
 All six existing development/test sets are excluded from every training model.
 All models see the same evaluation sentences within a suite. Report AAC,
