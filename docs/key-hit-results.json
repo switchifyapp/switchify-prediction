@@ -1,7 +1,6 @@
 {
   "git_head": "b16e3070754dd3dce4eb665ef0a0c140b7b8af49",
   "git_dirty": false,
-  "executable_path": "C:\\Users\\oamcg\\source\\repos\\switchify-prediction\\target\\release\\examples\\key_hit_benchmark.exe",
   "executable_sha256": "76b88289afdc725fa5483d43f676b421d2de50356d3ef7325c248e44dc7da425",
   "baseline_file_sha256": "c6df388c845354a059333b1e4abe68719e5a7016e8514c44581e14ed16bf964a",
   "source_hashes": {

@@ -88,7 +88,7 @@ def main():
     report = {
         'git_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'git_dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip()),
-        'executable_path': str(exe), 'executable_sha256': sha(exe),
+        'executable_sha256': sha(exe),
         'baseline_file_sha256': sha(args.baseline.resolve()),
         'source_hashes': {name: sha(ROOT / name) for name in sources},
         'hardware': f'{platform.platform()}; {platform.machine()}; {os.cpu_count()} logical CPUs',

@@ -1,7 +1,8 @@
 from copy import deepcopy
 import hashlib
+import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,24 @@ from key_hit_benchmark import SUITES, build_example, check_result, example_execu
 
 
 class KeyHitBenchmarkTests(unittest.TestCase):
+    def test_published_report_keeps_hash_provenance_without_local_absolute_paths(self):
+        report = json.loads((Path(__file__).resolve().parent.parent /
+                             'docs/key-hit-results.json').read_text(encoding='utf-8'))
+        self.assertRegex(report['executable_sha256'], r'^[0-9a-f]{64}$')
+
+        def check(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    check(key)
+                    check(item)
+            elif isinstance(value, list):
+                for item in value:
+                    check(item)
+            elif isinstance(value, str):
+                self.assertFalse(PurePosixPath(value).is_absolute() or
+                                 PureWindowsPath(value).is_absolute(), value)
+        check(report)
+
     def test_cargo_reported_executable_respects_both_target_directory_overrides(self):
         for mode in ['environment', 'configuration']:
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:

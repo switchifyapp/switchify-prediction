@@ -35,6 +35,8 @@ Choose an empty output directory; partial reports have `complete: false`.
 The executable path comes from Cargo's JSON artifact output, so both
 `CARGO_TARGET_DIR` and Cargo's `build.target-dir` configuration are respected.
 There is no fallback to a binary in the default `target/` directory.
+The report identifies the executable by its SHA-256; local executable paths are
+not included in the report or published results.
 
 The inputs are specifically the AAC/OANC-prepared development files, including
 the general English file from that preparation. `data/prepared/general-dev.txt`
