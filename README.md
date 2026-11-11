@@ -50,6 +50,7 @@ For opt-in suggestions after a nearby-key mistake, use
 [`predict_with_hit_map`](docs/key-hit-maps.md). Supply the
 actual keyboard layout when using the library. Results include substitution
 metadata so callers can distinguish corrections from exact completions.
+The [CLI flag `--nearby-qwerty`](docs/key-hit-cli.md) enables this for word suggestions.
 
 Add `--phrases` to suggest the next two words instead, as JSON with `words` and
 `score`: the current word completed from the prefix, then a word seen after it.

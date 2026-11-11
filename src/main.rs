@@ -5,7 +5,8 @@ use std::{
     path::PathBuf,
 };
 use switchify_prediction::{
-    Options, Predictor, Result, build, build_ngrams, convert, digest, evaluation, validate,
+    KeyHitMap, Options, Predictor, Result, build, build_ngrams, convert, digest, evaluation,
+    validate,
 };
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -80,6 +81,9 @@ enum Command {
         /// Suggest two-word phrases instead of single words.
         #[arg(long)]
         phrases: bool,
+        /// Allow one nearby-key substitution using a QWERTY hit map.
+        #[arg(long, conflicts_with = "phrases")]
+        nearby_qwerty: bool,
     },
     Import {
         #[arg(long)]
@@ -198,6 +202,7 @@ fn run() -> Result<()> {
             limit,
             min_chars,
             phrases,
+            nearby_qwerty,
         } => {
             let predictor = Predictor::open(&baseline, personal.as_deref())?;
             let options = Options {
@@ -205,7 +210,14 @@ fn run() -> Result<()> {
                 min_chars,
                 unigram_only: false,
             };
-            if phrases {
+            if nearby_qwerty {
+                print(predictor.predict_with_hit_map(
+                    &before,
+                    &prefix,
+                    options,
+                    &KeyHitMap::qwerty(),
+                ))
+            } else if phrases {
                 print(predictor.predict_phrases(&before, &prefix, options))
             } else {
                 print(predictor.predict(&before, &prefix, options))
