@@ -13,15 +13,15 @@ Recovery below is not a comparison against observed user behavior.
 
 | Suite | Prefix graphemes | Queries | Clean exact top 5 | Clean hit-map top 5 | Noisy hit-map top 5 | Clean hit-map p95 ms | Noisy hit-map p95 ms |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| aac | 2 | 1000 | 84.4% | 81.9% | 72.2% | 0.915 | 0.680 |
-| aac | 3 | 1000 | 92.5% | 90.9% | 85.6% | 0.113 | 0.104 |
-| aac | 4 | 697 | 95.4% | 94.4% | 93.5% | 0.055 | 0.045 |
-| general | 2 | 1000 | 65.2% | 62.2% | 53.2% | 0.769 | 0.565 |
-| general | 3 | 1000 | 82.0% | 78.0% | 70.0% | 0.115 | 0.087 |
-| general | 4 | 1000 | 83.6% | 82.3% | 79.1% | 0.052 | 0.045 |
-| conversation | 2 | 1000 | 86.2% | 83.9% | 76.0% | 0.727 | 0.630 |
-| conversation | 3 | 1000 | 95.0% | 93.9% | 90.0% | 0.107 | 0.088 |
-| conversation | 4 | 1000 | 95.8% | 95.3% | 94.6% | 0.052 | 0.045 |
+| aac | 2 | 1000 | 84.4% | 81.9% | 72.2% | 0.860 | 0.662 |
+| aac | 3 | 1000 | 92.5% | 90.9% | 85.6% | 0.105 | 0.097 |
+| aac | 4 | 697 | 95.4% | 94.4% | 93.5% | 0.051 | 0.043 |
+| general | 2 | 1000 | 65.2% | 62.2% | 53.2% | 0.799 | 0.590 |
+| general | 3 | 1000 | 82.0% | 78.0% | 70.0% | 0.122 | 0.090 |
+| general | 4 | 1000 | 83.6% | 82.3% | 79.1% | 0.056 | 0.047 |
+| conversation | 2 | 1000 | 86.2% | 83.9% | 76.0% | 0.759 | 0.624 |
+| conversation | 3 | 1000 | 95.0% | 93.9% | 90.0% | 0.111 | 0.091 |
+| conversation | 4 | 1000 | 95.8% | 95.3% | 94.6% | 0.053 | 0.046 |
 
 Nearby suggestions recover many synthetic errors, but they also displace correct
 completions on clean input. Across these rows, clean top-five retrieval falls
@@ -41,12 +41,12 @@ the feature's worst-case latency.
 
 | Suite run | Prefix | Repetitions | Exact p95 ms | Hit-map p95 ms |
 | --- | --- | ---: | ---: | ---: |
-| aac | empty | 50 | 4.514 | 4.441 |
-| aac | `s` | 50 | 0.438 | 4.287 |
-| general | empty | 50 | 4.213 | 4.326 |
-| general | `s` | 50 | 0.405 | 4.199 |
-| conversation | empty | 50 | 4.314 | 4.227 |
-| conversation | `s` | 50 | 0.411 | 4.087 |
+| aac | empty | 50 | 4.220 | 4.323 |
+| aac | `s` | 50 | 0.420 | 4.395 |
+| general | empty | 50 | 4.759 | 5.046 |
+| general | `s` | 50 | 0.427 | 4.327 |
+| conversation | empty | 50 | 4.521 | 4.532 |
+| conversation | `s` | 50 | 0.426 | 4.442 |
 
 ## Interpretation and reproduction
 
@@ -64,6 +64,6 @@ The runner assembles all three suites and records source, executable, model,
 corpus and case hashes. No application integration, text editing or automatic
 replacement is enabled.
 
-Measurement commit: `b16e3070754dd3dce4eb665ef0a0c140b7b8af49`. Working tree clean at start: `True`.
+Measurement commit: `2156551fbb9fd76ec6524cc50de02587fe6620f4`. Working tree clean at start: `True`.
 
 Hardware: Windows-11-10.0.26200-SP0; AMD64; 24 logical CPUs.
