@@ -24,6 +24,18 @@ required-features = ["test-support"]
 members = ["worker"]
 resolver = "3"
 
+# gemm's fp16 kernels keep their asm in small #[inline] helpers that gain the
+# fp16 target feature only once inlined into a runtime-detected caller.
+# Unoptimised builds don't inline them, so the asm fails to assemble on
+# targets without fp16 in their baseline, such as aarch64-pc-windows-msvc.
+# Optimising these crates in dev and test builds only changes nothing in
+# release builds.
+[profile.dev.package.gemm-common]
+opt-level = 3
+
+[profile.dev.package.gemm-f16]
+opt-level = 3
+
 [dependencies]
 switchify-prediction = { path = ".." }
 serde = { version = "1", features = ["derive"] }
