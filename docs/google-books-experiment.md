@@ -4,6 +4,9 @@ This experiment compares a fixed Google Books sample against the shipped model.
 It keeps the predictor unchanged and scores only the existing development sets.
 It does not promote a model or score the test sets.
 
+See the [development results](google-books-results.md) for the six-model
+comparison, contextual-count control and source retention figures.
+
 ## Source and scope
 
 The source is Google Books English One Million, version `20090715`. Publication
@@ -41,6 +44,8 @@ The six models are production, Google alone, 5%/20%/50% Google blends, and a
 adding the retained contextual counts at the same vocabulary/frequency mixture.
 Shares refer to unigram probability mass, not file sizes or an independent
 interpolation weight. The predictor's 0.1/0.3/0.6 weights remain unchanged.
+The Google share within a particular context can differ because the two sources
+have different context frequencies.
 
 For baseline unigram mass B, Google mass G and Google percentage p, multiply
 baseline counts by `(100-p)*G` and Google counts by `p*B`, reducing both integer
