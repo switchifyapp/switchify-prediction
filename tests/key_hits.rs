@@ -12,6 +12,20 @@ fn options() -> Options {
 fn geometry_is_normalized_bounded_and_validated() {
     let map = KeyHitMap::qwerty();
     assert!(map.neighbors("R").iter().any(|a| a.key == "e"));
+    for (top, middle) in [
+        ("w", "a"),
+        ("e", "s"),
+        ("r", "d"),
+        ("t", "f"),
+        ("y", "g"),
+        ("u", "h"),
+        ("i", "j"),
+        ("o", "k"),
+        ("p", "l"),
+    ] {
+        assert!(map.neighbors(top).iter().any(|a| a.key == middle));
+        assert!(map.neighbors(middle).iter().any(|a| a.key == top));
+    }
     assert!(
         !map.neighbors("r")
             .iter()
@@ -201,6 +215,36 @@ fn compact_and_sqlite_and_personal_learning_agree() {
             .iter()
             .any(|s| s.word == "zelda")
     );
+}
+
+#[test]
+fn exact_only_requests_keep_normal_limits_scores_and_metadata() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db = tmp.path().join("base.sqlite");
+    let long = "a".repeat(40);
+    build(
+        &db,
+        &format!("We want water. We want tea. éclair. {long}."),
+        "synthetic",
+    )
+    .unwrap();
+    let predictor = Predictor::open(&db, None).unwrap();
+    let map = KeyHitMap::qwerty();
+    for prefix in ["", "é", &long[..33]] {
+        for limit in [1, 5] {
+            let options = Options { limit, ..options() };
+            let exact = predictor.predict("we want ", prefix, options);
+            let hits = predictor.predict_with_hit_map("we want ", prefix, options, &map);
+            assert_eq!(hits.len(), exact.len());
+            for (hit, exact) in hits.iter().zip(exact) {
+                assert_eq!(hit.word, exact.word);
+                assert_eq!(hit.score, exact.score);
+                assert_eq!(hit.language_score, exact.score);
+                assert_eq!(hit.key_weight, 1.);
+                assert!(hit.substitution.is_none());
+            }
+        }
+    }
 }
 
 #[test]

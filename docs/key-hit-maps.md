@@ -24,7 +24,7 @@ let suggestions = predictor.predict_with_hit_map(
 `KeyHitMap::new` takes `KeyPosition { key, x, y }` values, a neighbor radius
 and a spread. Positions, radius and spread use the same units. Supply the
 positions of the actual layout, including any rearranged letter keys. The
-QWERTY preset uses staggered rows with unit key pitch, radius 1.25 and spread
+QWERTY preset uses staggered rows with unit key pitch, radius 1.3 and spread
 0.45. These are starting values, not calibrated user error measurements.
 
 Exact-prefix candidates have key weight one. A nearby substitution receives
@@ -47,6 +47,11 @@ outside this implementation. Substitutions that merge or alter surrounding
 grapheme boundaries are skipped. Actual pointer/touch coordinates and learning a
 personal error distribution are also outside this API; observations are typed
 key labels, and the map derives alternatives from their centers.
+
+When only the exact variant is available, the API delegates directly to normal
+prediction with the requested limit. Short prefixes can match many vocabulary
+entries across several variants. The variant bound is not a latency guarantee;
+one-letter requests can cost more than requests with two or more letters.
 
 ## Accepting suggestions
 

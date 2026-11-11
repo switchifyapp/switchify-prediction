@@ -1,7 +1,7 @@
 //! Opt-in, layout-based single-key substitutions. No input capture or text edits.
 use crate::{Error, Options, Predictor, Result, normalize, valid_word};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map::Entry};
 use unicode_segmentation::UnicodeSegmentation;
 
 const MAX_KEYS: usize = 128;
@@ -114,7 +114,7 @@ impl KeyHitMap {
     }
 
     /// Conventional staggered QWERTY letters, in units of one key pitch.
-    /// Radius 1.25 and spread 0.45 are fixed starting values, not user calibration.
+    /// Radius 1.3 and spread 0.45 are fixed starting values, not user calibration.
     pub fn qwerty() -> Self {
         let keys: Vec<_> = [("qwertyuiop", 0.), ("asdfghjkl", 0.25), ("zxcvbnm", 0.75)]
             .iter()
@@ -127,7 +127,7 @@ impl KeyHitMap {
                 })
             })
             .collect();
-        Self::new(&keys, 1.25, 0.45).expect("built-in QWERTY geometry is valid")
+        Self::new(&keys, 1.3, 0.45).expect("built-in QWERTY geometry is valid")
     }
 
     /// Nearest alternatives to a typed key. Unmapped keys have no alternatives.
@@ -180,6 +180,19 @@ impl Predictor {
                 }
             }
         }
+        if variants.len() == 1 {
+            return self
+                .predict(before, &prefix, options)
+                .into_iter()
+                .map(|suggestion| HitSuggestion {
+                    word: suggestion.word,
+                    score: suggestion.score,
+                    language_score: suggestion.score,
+                    key_weight: 1.,
+                    substitution: None,
+                })
+                .collect();
+        }
         let mut best: BTreeMap<String, HitSuggestion> = BTreeMap::new();
         for (candidate, key_weight, substitution) in variants {
             // Rank after weighting, including ties introduced by floating-point
@@ -200,9 +213,14 @@ impl Predictor {
                     key_weight,
                     substitution: substitution.clone(),
                 };
-                let entry = best.entry(hit.word.clone()).or_insert_with(|| hit.clone());
-                if hit.score > entry.score {
-                    *entry = hit;
+                match best.entry(hit.word.clone()) {
+                    Entry::Vacant(entry) => {
+                        entry.insert(hit);
+                    }
+                    Entry::Occupied(mut entry) if hit.score > entry.get().score => {
+                        entry.insert(hit);
+                    }
+                    Entry::Occupied(_) => {}
                 }
             }
         }
