@@ -2,7 +2,7 @@
 
 Offline English word completion using a Rust library and bundled SQLite. The
 read-only baseline, as a SQLite database or a compact n-gram file, and a
-separate personal SQLite database feed an in-memory n-gram predictor. No keystroke capture, background monitoring, abbreviations or Switchify
+separate personal SQLite database feed an in-memory n-gram predictor. No keystroke capture, background monitoring, user-defined shortcuts or Switchify
 PC integration is included.
 
 The default model is **en-aac-oanc-v1**: 21,674 words and 539,151 n-grams. It adds
@@ -56,6 +56,10 @@ For opt-in suggestions after a nearby-key mistake, use
 actual keyboard layout when using the library. Results include substitution
 metadata so callers can distinguish corrections from exact completions.
 The [CLI flag `--nearby-qwerty`](docs/key-hit-cli.md) enables this for word suggestions.
+
+For opt-in suggestions from some of a word's letters typed in order, such as
+`abt` for `about`, use [`predict_abbreviated`](docs/abbreviations.md) or the CLI
+flag `--abbreviations`. Results say whether each word matched by skipping letters.
 
 Add `--phrases` to suggest the next two words instead, as JSON with `words` and
 `score`: the current word completed from the prefix, then a word seen after it.
