@@ -10,12 +10,14 @@ use std::{
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod abbreviations;
 pub mod corpus;
 pub mod evaluation;
 pub mod key_hits;
 pub mod ngrams;
 pub mod production;
 
+pub use abbreviations::{ABBREVIATION_WEIGHT, AbbreviatedSuggestion};
 pub use key_hits::{HitSuggestion, KeyAlternative, KeyHitMap, KeyPosition, KeySubstitution};
 
 /// The largest stored count, as the SQLite schema's check constraint allows.

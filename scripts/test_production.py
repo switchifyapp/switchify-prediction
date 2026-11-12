@@ -97,7 +97,7 @@ class CratePackagePrivacy(unittest.TestCase):
                 ['cargo', 'package', '--list', '--locked', '--allow-dirty'], cwd=ROOT, text=True).splitlines()
             allowed = {'.cargo_vcs_info.json', 'Cargo.lock', 'Cargo.toml', 'Cargo.toml.orig',
                        'LICENSE', 'README.md', 'production-model.json', 'quality-policy.json',
-                       'source-manifest.json', 'src/corpus.rs', 'src/evaluation.rs', 'src/lib.rs',
+                       'source-manifest.json', 'src/abbreviations.rs', 'src/corpus.rs', 'src/evaluation.rs', 'src/lib.rs',
                        'src/main.rs', 'src/key_hits.rs', 'src/ngrams.rs', 'src/production.rs'}
             self.assertEqual({name.replace('\\', '/') for name in listed}, allowed)
 

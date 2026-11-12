@@ -84,6 +84,10 @@ enum Command {
         /// Allow one nearby-key substitution using a QWERTY hit map.
         #[arg(long, conflicts_with = "phrases")]
         nearby_qwerty: bool,
+        /// Also suggest words containing the typed letters in order, such as
+        /// `abt` for `about`.
+        #[arg(long, conflicts_with_all = ["phrases", "nearby_qwerty"])]
+        abbreviations: bool,
     },
     Import {
         #[arg(long)]
@@ -203,6 +207,7 @@ fn run() -> Result<()> {
             min_chars,
             phrases,
             nearby_qwerty,
+            abbreviations,
         } => {
             let predictor = Predictor::open(&baseline, personal.as_deref())?;
             let options = Options {
@@ -210,7 +215,9 @@ fn run() -> Result<()> {
                 min_chars,
                 unigram_only: false,
             };
-            if nearby_qwerty {
+            if abbreviations {
+                print(predictor.predict_abbreviated(&before, &prefix, options))
+            } else if nearby_qwerty {
                 print(predictor.predict_with_hit_map(
                     &before,
                     &prefix,
