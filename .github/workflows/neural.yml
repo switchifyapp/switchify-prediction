@@ -15,10 +15,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
+        os: [ubuntu-latest, windows-latest, windows-11-arm, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     env:
-      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
+      RUSTFLAGS: ${{ startsWith(matrix.os, 'windows') && '-C target-feature=+crt-static' || '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: dtolnay/rust-toolchain@4716b85f2fac3e324e64fa2810f6b5c3905760a5
@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, windows-11-arm, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -81,13 +81,13 @@ jobs:
         run: |
           ext=""
           if [ "$RUNNER_OS" = "Windows" ]; then ext=".exe"; fi
-          python scripts/generation_evaluate.py --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-${{ runner.os }}.json"
+          python scripts/generation_evaluate.py --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-${{ runner.os }}-${{ runner.arch }}.json"
       - name: Measure 1000 warmed two-word phrase queries
         shell: bash
         run: |
           ext=""
           if [ "$RUNNER_OS" = "Windows" ]; then ext=".exe"; fi
-          python scripts/generation_evaluate.py --phrases --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-phrases-${{ runner.os }}.json"
+          python scripts/generation_evaluate.py --phrases --cli "target/qualification/release/switchify-prediction-neural$ext" --worker "target/qualification/release/switchify-smol-worker$ext" --baseline target/generation-inputs/english.sqlite --bundle target/generation-inputs/bundle --samples 1000 --output "artifacts/generation-phrases-${{ runner.os }}-${{ runner.arch }}.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
