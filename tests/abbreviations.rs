@@ -137,3 +137,19 @@ fn cli_flag_is_opt_in() {
     assert!(!nearby.output().unwrap().status.success());
     assert!(!command.arg("--phrases").output().unwrap().status.success());
 }
+
+#[test]
+fn long_typed_text_is_exact_only_and_curly_apostrophes_match() {
+    let exact = "a".repeat(34);
+    let spread = format!("{}b{}", "a".repeat(16), "a".repeat(17));
+    let (_tmp, p) = predictor(&format!("{exact}. {spread}. Don't. Didn't."));
+    let typed = "a".repeat(33);
+    let result = p.predict_abbreviated("", &typed, options());
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].word, exact);
+    assert!(!result[0].abbreviated);
+    let curly = p.predict_abbreviated("", "dn’t", options());
+    let words: Vec<_> = curly.iter().map(|s| s.word.as_str()).collect();
+    assert_eq!(words, ["didn't", "don't"]);
+    assert!(curly.iter().all(|s| s.abbreviated));
+}

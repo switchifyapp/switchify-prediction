@@ -29,7 +29,8 @@ A word matches when it starts with the first typed letter and contains the
 other typed letters in the same order, with any letters between them. `abt`
 matches `about` and `absent`, but not `bat` or `table`. Matching compares
 normalized Unicode grapheme clusters, so letter case and curly apostrophes
-behave as they do for `predict`. An apostrophe in the word can be skipped like
+behave as they do for `predict`. Accented letters are distinct, so `cafe` does
+not match `café`. An apostrophe in the word can be skipped like
 any other letter.
 
 Words that start with the typed text are exact completions and keep their
