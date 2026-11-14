@@ -52,7 +52,7 @@
     "max_order": 12
   },
   "build_tools": [
-    "cmake==4.4.4 --hash=sha256:ad8e0a38b5707e27882701146bdfffecacd80e7703fa0fc36c77528518d545af",
+    "cmake==4.4.4 --hash=sha256:ad8e0a38b5707e27882701146bdfffecacd80e7703fa0fc36c77528518d545af --hash=sha256:883962a72b1b3a16ff445427f24c8caca9797dd9e563bbe208cbcd89e877f9d3",
     "setuptools==84.2.1 --hash=sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
     "wheel==0.48.0 --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
     "pip==26.3 --hash=sha256:f3b60b20ffaadd4415ed7957212a38ac63fa4c5fa375bd0f4a797777940fad13",

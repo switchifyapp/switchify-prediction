@@ -28,7 +28,7 @@ class Pins(unittest.TestCase):
 
     def test_build_tools_and_sources_are_hash_pinned(self):
         for line in self.pins['build_tools']:
-            self.assertRegex(line, r'^[a-z]+==[0-9.]+ --hash=sha256:[0-9a-f]{64}$')
+            self.assertRegex(line, r'^[a-z]+==[0-9.]+( --hash=sha256:[0-9a-f]{64})+$')
         self.assertRegex(self.pins['kenlm']['sha256'], r'^[0-9a-f]{64}$')
         self.assertRegex(self.pins['model']['sha256'], r'^[0-9a-f]{64}$')
         self.assertEqual(self.pins['kenlm']['max_order'], 12)
