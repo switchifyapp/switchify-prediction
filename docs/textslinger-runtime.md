@@ -15,12 +15,13 @@ download it.
 | site-packages | numpy, regex, textslinger and KenLM; no PyTorch |
 | `model/lm_dec19_char_tiny_12gram.kenlm` | The binary tiny 12-gram character model, redistributed with the TextSlinger authors' permission |
 | `manifest.json` | Target, interpreter and model paths, the model's alphabet, component versions |
-| `notices/` | `NOTICE.md`, the CPython licence and KenLM's licence texts |
+| `notices/` | `NOTICE.md`; the licences of CPython and the libraries built into it; KenLM's licences, including its bundled double-conversion and integer_to_string code; and the exact KenLM source the library was built from |
 
 Targets: `x86_64-pc-windows-msvc`, `aarch64-apple-darwin` and `x86_64-apple-darwin`.
 Switchify PC also runs the Windows x64 runtime on Windows ARM64, using Windows' x64
-emulation, because there is no Python 3.10 or numpy 1.26 build for ARM64. The macOS
-KenLM build targets macOS 13.3, the oldest version Switchify PC supports.
+emulation, because there is no Python 3.10 or numpy 1.26 build for ARM64. Every
+component's macOS deployment target is older than macOS 13.3, the oldest version
+Switchify PC supports.
 
 textslinger requires Python 3.10, which reached end of life in October 2026.
 [kdv123/textslinger#3](https://github.com/kdv123/textslinger/issues/3) asks for newer
@@ -30,17 +31,31 @@ versions to be allowed.
 
 `textslinger/runtime.json` pins every input: the Python archive for each target,
 the package wheels and KenLM source by SHA-256, the KenLM build tools, and the model.
-On Windows x64 or macOS, with uv, git, Python 3.10 or newer and a C++ compiler
+On Windows x64 or macOS, with uv, git, Python 3.10.12 or newer and a C++ compiler
 (Visual Studio C++ tools or Xcode command line tools):
 
 ```bash
 python scripts/package_textslinger.py
 ```
 
-The script builds KenLM with `MAX_ORDER=12`, which this model needs. It assembles
-the runtime and applies the temporary patch below. It then checks that the runtime
-loads the model and predicts without importing PyTorch, and only then writes
-`artifacts/textslinger/`. Downloads are cached in `target/textslinger/`.
+The script builds KenLM with `MAX_ORDER=12`, which this model needs. KenLM's
+optional compression support is turned off, so the build never links a library
+that happens to be installed on the build machine. On Windows the C++ runtime is
+linked statically, so no Visual C++ Redistributable is needed. The script assembles
+the runtime and applies the temporary patch below. Before it writes
+`artifacts/textslinger/`, it checks two things:
+
+- the runtime loads the model and predicts without importing PyTorch;
+- every native file depends only on libraries inside the runtime or ones the operating system provides.
+
+The second check reads Windows import tables, or the macOS load commands through
+`otool`. It catches dependencies that the build machine happens to satisfy.
+Downloads are cached in `target/textslinger/`.
+
+The CPython licence texts in `textslinger/licenses/python-build-standalone/` come from
+python-build-standalone's full 3.10.22 archives, which carry the same texts for every
+target. Because 3.10.22 is the last 3.10 release, they are stored here rather than
+downloaded.
 
 ## Temporary patch
 

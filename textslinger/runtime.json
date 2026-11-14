@@ -62,10 +62,11 @@
     "name": "lm_dec19_char_tiny_12gram.kenlm",
     "url": "https://osf.io/download/zyj25/",
     "gzip_bytes": 15119971,
+    "gzip_sha256": "893c8587da30f899f98132c61f9fcda408dbd078cfa2fabf4577781a9758520f",
+    "bytes": 16467314,
     "sha256": "d17ea73ef2edf180b55e0e636524f32c76fb6ab110c69ed196432438b1baf9c3",
     "alphabet": "!',. ?abcdefghijklmnopqrstuvwxyz",
     "source": "Language Models for Augmentative and Alternative Communication (AAC), OSF project ajm7t, by the TextSlinger authors",
     "permission": "Redistributed in Switchify PC with the authors' permission."
-  },
-  "macos_deployment_target": "13.3"
+  }
 }

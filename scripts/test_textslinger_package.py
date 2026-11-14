@@ -27,6 +27,7 @@ class Pins(unittest.TestCase):
                 self.assertRegex(line, r'==[^ ]+ --hash=sha256:[0-9a-f]{64}$')
 
     def test_build_tools_and_sources_are_hash_pinned(self):
+        self.assertRegex(self.pins['model']['gzip_sha256'], r'^[0-9a-f]{64}$')
         for line in self.pins['build_tools']:
             self.assertRegex(line, r'^[a-z]+==[0-9.]+( --hash=sha256:[0-9a-f]{64})+$')
         self.assertRegex(self.pins['kenlm']['sha256'], r'^[0-9a-f]{64}$')
@@ -91,6 +92,66 @@ class Trim(unittest.TestCase):
             kept = {p.relative_to(root).as_posix() for p in Path(root).rglob('*') if p.is_file()}
             self.assertEqual(kept, {'bin/python3.10', 'lib/libpython3.10.dylib', 'lib/python3.10/os.py',
                                     'lib/python3.10/lib-dynload/_ctypes.so'})
+
+
+class NativeDependencies(unittest.TestCase):
+    def test_windows_allows_shipped_and_system_dlls_only(self):
+        present = {'python310.dll', 'vcruntime140.dll', 'libssl-1_1-x64.dll'}
+        imports = ['python310.dll', 'vcruntime140.dll', 'kernel32.dll', 'api-ms-win-crt-runtime-l1-1-0.dll',
+                   'libssl-1_1-x64.dll', 'msvcp140.dll', 'zlib1.dll']
+        self.assertEqual(pkg.disallowed_windows(imports, present), ['msvcp140.dll', 'zlib1.dll'])
+
+    def test_macos_allows_bundle_relative_and_system_paths_only(self):
+        dependencies = ['/usr/lib/libc++.1.dylib', '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation',
+                        '@rpath/libpython3.10.dylib', '@loader_path/../numpy.libs/libopenblas.dylib',
+                        '/usr/local/opt/xz/lib/liblzma.5.dylib', '/opt/homebrew/lib/libz.dylib']
+        self.assertEqual(pkg.disallowed_macos(dependencies),
+                         ['/opt/homebrew/lib/libz.dylib', '/usr/local/opt/xz/lib/liblzma.5.dylib'])
+
+    @unittest.skipUnless(os.name == 'nt', 'reads a Windows executable')
+    def test_reads_the_imports_of_a_real_windows_executable(self):
+        import sys
+        imports = pkg.pe_imports(Path(sys.executable).read_bytes())
+        self.assertTrue(any(name.startswith('python3') for name in imports), imports)
+
+    def test_non_pe_files_have_no_imports(self):
+        self.assertEqual(pkg.pe_imports(b'not a program'), [])
+
+
+class ModelDownload(unittest.TestCase):
+    def model(self, payload, **overrides):
+        import gzip, hashlib
+        compressed = gzip.compress(payload)
+        model = {'name': 'm.kenlm', 'gzip_bytes': len(compressed),
+                 'gzip_sha256': hashlib.sha256(compressed).hexdigest(),
+                 'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()}
+        model.update(overrides)
+        return compressed, model
+
+    def fetch(self, compressed, model):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory, 'source.gz')
+            source.write_bytes(compressed)
+            model['url'] = source.as_uri()
+            work = Path(directory, 'work')
+            work.mkdir()
+            destination = Path(directory, 'out.kenlm')
+            pkg.fetch_model(model, work, destination)
+            return destination.read_bytes()
+
+    def test_a_verified_model_is_written(self):
+        compressed, model = self.model(b'model bytes')
+        self.assertEqual(self.fetch(compressed, model), b'model bytes')
+
+    def test_a_changed_download_is_rejected_before_decompressing(self):
+        compressed, model = self.model(b'model bytes', gzip_sha256='0' * 64)
+        with self.assertRaises(SystemExit):
+            self.fetch(compressed, model)
+
+    def test_a_model_larger_than_pinned_is_rejected(self):
+        compressed, model = self.model(b'x' * 4096, bytes=100)
+        with self.assertRaises(SystemExit):
+            self.fetch(compressed, model)
 
 
 class Zip(unittest.TestCase):

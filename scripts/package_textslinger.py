@@ -23,6 +23,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent.parent
 PINS = ROOT / 'textslinger/runtime.json'
 PATCH = ROOT / 'textslinger/lazy-torch-imports.patch'
+PYTHON_LICENSES = ROOT / 'textslinger/licenses/python-build-standalone'
 # The bridge never imports these parts of the standard library.
 TRIM_STDLIB = ['test', 'tkinter', 'idlelib', 'ensurepip', 'lib2to3', 'turtledemo', 'pydoc_data',
                'unittest/test', 'ctypes/test', 'sqlite3/test', 'distutils/tests', 'site-packages']
@@ -111,10 +112,21 @@ def build_kenlm(pins, target, uv, base_python, work):
     tools = work / 'build-tools.txt'
     tools.write_text('\n'.join(pins['build_tools']) + '\n')
     run([uv, 'pip', 'install', '--python', venv_python, '--require-hashes', '-r', tools])
+    # KenLM's setup.py links zlib, bzip2 and xz whenever a test compile with
+    # g++ finds them, which picks up whatever the build host has installed
+    # (Homebrew's xz on Intel Macs). A failing g++ first on PATH turns those
+    # checks off; the binary model needs none of them.
+    shim = work / 'no-gxx'
+    shutil.rmtree(shim, ignore_errors=True)
+    shim.mkdir()
+    (shim / 'g++').write_bytes(b'#!/bin/sh\nexit 1\n')
+    (shim / 'g++').chmod(0o755)
     env = dict(os.environ, MAX_ORDER=str(kenlm['max_order']), CMAKE_POLICY_VERSION_MINIMUM='3.5')
-    env['PATH'] = str(venv_python.parent) + os.pathsep + env['PATH']
-    if target.endswith('apple-darwin'):
-        env['MACOSX_DEPLOYMENT_TARGET'] = pins['macos_deployment_target']
+    env['PATH'] = os.pathsep.join([str(shim), str(venv_python.parent), env['PATH']])
+    if target.endswith('windows-msvc'):
+        # Link the C++ runtime statically, so the extension needs no
+        # MSVCP140.dll from a Visual C++ Redistributable.
+        env['_CL_'] = '/MT'
     run([venv_python, '-m', 'pip', 'wheel', '--no-cache-dir', '--no-build-isolation', '--no-deps',
          '-w', wheels, source], env=env)
     built = sorted(wheels.glob('kenlm-0.2.0-*.whl'))
@@ -124,9 +136,17 @@ def build_kenlm(pins, target, uv, base_python, work):
     shutil.rmtree(licenses, ignore_errors=True)
     licenses.mkdir()
     with tarfile.open(source) as tar:
+        def member(name):
+            return tar.extractfile(f'kenlm-0.2.0/{name}').read()
         for name in ('LICENSE', 'COPYING', 'COPYING.3', 'COPYING.LESSER.3'):
-            member = tar.extractfile(f'kenlm-0.2.0/{name}')
-            (licenses / name).write_bytes(member.read())
+            (licenses / name).write_bytes(member(name))
+        # Code compiled into the extension under its own licences.
+        (licenses / 'double-conversion-LICENSE').write_bytes(member('util/double-conversion/LICENSE'))
+        itoa = member('util/integer_to_string.cc').decode('utf-8')
+        notice = itoa[itoa.index('/*') + 2:itoa.index('*/')].strip()
+        (licenses / 'integer_to_string-NOTICE').write_text(notice + '\n', encoding='utf-8')
+    # LGPL: ship the exact source the library was built from.
+    shutil.copyfile(source, licenses / source.name)
     return built[0], licenses
 
 
@@ -138,19 +158,21 @@ def trim(runtime, target):
         for name in ('include', 'libs', 'Scripts', 'tcl'):
             shutil.rmtree(runtime / name, ignore_errors=True)
         (runtime / 'pythonw.exe').unlink(missing_ok=True)
-        for pattern in ('_tkinter.pyd', 'tcl*.dll', 'tk*.dll', '_test*.pyd'):
+        for pattern in ('_tkinter.pyd', 'tcl*.dll', 'tk*.dll', '_test*.pyd', '_ctypes_test.pyd'):
             for path in (runtime / 'DLLs').glob(pattern):
                 path.unlink()
+        # Debug symbols are large and not needed to run.
+        for path in runtime.rglob('*.pdb'):
+            path.unlink()
     else:
         for name in ('include', 'share', 'lib/pkgconfig', 'lib/python3.10/config-3.10-darwin'):
             shutil.rmtree(runtime / name, ignore_errors=True)
         for pattern in ('tcl8*', 'tk8*', 'itcl*', 'thread*', 'libtcl*', 'libtk*'):
             for path in (runtime / 'lib').glob(pattern):
                 shutil.rmtree(path) if path.is_dir() else path.unlink()
-        for path in (runtime / 'lib/python3.10/lib-dynload').glob('_test*'):
-            path.unlink()
-        for path in (runtime / 'lib/python3.10/lib-dynload').glob('_tkinter*'):
-            path.unlink()
+        for pattern in ('_test*', '_ctypes_test*', '_tkinter*'):
+            for path in (runtime / 'lib/python3.10/lib-dynload').glob(pattern):
+                path.unlink()
         # Keep the real interpreter only; zip archives do not hold symlinks.
         for path in (runtime / 'bin').iterdir():
             if path.name != 'python3.10':
@@ -174,7 +196,15 @@ def clean(runtime, site):
     for path in list(site.iterdir()):
         if path.is_file() and (path.suffix in ('.lib', '.exp', '.whl') or path.name == '.lock'):
             path.unlink()
+    # KenLM's setup.py also builds a standalone library that the Python
+    # extension does not load.
+    for name in ('kenlm.dll', 'libkenlm.dylib'):
+        (site / name).unlink(missing_ok=True)
     shutil.rmtree(site / 'bin', ignore_errors=True)
+    # Installer records that hold build paths and times.
+    for info in site.glob('*.dist-info'):
+        for name in ('direct_url.json', 'uv_cache.json', 'REQUESTED'):
+            (info / name).unlink(missing_ok=True)
     for path in sorted(runtime.rglob('__pycache__'), reverse=True):
         shutil.rmtree(path, ignore_errors=True)
 
@@ -183,8 +213,7 @@ def write_notices(pins, runtime, target, kenlm_licenses):
     notices = runtime / 'notices'
     notices.mkdir()
     shutil.copytree(kenlm_licenses, notices / 'kenlm')
-    python_license = runtime / ('LICENSE.txt' if target.endswith('windows-msvc') else 'lib/python3.10/LICENSE.txt')
-    shutil.copyfile(python_license, notices / 'python-LICENSE.txt')
+    shutil.copytree(PYTHON_LICENSES, notices / 'python')
     model = pins['model']
     packages = pins['packages']
     (notices / 'NOTICE.md').write_text(f"""# TextSlinger runtime notices
@@ -194,15 +223,16 @@ packages are in their `*.dist-info` folders under `{layout(target)['site']}`.
 
 | Component | Version | Licence | Source |
 |---|---|---|---|
-| CPython (python-build-standalone {pins['python']['release']}) | {pins['python']['version']} | PSF-2.0 and bundled licences, see `python-LICENSE.txt` | https://github.com/astral-sh/python-build-standalone |
+| CPython (python-build-standalone {pins['python']['release']}) | {pins['python']['version']} | PSF-2.0; libraries built into it (OpenSSL, libffi, SQLite, xz, zlib, bzip2, expat, mpdecimal and others) keep their own licences, in `python/` | https://github.com/astral-sh/python-build-standalone |
 | textslinger | {packages['textslinger']['version']} | MIT | https://github.com/kdv123/textslinger |
 | numpy | {packages['numpy']['version']} | BSD-3-Clause and bundled licences | https://pypi.org/project/numpy/ |
 | regex | {packages['regex']['version']} | Apache-2.0 | https://pypi.org/project/regex/ |
-| KenLM | {pins['kenlm']['version']} | LGPL-2.1-or-later, with exceptions listed in `kenlm/LICENSE` | {pins['kenlm']['url']} |
+| KenLM | {pins['kenlm']['version']} | LGPL-2.1-or-later; bundled double-conversion (BSD-3-Clause) and integer_to_string (MIT) notices are in `kenlm/` | {pins['kenlm']['url']} |
 | {model['name']} | | {model['permission']} | {model['source']}, {model['url']} |
 
-KenLM is built from the unmodified source above with `MAX_ORDER={pins['kenlm']['max_order']}`, as a
-separate library that you may replace with your own build.
+KenLM is built from the unmodified source above with `MAX_ORDER={pins['kenlm']['max_order']}`, as the
+separate `kenlm` Python extension module, which you may replace with your own build. That
+source is included as `kenlm/kenlm-{pins['kenlm']['version']}.tar.gz`.
 
 textslinger {packages['textslinger']['version']} includes a small patch so that it imports PyTorch only for
 the models that need it; see https://github.com/kdv123/textslinger/pull/2.
@@ -227,6 +257,109 @@ print("smoke test:", words)
         script.write_text(check)
         run([runtime / layout(target)['python'], '-I', script,
              runtime / 'model' / pins['model']['name'], pins['model']['alphabet']])
+
+
+# DLLs every supported Windows provides (msvcrt.dll is the system C runtime,
+# not a redistributable). Anything else must ship in the runtime.
+WINDOWS_SYSTEM_DLLS = {
+    'advapi32.dll', 'bcrypt.dll', 'cabinet.dll', 'comctl32.dll', 'comdlg32.dll', 'crypt32.dll',
+    'dbghelp.dll', 'gdi32.dll', 'imm32.dll', 'iphlpapi.dll', 'kernel32.dll', 'msi.dll',
+    'msvcrt.dll', 'mswsock.dll', 'normaliz.dll', 'ntdll.dll', 'ole32.dll', 'oleaut32.dll', 'psapi.dll',
+    'rpcrt4.dll', 'secur32.dll', 'setupapi.dll', 'shell32.dll', 'shlwapi.dll', 'sspicli.dll',
+    'user32.dll', 'userenv.dll', 'version.dll', 'winhttp.dll', 'winmm.dll', 'wintrust.dll',
+    'ws2_32.dll',
+}
+# Load paths that resolve inside the runtime or to the operating system.
+MACOS_ALLOWED_PREFIXES = ('/usr/lib/', '/System/Library/', '@rpath/', '@loader_path/', '@executable_path/')
+
+
+def pe_imports(data):
+    """DLL names a PE file imports, including delay-loaded ones."""
+    import struct
+    if data[:2] != b'MZ':
+        return []
+    pe = struct.unpack_from('<I', data, 0x3C)[0]
+    if data[pe:pe + 4] != b'PE\0\0':
+        return []
+    sections, optional_size = struct.unpack_from('<H12xH', data, pe + 6)
+    optional = pe + 24
+    magic = struct.unpack_from('<H', data, optional)[0]
+    directories = optional + (112 if magic == 0x20B else 96)
+    table = optional + optional_size
+    ranges = [struct.unpack_from('<8xIIII', data, table + 40 * i) for i in range(sections)]
+
+    def offset(rva):
+        for size, address, raw_size, raw in ranges:
+            if address <= rva < address + max(size, raw_size):
+                return raw + rva - address
+        raise ValueError(f'RVA {rva:#x} outside every section')
+
+    def name(rva):
+        start = offset(rva)
+        return data[start:data.index(b'\0', start)].decode('ascii').lower()
+
+    names = []
+    for index, entry_size, name_at in ((1, 20, 12), (13, 32, 4)):
+        rva, size = struct.unpack_from('<II', data, directories + 8 * index)
+        if not rva:
+            continue
+        position = offset(rva)
+        while True:
+            entry = data[position:position + entry_size]
+            if len(entry) < entry_size or not any(entry):
+                break
+            names.append(name(struct.unpack_from('<I', entry, name_at)[0]))
+            position += entry_size
+    return names
+
+
+def disallowed_windows(imports, present):
+    return sorted({dll for dll in imports if dll not in present and dll not in WINDOWS_SYSTEM_DLLS
+                   and not dll.startswith(('api-ms-win-', 'ext-ms-'))})
+
+
+def macho_dependencies(path):
+    """Load paths from a Mach-O file's LC_LOAD/WEAK/REEXPORT_DYLIB commands."""
+    output = subprocess.run(['otool', '-l', str(path)], check=True, capture_output=True, text=True).stdout
+    dependencies, loading = [], False
+    for line in output.splitlines():
+        line = line.strip()
+        if line.startswith('cmd '):
+            loading = line.split()[1] in ('LC_LOAD_DYLIB', 'LC_LOAD_WEAK_DYLIB', 'LC_REEXPORT_DYLIB')
+        elif loading and line.startswith('name '):
+            dependencies.append(line[5:].rsplit(' (offset', 1)[0])
+    return dependencies
+
+
+def disallowed_macos(dependencies):
+    return sorted({d for d in dependencies if not d.startswith(MACOS_ALLOWED_PREFIXES)})
+
+
+def check_native_dependencies(runtime, target):
+    """Fail if a native file needs a library the runtime and the OS do not provide.
+
+    The smoke test runs on the build host, where extra libraries can satisfy a
+    dependency that a user's machine lacks.
+    """
+    problems = {}
+    files = [p for p in runtime.rglob('*') if p.is_file()]
+    if target.endswith('windows-msvc'):
+        present = {p.name.lower() for p in files}
+        for path in files:
+            if path.suffix.lower() in ('.exe', '.dll', '.pyd'):
+                if missing := disallowed_windows(pe_imports(path.read_bytes()), present):
+                    problems[path.relative_to(runtime).as_posix()] = missing
+    else:
+        for path in files:
+            with open(path, 'rb') as file:
+                magic = file.read(4)
+            if magic in (b'\xcf\xfa\xed\xfe', b'\xca\xfe\xba\xbe', b'\xce\xfa\xed\xfe'):
+                if missing := disallowed_macos(macho_dependencies(path)):
+                    problems[path.relative_to(runtime).as_posix()] = missing
+    if problems:
+        details = '\n'.join(f'  {path}: {", ".join(names)}' for path, names in sorted(problems.items()))
+        raise SystemExit(f'Native files depend on libraries outside the runtime:\n{details}')
+    print('native dependencies: only the runtime and the operating system', flush=True)
 
 
 def write_zip(runtime, archive):
@@ -289,6 +422,7 @@ def package(output, work, uv='uv', target=None):
     }, indent=2) + '\n')
     smoke_test(runtime, target, pins)
     clean(runtime, site)
+    check_native_dependencies(runtime, target)
 
     name = f'textslinger-runtime-{target}.zip'
     zipped = output / name
@@ -310,10 +444,16 @@ def fetch_model(model, work, destination):
                 if received > model['gzip_bytes']:
                     raise SystemExit('The model download is larger than pinned')
                 file.write(chunk)
-        if received != model['gzip_bytes']:
-            raise SystemExit('The model download is not the pinned size')
+        if received != model['gzip_bytes'] or sha256(compressed) != model['gzip_sha256']:
+            compressed.unlink()
+            raise SystemExit('The model download does not match its pinned size and hash')
         with gzip.open(compressed) as source, open(cached, 'wb') as target:
-            shutil.copyfileobj(source, target)
+            written = 0
+            while chunk := source.read(1 << 20):
+                written += len(chunk)
+                if written > model['bytes']:
+                    raise SystemExit('The model is larger than pinned')
+                target.write(chunk)
         compressed.unlink()
         if sha256(cached) != model['sha256']:
             cached.unlink()
