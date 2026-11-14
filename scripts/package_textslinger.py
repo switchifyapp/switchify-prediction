@@ -229,11 +229,15 @@ def clean(runtime, site):
 
 def prune_record(record, site):
     """Drop RECORD entries for files that were removed from the runtime."""
+    import csv
+    import io
     if not record.exists():
         return
-    kept = [line for line in record.read_text(encoding='utf-8').splitlines()
-            if line and (site / line.split(',', 1)[0]).exists()]
-    record.write_text(''.join(line + '\n' for line in kept), encoding='utf-8')
+    rows = [row for row in csv.reader(io.StringIO(record.read_text(encoding='utf-8')))
+            if row and (site / row[0]).exists()]
+    output = io.StringIO()
+    csv.writer(output, lineterminator='\n').writerows(rows)
+    record.write_text(output.getvalue(), encoding='utf-8')
 
 
 def write_notices(pins, runtime, target, kenlm_licenses):
@@ -338,6 +342,22 @@ def pe_imports(data):
     return names
 
 
+def windows_search_sets(files, runtime):
+    """For each file, the DLL names the loader can find for it in the runtime.
+
+    Python loads extensions searching their own folder and the interpreter's;
+    wheels add their *.libs folder with os.add_dll_directory.
+    """
+    names = {}
+    for path in files:
+        names.setdefault(path.parent, set()).add(path.name.lower())
+    shared = set(names.get(runtime, set()))
+    for folder, contents in names.items():
+        if folder.name.endswith('.libs'):
+            shared |= contents
+    return {path: shared | names[path.parent] for path in files}
+
+
 def disallowed_windows(imports, present):
     return sorted({dll for dll in imports if dll not in present and dll not in WINDOWS_SYSTEM_DLLS
                    and not dll.startswith(('api-ms-win-', 'ext-ms-'))})
@@ -401,19 +421,10 @@ def check_native_dependencies(runtime, target):
     problems = {}
     files = [p for p in runtime.rglob('*') if p.is_file()]
     if target.endswith('windows-msvc'):
-        names = {}
-        for path in files:
-            names.setdefault(path.parent, set()).add(path.name.lower())
-        # Python loads extensions searching their own folder and the
-        # interpreter's; wheels add their *.libs folder with add_dll_directory.
-        shared = set(names.get(runtime, set()))
-        for folder, contents in names.items():
-            if folder.name.endswith('.libs'):
-                shared |= contents
+        searchable = windows_search_sets(files, runtime)
         for path in files:
             if path.suffix.lower() in ('.exe', '.dll', '.pyd'):
-                present = shared | names[path.parent]
-                if missing := disallowed_windows(pe_imports(path.read_bytes()), present):
+                if missing := disallowed_windows(pe_imports(path.read_bytes()), searchable[path]):
                     problems[path.relative_to(runtime).as_posix()] = missing
     else:
         for path in files:

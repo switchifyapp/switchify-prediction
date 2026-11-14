@@ -148,6 +148,24 @@ Load command 4
                          (['/usr/lib/libc++.1.dylib', '@rpath/libz.dylib', '/opt/x/liblazy.dylib'],
                           ['@loader_path/../lib']))
 
+    def test_windows_finds_dlls_only_where_the_loader_searches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            touch(runtime, 'python310.dll', 'DLLs/libcrypto-1_1-x64.dll', 'DLLs/_ssl.pyd',
+                  'Lib/site-packages/numpy.libs/libopenblas.dll', 'Lib/site-packages/numpy/core/_umath.pyd',
+                  'Lib/site-packages/x.pyd')
+            files = [p for p in runtime.rglob('*') if p.is_file()]
+            search = pkg.windows_search_sets(files, runtime)
+            ssl = search[runtime / 'DLLs/_ssl.pyd']
+            umath = search[runtime / 'Lib/site-packages/numpy/core/_umath.pyd']
+            other = search[runtime / 'Lib/site-packages/x.pyd']
+            # Its own folder and the interpreter's folder.
+            self.assertEqual(pkg.disallowed_windows(['libcrypto-1_1-x64.dll', 'python310.dll'], ssl), [])
+            # A wheel's *.libs folder, added with os.add_dll_directory.
+            self.assertEqual(pkg.disallowed_windows(['libopenblas.dll', 'python310.dll'], umath), [])
+            # DLLs/ is not searched for an extension in site-packages.
+            self.assertEqual(pkg.disallowed_windows(['libcrypto-1_1-x64.dll'], other), ['libcrypto-1_1-x64.dll'])
+
     @unittest.skipUnless(os.name == 'nt', 'reads a Windows executable')
     def test_reads_the_imports_of_a_real_windows_executable(self):
         import sys
@@ -156,6 +174,19 @@ Load command 4
 
     def test_non_pe_files_have_no_imports(self):
         self.assertEqual(pkg.pe_imports(b'not a program'), [])
+
+
+class Record(unittest.TestCase):
+    def test_removed_files_leave_record_and_quoted_paths_survive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            site = Path(directory)
+            touch(site, 'kenlm.pyd', 'a,b.py', 'kenlm-0.2.0.dist-info/RECORD')
+            record = site / 'kenlm-0.2.0.dist-info/RECORD'
+            record.write_text('kenlm.pyd,sha256=x,1\n"a,b.py",sha256=y,2\nkenlm.dll,sha256=z,3\n'
+                              '../../bin/f2py,sha256=w,4\nkenlm-0.2.0.dist-info/RECORD,,\n')
+            pkg.prune_record(record, site)
+            self.assertEqual(record.read_text(),
+                             'kenlm.pyd,sha256=x,1\n"a,b.py",sha256=y,2\nkenlm-0.2.0.dist-info/RECORD,,\n')
 
 
 class ModelDownload(unittest.TestCase):
