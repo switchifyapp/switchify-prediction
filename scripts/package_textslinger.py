@@ -316,8 +316,13 @@ words = [w.word for w in model.predict_words(left_context="please open the ",
     word_spelling_characters=tuple("abcdefghijklmnopqrstuvwxyz'"),
     word_ending_characters=(" ",), nbest=5).top(5)]
 assert "door" in words, words
+# The model keeps case: asked to, it suggests "I" with its capital.
+cased = [w.word for w in model.predict_words(left_context="", predict_lower=False,
+    word_spelling_characters=tuple(c for c in sys.argv[2] if c != " "),
+    word_ending_characters=(" ",), nbest=5).top(5)]
+assert "I" in cased, cased
 assert not any(name.split(".")[0] == "torch" for name in sys.modules), "torch was imported"
-print("smoke test:", words)
+print("smoke test:", words, cased)
 """
     with tempfile.TemporaryDirectory() as directory:
         script = Path(directory) / 'check.py'

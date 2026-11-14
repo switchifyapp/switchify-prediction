@@ -12,7 +12,7 @@ archive by hash at build time. Installed apps never download it.
 |---|---|
 | `python.exe` or `bin/python3.10` | Standalone CPython 3.10.22 from python-build-standalone 20261009, without tests, tkinter, idlelib, ensurepip, lib2to3 or turtledemo |
 | site-packages | numpy, regex, textslinger and KenLM; no PyTorch |
-| `model/lm_dec19_char_tiny_12gram.kenlm` | The binary tiny 12-gram character model, redistributed with the TextSlinger authors' permission |
+| `model/mix_case_c4_0.90_subtitle_0.75_12gram_4e-9.kenlm` | The binary mixed-case 12-gram character model (letters in both cases, apostrophe and space), redistributed with the TextSlinger authors' permission |
 | `manifest.json` | Target, interpreter and model paths, the model's alphabet, component versions |
 | `notices/` | `NOTICE.md`; the licences of CPython and the libraries built into it; KenLM's licences, including its bundled double-conversion and integer_to_string code; and the exact KenLM source the library was built from |
 
@@ -51,7 +51,7 @@ The second check reads Windows import tables, or the macOS load commands through
 `otool`. It catches dependencies that the build machine happens to satisfy.
 Downloads are cached in `target/textslinger/`, and network errors are retried.
 
-The model comes from this repository's [`textslinger-model-1`](https://github.com/switchifyapp/switchify-prediction/releases/tag/textslinger-model-1)
+The model comes from this repository's [`textslinger-model-2`](https://github.com/switchifyapp/switchify-prediction/releases/tag/textslinger-model-2)
 release first, and from OSF if that fails. That release holds an unchanged copy of the
 OSF file, published with the TextSlinger authors' permission, so a build does not depend
 on OSF being reachable. Whichever source is used must match the pinned size and hash.
