@@ -34,6 +34,12 @@ class Pins(unittest.TestCase):
         self.assertRegex(self.pins['model']['sha256'], r'^[0-9a-f]{64}$')
         self.assertEqual(self.pins['kenlm']['max_order'], 12)
 
+    def test_the_model_comes_from_our_copy_first_and_osf_second(self):
+        model = self.pins['model']
+        self.assertEqual(model['download_urls'][-1], model['url'])
+        self.assertTrue(model['download_urls'][0].startswith(
+            'https://github.com/switchifyapp/switchify-prediction/releases/download/textslinger-model-'))
+
     def test_model_alphabet_has_no_duplicates(self):
         alphabet = self.pins['model']['alphabet']
         self.assertEqual(len(set(alphabet)), len(alphabet))
@@ -199,16 +205,91 @@ class ModelDownload(unittest.TestCase):
         model.update(overrides)
         return compressed, model
 
-    def fetch(self, compressed, model):
+    def fetch(self, compressed, model, sources=None):
+        """Fetch through file:// URLs; `sources` maps a name to bytes, or None for missing."""
         with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory, 'source.gz')
-            source.write_bytes(compressed)
-            model['url'] = source.as_uri()
+            urls = []
+            for name, data in (sources or {'source.gz': compressed}).items():
+                path = Path(directory, name)
+                if data is not None:
+                    path.write_bytes(data)
+                urls.append(path.as_uri())
+            model['download_urls'] = urls
             work = Path(directory, 'work')
             work.mkdir()
             destination = Path(directory, 'out.kenlm')
-            pkg.fetch_model(model, work, destination)
+            pkg.fetch_model(model, work, destination, attempts=2, delay=0)
             return destination.read_bytes()
+
+    def test_an_unreachable_first_source_falls_back_to_the_next(self):
+        compressed, model = self.model(b'model bytes')
+        self.assertEqual(self.fetch(compressed, model, {'mirror.gz': None, 'osf.gz': compressed}),
+                         b'model bytes')
+
+    def test_a_tampered_first_source_falls_back_to_the_next(self):
+        compressed, model = self.model(b'model bytes')
+        self.assertEqual(self.fetch(compressed, model, {'mirror.gz': b'tampered', 'osf.gz': compressed}),
+                         b'model bytes')
+
+    def fake_urlopen(self, responses):
+        """urlopen replacement: each call pops the next response for its URL.
+
+        A response is bytes to serve, or an exception raised partway through.
+        """
+        import contextlib, io
+
+        class Cut:
+            def __init__(self, error):
+                self.error, self.sent = error, False
+
+            def read(self, _):
+                if not self.sent:
+                    self.sent = True
+                    return b'partial'
+                raise self.error
+
+        @contextlib.contextmanager
+        def urlopen(url, timeout=None):
+            response = responses[url].pop(0)
+            yield io.BytesIO(response) if isinstance(response, bytes) else Cut(response)
+        return urlopen
+
+    def download_with(self, responses, digest, size):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(pkg.urllib.request, 'urlopen', self.fake_urlopen(responses)):
+            path = Path(directory, 'file')
+            pkg.download(list(responses), path, digest, size, attempts=2, delay=0)
+            return path.read_bytes()
+
+    def test_a_stream_cut_off_mid_way_is_retried_then_falls_back(self):
+        import hashlib, http.client
+        data = b'model bytes'
+        cut = http.client.IncompleteRead(b'partial', 100)
+        responses = {'https://mirror/m.gz': [cut, cut], 'https://osf/m.gz': [data]}
+        self.assertEqual(self.download_with(responses, hashlib.sha256(data).hexdigest(), len(data)), data)
+        self.assertEqual(responses['https://mirror/m.gz'], [])  # both attempts used
+
+    def test_wrong_bytes_are_not_retried_and_fall_back(self):
+        import hashlib
+        data = b'model bytes'
+        digest = hashlib.sha256(data).hexdigest()
+        for wrong in (b'X' * len(data), data + b'extra'):  # same size wrong hash; oversized
+            # One mirror response only: a retry would pop from an empty list and error.
+            responses = {'https://mirror/m.gz': [wrong], 'https://osf/m.gz': [data]}
+            self.assertEqual(self.download_with(responses, digest, len(data)), data)
+            self.assertEqual(responses['https://mirror/m.gz'], [])
+
+    def test_a_download_that_ends_early_is_retried(self):
+        import hashlib
+        data = b'model bytes'
+        responses = {'https://mirror/m.gz': [data[:4], data]}
+        self.assertEqual(self.download_with(responses, hashlib.sha256(data).hexdigest(), len(data)), data)
+
+    def test_every_source_failing_stops_the_build(self):
+        compressed, model = self.model(b'model bytes')
+        with self.assertRaises(SystemExit):
+            self.fetch(compressed, model, {'mirror.gz': None, 'osf.gz': b'tampered'})
 
     def test_a_verified_model_is_written(self):
         compressed, model = self.model(b'model bytes')

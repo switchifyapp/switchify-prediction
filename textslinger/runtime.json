@@ -61,6 +61,10 @@
   "model": {
     "name": "lm_dec19_char_tiny_12gram.kenlm",
     "url": "https://osf.io/download/zyj25/",
+    "download_urls": [
+      "https://github.com/switchifyapp/switchify-prediction/releases/download/textslinger-model-1/lm_dec19_char_tiny_12gram.kenlm.gz",
+      "https://osf.io/download/zyj25/"
+    ],
     "gzip_bytes": 15119971,
     "gzip_sha256": "893c8587da30f899f98132c61f9fcda408dbd078cfa2fabf4577781a9758520f",
     "bytes": 16467314,
