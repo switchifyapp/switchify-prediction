@@ -71,23 +71,50 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def download(url, path, digest, size=None):
-    """Download url to path unless a verified copy exists. Fails on any mismatch."""
-    if path.exists() and sha256(path) == digest:
-        return path
-    partial = path.with_name(path.name + '.partial')
+class Mismatch(Exception):
+    """A download whose size or hash differs from its pin."""
+
+
+def fetch_once(url, partial, digest, size):
     with urllib.request.urlopen(url, timeout=300) as response, open(partial, 'wb') as file:
         received = 0
         while chunk := response.read(1 << 20):
             received += len(chunk)
             if size is not None and received > size:
-                raise SystemExit(f'{url} is larger than pinned')
+                raise Mismatch(f'{url} is larger than pinned')
             file.write(chunk)
     if (size is not None and received != size) or sha256(partial) != digest:
-        partial.unlink()
-        raise SystemExit(f'{url} does not match its pinned hash')
-    partial.replace(path)
-    return path
+        raise Mismatch(f'{url} does not match its pinned size and hash')
+
+
+def download(urls, path, digest, size=None, attempts=3, delay=10.0):
+    """Download to path unless a verified copy exists.
+
+    Tries each URL in order, retrying network errors, and accepts only bytes
+    that match the pinned size and hash. A mismatching source is not retried.
+    """
+    import time
+    if path.exists() and sha256(path) == digest:
+        return path
+    partial = path.with_name(path.name + '.partial')
+    failures = []
+    for url in [urls] if isinstance(urls, str) else urls:
+        for attempt in range(attempts):
+            try:
+                fetch_once(url, partial, digest, size)
+                partial.replace(path)
+                return path
+            except Mismatch as error:
+                failures.append(str(error))
+                break
+            except OSError as error:  # URLError, HTTPError and timeouts.
+                failures.append(f'{url}: {error}')
+                if attempt + 1 < attempts:
+                    print(f'retrying {url} after: {error}', flush=True)
+                    time.sleep(delay * (attempt + 1))
+            finally:
+                partial.unlink(missing_ok=True)
+    raise SystemExit('Download failed:\n  ' + '\n  '.join(failures))
 
 
 def run(command, **kwargs):
@@ -511,21 +538,14 @@ def package(output, work, uv='uv', target=None):
     return zipped
 
 
-def fetch_model(model, work, destination):
+def fetch_model(model, work, destination, attempts=3, delay=10.0):
     """Download the gzip model once, then decompress and check the model's hash."""
     cached = work / model['name']
     if not (cached.exists() and sha256(cached) == model['sha256']):
         compressed = work / (model['name'] + '.gz')
-        with urllib.request.urlopen(model['url'], timeout=300) as response, open(compressed, 'wb') as file:
-            received = 0
-            while chunk := response.read(1 << 20):
-                received += len(chunk)
-                if received > model['gzip_bytes']:
-                    raise SystemExit('The model download is larger than pinned')
-                file.write(chunk)
-        if received != model['gzip_bytes'] or sha256(compressed) != model['gzip_sha256']:
-            compressed.unlink()
-            raise SystemExit('The model download does not match its pinned size and hash')
+        # Our own copy first, then the original source; both must match the pin.
+        download(model['download_urls'], compressed, model['gzip_sha256'], model['gzip_bytes'],
+                 attempts=attempts, delay=delay)
         with gzip.open(compressed) as source, open(cached, 'wb') as target:
             written = 0
             while chunk := source.read(1 << 20):

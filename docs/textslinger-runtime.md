@@ -49,7 +49,13 @@ the runtime and applies the temporary patch below. Before it writes
 
 The second check reads Windows import tables, or the macOS load commands through
 `otool`. It catches dependencies that the build machine happens to satisfy.
-Downloads are cached in `target/textslinger/`.
+Downloads are cached in `target/textslinger/`, and network errors are retried.
+
+The model comes from this repository's [`textslinger-model-1`](https://github.com/switchifyapp/switchify-prediction/releases/tag/textslinger-model-1)
+release first, and from OSF if that fails. That release holds an unchanged copy of the
+OSF file, published with the TextSlinger authors' permission, so a build does not depend
+on OSF being reachable. Whichever source is used must match the pinned size and hash.
+A different model gets a new `textslinger-model-<n>` release; existing ones never change.
 
 The CPython licence texts in `textslinger/licenses/python-build-standalone/` come from
 python-build-standalone's full 3.10.22 archives, which carry the same texts for every

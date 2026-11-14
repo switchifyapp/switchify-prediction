@@ -34,6 +34,12 @@ class Pins(unittest.TestCase):
         self.assertRegex(self.pins['model']['sha256'], r'^[0-9a-f]{64}$')
         self.assertEqual(self.pins['kenlm']['max_order'], 12)
 
+    def test_the_model_comes_from_our_copy_first_and_osf_second(self):
+        model = self.pins['model']
+        self.assertEqual(model['download_urls'][-1], model['url'])
+        self.assertTrue(model['download_urls'][0].startswith(
+            'https://github.com/switchifyapp/switchify-prediction/releases/download/textslinger-model-'))
+
     def test_model_alphabet_has_no_duplicates(self):
         alphabet = self.pins['model']['alphabet']
         self.assertEqual(len(set(alphabet)), len(alphabet))
@@ -199,16 +205,36 @@ class ModelDownload(unittest.TestCase):
         model.update(overrides)
         return compressed, model
 
-    def fetch(self, compressed, model):
+    def fetch(self, compressed, model, sources=None):
+        """Fetch through file:// URLs; `sources` maps a name to bytes, or None for missing."""
         with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory, 'source.gz')
-            source.write_bytes(compressed)
-            model['url'] = source.as_uri()
+            urls = []
+            for name, data in (sources or {'source.gz': compressed}).items():
+                path = Path(directory, name)
+                if data is not None:
+                    path.write_bytes(data)
+                urls.append(path.as_uri())
+            model['download_urls'] = urls
             work = Path(directory, 'work')
             work.mkdir()
             destination = Path(directory, 'out.kenlm')
-            pkg.fetch_model(model, work, destination)
+            pkg.fetch_model(model, work, destination, attempts=2, delay=0)
             return destination.read_bytes()
+
+    def test_an_unreachable_first_source_falls_back_to_the_next(self):
+        compressed, model = self.model(b'model bytes')
+        self.assertEqual(self.fetch(compressed, model, {'mirror.gz': None, 'osf.gz': compressed}),
+                         b'model bytes')
+
+    def test_a_tampered_first_source_falls_back_to_the_next(self):
+        compressed, model = self.model(b'model bytes')
+        self.assertEqual(self.fetch(compressed, model, {'mirror.gz': b'tampered', 'osf.gz': compressed}),
+                         b'model bytes')
+
+    def test_every_source_failing_stops_the_build(self):
+        compressed, model = self.model(b'model bytes')
+        with self.assertRaises(SystemExit):
+            self.fetch(compressed, model, {'mirror.gz': None, 'osf.gz': b'tampered'})
 
     def test_a_verified_model_is_written(self):
         compressed, model = self.model(b'model bytes')
