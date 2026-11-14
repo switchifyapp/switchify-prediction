@@ -59,17 +59,17 @@
     "packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
   ],
   "model": {
-    "name": "lm_dec19_char_tiny_12gram.kenlm",
-    "url": "https://osf.io/download/zyj25/",
+    "name": "mix_case_c4_0.90_subtitle_0.75_12gram_4e-9.kenlm",
+    "url": "https://osf.io/download/jd8ku/",
     "download_urls": [
-      "https://github.com/switchifyapp/switchify-prediction/releases/download/textslinger-model-1/lm_dec19_char_tiny_12gram.kenlm.gz",
-      "https://osf.io/download/zyj25/"
+      "https://github.com/switchifyapp/switchify-prediction/releases/download/textslinger-model-2/mix_case_c4_0.90_subtitle_0.75_12gram_4e-9.kenlm.gz",
+      "https://osf.io/download/jd8ku/"
     ],
-    "gzip_bytes": 15119971,
-    "gzip_sha256": "893c8587da30f899f98132c61f9fcda408dbd078cfa2fabf4577781a9758520f",
-    "bytes": 16467314,
-    "sha256": "d17ea73ef2edf180b55e0e636524f32c76fb6ab110c69ed196432438b1baf9c3",
-    "alphabet": "!',. ?abcdefghijklmnopqrstuvwxyz",
+    "gzip_bytes": 28739934,
+    "gzip_sha256": "504db15439b74600b59c506e05de8c3673fd7ac1f9b17bf8e63c288d2401dc1e",
+    "bytes": 33508755,
+    "sha256": "3d1ca8f9912f3c8fc6b3db6da24b801ed83ff52b64cb1d6b9f7363dfd9d81c6b",
+    "alphabet": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ",
     "source": "Language Models for Augmentative and Alternative Communication (AAC), OSF project ajm7t, by the TextSlinger authors",
     "permission": "Redistributed in Switchify PC with the authors' permission."
   }
