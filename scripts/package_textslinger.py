@@ -8,6 +8,7 @@ textslinger/runtime.json. Build tools: uv, git, a C++ compiler.
 import argparse
 import gzip
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -72,7 +73,11 @@ def sha256(path):
 
 
 class Mismatch(Exception):
-    """A download whose size or hash differs from its pin."""
+    """A download whose bytes differ from its pin: too large or the wrong hash."""
+
+
+class ShortRead(OSError):
+    """A download that ended early, as when a connection drops; worth retrying."""
 
 
 def fetch_once(url, partial, digest, size):
@@ -83,8 +88,10 @@ def fetch_once(url, partial, digest, size):
             if size is not None and received > size:
                 raise Mismatch(f'{url} is larger than pinned')
             file.write(chunk)
-    if (size is not None and received != size) or sha256(partial) != digest:
-        raise Mismatch(f'{url} does not match its pinned size and hash')
+    if size is not None and received < size:
+        raise ShortRead(f'ended after {received} of {size} bytes')
+    if sha256(partial) != digest:
+        raise Mismatch(f'{url} does not match its pinned hash')
 
 
 def download(urls, path, digest, size=None, attempts=3, delay=10.0):
@@ -107,7 +114,9 @@ def download(urls, path, digest, size=None, attempts=3, delay=10.0):
             except Mismatch as error:
                 failures.append(str(error))
                 break
-            except OSError as error:  # URLError, HTTPError and timeouts.
+            # URLError, HTTPError, timeouts, short reads, and IncompleteRead
+            # from a chunked response cut off mid-stream.
+            except (OSError, http.client.HTTPException) as error:
                 failures.append(f'{url}: {error}')
                 if attempt + 1 < attempts:
                     print(f'retrying {url} after: {error}', flush=True)

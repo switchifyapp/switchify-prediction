@@ -231,6 +231,51 @@ class ModelDownload(unittest.TestCase):
         self.assertEqual(self.fetch(compressed, model, {'mirror.gz': b'tampered', 'osf.gz': compressed}),
                          b'model bytes')
 
+    def fake_urlopen(self, responses):
+        """urlopen replacement: each call pops the next response for its URL.
+
+        A response is bytes to serve, or an exception raised partway through.
+        """
+        import contextlib, io
+
+        class Cut:
+            def __init__(self, error):
+                self.error, self.sent = error, False
+
+            def read(self, _):
+                if not self.sent:
+                    self.sent = True
+                    return b'partial'
+                raise self.error
+
+        @contextlib.contextmanager
+        def urlopen(url, timeout=None):
+            response = responses[url].pop(0)
+            yield io.BytesIO(response) if isinstance(response, bytes) else Cut(response)
+        return urlopen
+
+    def download_with(self, responses, digest, size):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(pkg.urllib.request, 'urlopen', self.fake_urlopen(responses)):
+            path = Path(directory, 'file')
+            pkg.download(list(responses), path, digest, size, attempts=2, delay=0)
+            return path.read_bytes()
+
+    def test_a_stream_cut_off_mid_way_is_retried_then_falls_back(self):
+        import hashlib, http.client
+        data = b'model bytes'
+        cut = http.client.IncompleteRead(b'partial', 100)
+        responses = {'https://mirror/m.gz': [cut, cut], 'https://osf/m.gz': [data]}
+        self.assertEqual(self.download_with(responses, hashlib.sha256(data).hexdigest(), len(data)), data)
+        self.assertEqual(responses['https://mirror/m.gz'], [])  # both attempts used
+
+    def test_a_download_that_ends_early_is_retried(self):
+        import hashlib
+        data = b'model bytes'
+        responses = {'https://mirror/m.gz': [data[:4], data]}
+        self.assertEqual(self.download_with(responses, hashlib.sha256(data).hexdigest(), len(data)), data)
+
     def test_every_source_failing_stops_the_build(self):
         compressed, model = self.model(b'model bytes')
         with self.assertRaises(SystemExit):
