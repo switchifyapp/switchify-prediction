@@ -270,6 +270,16 @@ class ModelDownload(unittest.TestCase):
         self.assertEqual(self.download_with(responses, hashlib.sha256(data).hexdigest(), len(data)), data)
         self.assertEqual(responses['https://mirror/m.gz'], [])  # both attempts used
 
+    def test_wrong_bytes_are_not_retried_and_fall_back(self):
+        import hashlib
+        data = b'model bytes'
+        digest = hashlib.sha256(data).hexdigest()
+        for wrong in (b'X' * len(data), data + b'extra'):  # same size wrong hash; oversized
+            # One mirror response only: a retry would pop from an empty list and error.
+            responses = {'https://mirror/m.gz': [wrong], 'https://osf/m.gz': [data]}
+            self.assertEqual(self.download_with(responses, digest, len(data)), data)
+            self.assertEqual(responses['https://mirror/m.gz'], [])
+
     def test_a_download_that_ends_early_is_retried(self):
         import hashlib
         data = b'model bytes'
