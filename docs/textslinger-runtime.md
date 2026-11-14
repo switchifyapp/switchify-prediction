@@ -1,11 +1,10 @@
 # TextSlinger runtime
 
-Switchify PC predicts words with the n-gram model from
+Switchify PC is moving its word suggestions to the n-gram model from
 [TextSlinger](https://github.com/kdv123/textslinger). This repository builds the
 runtime it bundles, for each platform, and publishes it with each release as
 `textslinger-runtime-<target>.zip` plus a `.sha256` file. Switchify PC pins the
-archive by hash at build time. Installed apps never
-download it.
+archive by hash at build time. Installed apps never download it.
 
 ## What is inside
 
