@@ -1,0 +1,72 @@
+{
+  "format_version": 1,
+  "python": {
+    "version": "3.10.22",
+    "release": "20261009",
+    "targets": {
+      "x86_64-pc-windows-msvc": {
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-x86_64-pc-windows-msvc-install_only.tar.gz",
+        "bytes": 39573204,
+        "sha256": "cb023e83e42d8937ba77c7cf83641083c3b81e88e1226e1c694a347ae1924d54"
+      },
+      "aarch64-apple-darwin": {
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-aarch64-apple-darwin-install_only.tar.gz",
+        "bytes": 25843371,
+        "sha256": "02d1a66b5fe8676e6df5084f4e0b71779a4e6f1c46f192d3d3a12b7eb3a789ec"
+      },
+      "x86_64-apple-darwin": {
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-x86_64-apple-darwin-install_only.tar.gz",
+        "bytes": 25562770,
+        "sha256": "998d4159933724eba107bbb0e01ed920d267d59c815b256fc39ffe8658df1350"
+      }
+    }
+  },
+  "packages": {
+    "textslinger": {
+      "version": "0.4.0",
+      "sha256": {
+        "any": "d33238e58c2f18403f5b777bd4b8f1148638a6e4c4d6a1094f3b487d01f46f22"
+      }
+    },
+    "numpy": {
+      "version": "1.26.4",
+      "sha256": {
+        "x86_64-pc-windows-msvc": "b97fe8060236edf3662adfc2c633f56a08ae30560c56310562cb4f95500022d5",
+        "aarch64-apple-darwin": "2e4ee3380d6de9c9ec04745830fd9e2eccb3e6cf790d39d7b98ffd19b0dd754a",
+        "x86_64-apple-darwin": "9ff0f4f29c51e2803569d7a51c2304de5554655a60c5d776e35b4a41413830d0"
+      }
+    },
+    "regex": {
+      "version": "2026.9.29",
+      "sha256": {
+        "x86_64-pc-windows-msvc": "23ae6fdad9e63e54038f5ef78aba2933faca61e24d432786589e737bc5522ebb",
+        "aarch64-apple-darwin": "1d9fe8091b2e89d470df68a9331111ed008ae8aae6bf1e8e1fba4086a495c84e",
+        "x86_64-apple-darwin": "8873c4a11c50b9989168881aeb3f08859f469d809941866aa1feefd8be5431f6"
+      }
+    }
+  },
+  "kenlm": {
+    "version": "0.2.0",
+    "url": "https://files.pythonhosted.org/packages/source/k/kenlm/kenlm-0.2.0.tar.gz",
+    "sha256": "c2dc1dc09d3c150e6a1777ef0fd5cac3688e1dc1cc13e41472d0284e5e88ac7f",
+    "max_order": 12
+  },
+  "build_tools": [
+    "cmake==4.4.4 --hash=sha256:ad8e0a38b5707e27882701146bdfffecacd80e7703fa0fc36c77528518d545af --hash=sha256:883962a72b1b3a16ff445427f24c8caca9797dd9e563bbe208cbcd89e877f9d3",
+    "setuptools==84.2.1 --hash=sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+    "wheel==0.48.0 --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+    "pip==26.3 --hash=sha256:f3b60b20ffaadd4415ed7957212a38ac63fa4c5fa375bd0f4a797777940fad13",
+    "packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+  ],
+  "model": {
+    "name": "lm_dec19_char_tiny_12gram.kenlm",
+    "url": "https://osf.io/download/zyj25/",
+    "gzip_bytes": 15119971,
+    "gzip_sha256": "893c8587da30f899f98132c61f9fcda408dbd078cfa2fabf4577781a9758520f",
+    "bytes": 16467314,
+    "sha256": "d17ea73ef2edf180b55e0e636524f32c76fb6ab110c69ed196432438b1baf9c3",
+    "alphabet": "!',. ?abcdefghijklmnopqrstuvwxyz",
+    "source": "Language Models for Augmentative and Alternative Communication (AAC), OSF project ajm7t, by the TextSlinger authors",
+    "permission": "Redistributed in Switchify PC with the authors' permission."
+  }
+}

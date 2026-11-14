@@ -3,3 +3,6 @@ neural/** text eol=lf
 docs/smol-*.json text eol=lf
 docs/neural-*.json text eol=lf
 production-model.json text eol=lf
+# The TextSlinger patch applies to LF files from the PyPI wheel.
+textslinger/*.patch text eol=lf
+textslinger/licenses/** text eol=lf
