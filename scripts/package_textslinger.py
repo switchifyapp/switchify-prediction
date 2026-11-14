@@ -27,7 +27,8 @@ PYTHON_LICENSES = ROOT / 'textslinger/licenses/python-build-standalone'
 # The bridge never imports these parts of the standard library.
 TRIM_STDLIB = ['test', 'tkinter', 'idlelib', 'ensurepip', 'lib2to3', 'turtledemo', 'pydoc_data',
                'unittest/test', 'ctypes/test', 'sqlite3/test', 'distutils/tests', 'site-packages']
-# A fixed timestamp keeps the archive's bytes independent of build time.
+# A fixed timestamp keeps archive metadata independent of build time. Compiled
+# binaries are not byte-for-byte reproducible.
 ZIP_TIME = (2026, 1, 1, 0, 0, 0)
 
 
@@ -145,6 +146,12 @@ def build_kenlm(pins, target, uv, base_python, work):
         itoa = member('util/integer_to_string.cc').decode('utf-8')
         notice = itoa[itoa.index('/*') + 2:itoa.index('*/')].strip()
         (licenses / 'integer_to_string-NOTICE').write_text(notice + '\n', encoding='utf-8')
+        # util/string_piece is Google's BSD-3-Clause code, in // comments.
+        lines = member('util/string_piece.hh').decode('utf-8').splitlines()
+        first = next(i for i, line in enumerate(lines) if line.startswith('// Copyright'))
+        last = next(i for i in range(first, len(lines)) if 'SUCH DAMAGE.' in lines[i])
+        notice = '\n'.join(line[3:] if line.startswith('// ') else line[2:] for line in lines[first:last + 1])
+        (licenses / 'string_piece-LICENSE').write_text(notice + '\n', encoding='utf-8')
     # LGPL: ship the exact source the library was built from.
     shutil.copyfile(source, licenses / source.name)
     return built[0], licenses
@@ -167,9 +174,13 @@ def trim(runtime, target):
     else:
         for name in ('include', 'share', 'lib/pkgconfig', 'lib/python3.10/config-3.10-darwin'):
             shutil.rmtree(runtime / name, ignore_errors=True)
-        for pattern in ('tcl8*', 'tk8*', 'itcl*', 'thread*', 'libtcl*', 'libtk*'):
+        for pattern in ('tcl[89]*', 'tk[89]*', 'itcl*', 'thread*', 'libtcl*', 'libtk*'):
             for path in (runtime / 'lib').glob(pattern):
                 shutil.rmtree(path) if path.is_dir() else path.unlink()
+        # The interpreter links Python statically and extensions resolve its
+        # symbols from it, so the shared library is unused. The dependency
+        # check fails the build if anything still loads it.
+        (runtime / 'lib/libpython3.10.dylib').unlink(missing_ok=True)
         for pattern in ('_test*', '_ctypes_test*', '_tkinter*'):
             for path in (runtime / 'lib/python3.10/lib-dynload').glob(pattern):
                 path.unlink()
@@ -194,8 +205,13 @@ def apply_patch(site, runtime):
 
 def clean(runtime, site):
     for path in list(site.iterdir()):
-        if path.is_file() and (path.suffix in ('.lib', '.exp', '.whl') or path.name == '.lock'):
+        if path.is_file() and (path.suffix in ('.exp', '.whl') or path.name == '.lock'):
             path.unlink()
+    # Static libraries for building extensions, and numpy's own test suite.
+    for path in list(site.rglob('*.lib')):
+        path.unlink()
+    for path in sorted(site.glob('numpy/**/tests'), reverse=True):
+        shutil.rmtree(path, ignore_errors=True)
     # KenLM's setup.py also builds a standalone library that the Python
     # extension does not load.
     for name in ('kenlm.dll', 'libkenlm.dylib'):
@@ -207,6 +223,17 @@ def clean(runtime, site):
             (info / name).unlink(missing_ok=True)
     for path in sorted(runtime.rglob('__pycache__'), reverse=True):
         shutil.rmtree(path, ignore_errors=True)
+    for info in site.glob('*.dist-info'):
+        prune_record(info / 'RECORD', site)
+
+
+def prune_record(record, site):
+    """Drop RECORD entries for files that were removed from the runtime."""
+    if not record.exists():
+        return
+    kept = [line for line in record.read_text(encoding='utf-8').splitlines()
+            if line and (site / line.split(',', 1)[0]).exists()]
+    record.write_text(''.join(line + '\n' for line in kept), encoding='utf-8')
 
 
 def write_notices(pins, runtime, target, kenlm_licenses):
@@ -227,7 +254,7 @@ packages are in their `*.dist-info` folders under `{layout(target)['site']}`.
 | textslinger | {packages['textslinger']['version']} | MIT | https://github.com/kdv123/textslinger |
 | numpy | {packages['numpy']['version']} | BSD-3-Clause and bundled licences | https://pypi.org/project/numpy/ |
 | regex | {packages['regex']['version']} | Apache-2.0 | https://pypi.org/project/regex/ |
-| KenLM | {pins['kenlm']['version']} | LGPL-2.1-or-later; bundled double-conversion (BSD-3-Clause) and integer_to_string (MIT) notices are in `kenlm/` | {pins['kenlm']['url']} |
+| KenLM | {pins['kenlm']['version']} | LGPL-2.1-or-later; bundled double-conversion (BSD-3-Clause), string_piece (BSD-3-Clause) and integer_to_string (MIT) notices are in `kenlm/`; murmur_hash is public domain | {pins['kenlm']['url']} |
 | {model['name']} | | {model['permission']} | {model['source']}, {model['url']} |
 
 KenLM is built from the unmodified source above with `MAX_ORDER={pins['kenlm']['max_order']}`, as the
@@ -269,8 +296,6 @@ WINDOWS_SYSTEM_DLLS = {
     'user32.dll', 'userenv.dll', 'version.dll', 'winhttp.dll', 'winmm.dll', 'wintrust.dll',
     'ws2_32.dll',
 }
-# Load paths that resolve inside the runtime or to the operating system.
-MACOS_ALLOWED_PREFIXES = ('/usr/lib/', '/System/Library/', '@rpath/', '@loader_path/', '@executable_path/')
 
 
 def pe_imports(data):
@@ -318,21 +343,53 @@ def disallowed_windows(imports, present):
                    and not dll.startswith(('api-ms-win-', 'ext-ms-'))})
 
 
-def macho_dependencies(path):
-    """Load paths from a Mach-O file's LC_LOAD/WEAK/REEXPORT_DYLIB commands."""
-    output = subprocess.run(['otool', '-l', str(path)], check=True, capture_output=True, text=True).stdout
-    dependencies, loading = [], False
+MACHO_LOAD_COMMANDS = ('LC_LOAD_DYLIB', 'LC_LOAD_WEAK_DYLIB', 'LC_REEXPORT_DYLIB',
+                       'LC_LOAD_UPWARD_DYLIB', 'LC_LAZY_LOAD_DYLIB')
+MACHO_MAGICS = (b'\xcf\xfa\xed\xfe', b'\xce\xfa\xed\xfe', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf')
+
+
+def parse_otool(output):
+    """Dylib load paths and rpaths from `otool -l` output, for every architecture."""
+    dependencies, rpaths, command = [], [], None
     for line in output.splitlines():
         line = line.strip()
         if line.startswith('cmd '):
-            loading = line.split()[1] in ('LC_LOAD_DYLIB', 'LC_LOAD_WEAK_DYLIB', 'LC_REEXPORT_DYLIB')
-        elif loading and line.startswith('name '):
+            command = line.split()[1]
+        elif command in MACHO_LOAD_COMMANDS and line.startswith('name '):
             dependencies.append(line[5:].rsplit(' (offset', 1)[0])
-    return dependencies
+        elif command == 'LC_RPATH' and line.startswith('path '):
+            rpaths.append(line[5:].rsplit(' (offset', 1)[0])
+    return dependencies, rpaths
 
 
-def disallowed_macos(dependencies):
-    return sorted({d for d in dependencies if not d.startswith(MACOS_ALLOWED_PREFIXES)})
+def unresolved_macos(dependencies, rpaths, path, runtime):
+    """Dependencies that are neither the OS's nor a file inside the runtime.
+
+    Bundle-relative paths must resolve to a file in the runtime; an @rpath
+    dependency resolves through the file's own rpaths.
+    """
+    executable_dir = runtime / 'bin'
+
+    def expand(prefix_path):
+        expanded = prefix_path.replace('@loader_path', str(path.parent)).replace('@executable_path', str(executable_dir))
+        return Path(os.path.normpath(expanded))
+
+    def inside(candidate):
+        return candidate.is_file() and runtime.resolve() in candidate.resolve().parents
+
+    problems = set()
+    for dependency in dependencies:
+        if dependency.startswith(('/usr/lib/', '/System/Library/')):
+            continue
+        if dependency.startswith(('@loader_path/', '@executable_path/')):
+            if inside(expand(dependency)):
+                continue
+        elif dependency.startswith('@rpath/'):
+            name = dependency[len('@rpath/'):]
+            if any(inside(expand(rpath) / name) for rpath in rpaths):
+                continue
+        problems.add(dependency)
+    return sorted(problems)
 
 
 def check_native_dependencies(runtime, target):
@@ -344,17 +401,28 @@ def check_native_dependencies(runtime, target):
     problems = {}
     files = [p for p in runtime.rglob('*') if p.is_file()]
     if target.endswith('windows-msvc'):
-        present = {p.name.lower() for p in files}
+        names = {}
+        for path in files:
+            names.setdefault(path.parent, set()).add(path.name.lower())
+        # Python loads extensions searching their own folder and the
+        # interpreter's; wheels add their *.libs folder with add_dll_directory.
+        shared = set(names.get(runtime, set()))
+        for folder, contents in names.items():
+            if folder.name.endswith('.libs'):
+                shared |= contents
         for path in files:
             if path.suffix.lower() in ('.exe', '.dll', '.pyd'):
+                present = shared | names[path.parent]
                 if missing := disallowed_windows(pe_imports(path.read_bytes()), present):
                     problems[path.relative_to(runtime).as_posix()] = missing
     else:
         for path in files:
             with open(path, 'rb') as file:
                 magic = file.read(4)
-            if magic in (b'\xcf\xfa\xed\xfe', b'\xca\xfe\xba\xbe', b'\xce\xfa\xed\xfe'):
-                if missing := disallowed_macos(macho_dependencies(path)):
+            if magic in MACHO_MAGICS:
+                output = subprocess.run(['otool', '-l', str(path)], check=True,
+                                        capture_output=True, text=True).stdout
+                if missing := unresolved_macos(*parse_otool(output), path, runtime):
                     problems[path.relative_to(runtime).as_posix()] = missing
     if problems:
         details = '\n'.join(f'  {path}: {", ".join(names)}' for path, names in sorted(problems.items()))

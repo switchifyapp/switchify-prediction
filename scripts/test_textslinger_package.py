@@ -82,7 +82,8 @@ class Trim(unittest.TestCase):
     def test_macos_keeps_only_the_real_interpreter(self):
         with tempfile.TemporaryDirectory() as root:
             touch(root, 'bin/python3.10', 'bin/pip3', 'bin/idle3.10', 'lib/libpython3.10.dylib',
-                  'lib/libtcl8.6.dylib', 'lib/tcl8.6/init.tcl', 'lib/python3.10/os.py',
+                  'lib/libtcl8.6.dylib', 'lib/tcl8.6/init.tcl', 'lib/tcl9.0/init.tcl', 'lib/tk9.0/tk.tcl',
+                  'lib/python3.10/os.py', 'lib/python3.10/lib-dynload/_ctypes_test.so',
                   'lib/python3.10/config-3.10-darwin/libpython3.10.a', 'lib/python3.10/test/x.py',
                   'lib/python3.10/lib-dynload/_ctypes.so', 'lib/python3.10/lib-dynload/_tkinter.so',
                   'lib/python3.10/lib-dynload/_testcapi.so', 'share/man/x', 'include/python3.10/x.h')
@@ -90,7 +91,7 @@ class Trim(unittest.TestCase):
                 os.symlink('python3.10', Path(root, 'bin/python3'))
             pkg.trim(Path(root), 'aarch64-apple-darwin')
             kept = {p.relative_to(root).as_posix() for p in Path(root).rglob('*') if p.is_file()}
-            self.assertEqual(kept, {'bin/python3.10', 'lib/libpython3.10.dylib', 'lib/python3.10/os.py',
+            self.assertEqual(kept, {'bin/python3.10', 'lib/python3.10/os.py',
                                     'lib/python3.10/lib-dynload/_ctypes.so'})
 
 
@@ -101,12 +102,51 @@ class NativeDependencies(unittest.TestCase):
                    'libssl-1_1-x64.dll', 'msvcp140.dll', 'zlib1.dll']
         self.assertEqual(pkg.disallowed_windows(imports, present), ['msvcp140.dll', 'zlib1.dll'])
 
-    def test_macos_allows_bundle_relative_and_system_paths_only(self):
-        dependencies = ['/usr/lib/libc++.1.dylib', '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation',
-                        '@rpath/libpython3.10.dylib', '@loader_path/../numpy.libs/libopenblas.dylib',
-                        '/usr/local/opt/xz/lib/liblzma.5.dylib', '/opt/homebrew/lib/libz.dylib']
-        self.assertEqual(pkg.disallowed_macos(dependencies),
-                         ['/opt/homebrew/lib/libz.dylib', '/usr/local/opt/xz/lib/liblzma.5.dylib'])
+    def test_macos_requires_system_paths_or_files_inside_the_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory, 'runtime')
+            touch(runtime, 'site/numpy/core/_multiarray.so', 'site/numpy/.dylibs/libopenblas.dylib',
+                  'lib/libpython3.10.dylib')
+            touch(directory, 'outside/libz.dylib')
+            module = runtime / 'site/numpy/core/_multiarray.so'
+            dependencies = [
+                '/usr/lib/libc++.1.dylib',
+                '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation',
+                '@loader_path/../.dylibs/libopenblas.dylib',      # resolves inside
+                '@loader_path/../.dylibs/libgfortran.dylib',      # missing
+                '@rpath/libpython3.10.dylib',                     # via the second rpath
+                '@rpath/libz.dylib',                              # only outside the runtime
+                '@executable_path/../lib/libpython3.10.dylib',    # resolves from bin/
+                '/usr/local/opt/xz/lib/liblzma.5.dylib',
+            ]
+            rpaths = ['/usr/local/lib', '@loader_path/../../../lib', str(Path(directory, 'outside'))]
+            self.assertEqual(pkg.unresolved_macos(dependencies, rpaths, module, runtime),
+                             ['/usr/local/opt/xz/lib/liblzma.5.dylib',
+                              '@loader_path/../.dylibs/libgfortran.dylib', '@rpath/libz.dylib'])
+
+    def test_otool_output_gives_load_paths_and_rpaths_for_every_architecture(self):
+        output = """x.so (architecture arm64):
+Load command 3
+          cmd LC_LOAD_DYLIB
+      cmdsize 56
+         name /usr/lib/libc++.1.dylib (offset 24)
+Load command 4
+          cmd LC_ID_DYLIB
+         name @rpath/x.so (offset 24)
+Load command 5
+          cmd LC_RPATH
+         path @loader_path/../lib (offset 12)
+x.so (architecture x86_64):
+Load command 3
+          cmd LC_LOAD_WEAK_DYLIB
+         name @rpath/libz.dylib (offset 24)
+Load command 4
+          cmd LC_LAZY_LOAD_DYLIB
+         name /opt/x/liblazy.dylib (offset 24)
+"""
+        self.assertEqual(pkg.parse_otool(output),
+                         (['/usr/lib/libc++.1.dylib', '@rpath/libz.dylib', '/opt/x/liblazy.dylib'],
+                          ['@loader_path/../lib']))
 
     @unittest.skipUnless(os.name == 'nt', 'reads a Windows executable')
     def test_reads_the_imports_of_a_real_windows_executable(self):
