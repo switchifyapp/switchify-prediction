@@ -46,7 +46,6 @@ class Pins(unittest.TestCase):
         patch = pkg.PATCH.read_text()
         self.assertIn('a/textslinger/helpers.py', patch)
         self.assertIn('a/textslinger/__init__.py', patch)
-        self.assertNotIn('\r\n', patch)
         self.assertEqual(self.pins['packages']['textslinger']['version'], '0.4.0')
 
 

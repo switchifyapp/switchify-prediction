@@ -162,7 +162,10 @@ def apply_patch(site, runtime):
     # git apply inside a repository resolves paths from its root and skips
     # ignored files, so stop it from finding the repository above the runtime.
     env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(runtime.resolve()))
-    run(['git', 'apply', '--whitespace=nowarn', PATCH], cwd=site, env=env)
+    # The wheel's files use LF; a CRLF checkout of the patch would not apply.
+    patch = PATCH.read_bytes().replace(b'\r\n', b'\n')
+    print('+ git apply', PATCH.name, flush=True)
+    subprocess.run(['git', 'apply', '--whitespace=nowarn', '-'], input=patch, cwd=site, env=env, check=True)
     if '_precision_to_torch' not in (site / 'textslinger/helpers.py').read_text():
         raise SystemExit('The lazy import patch was not applied')
 
