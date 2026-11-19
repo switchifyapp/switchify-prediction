@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the TextSlinger runtime that Switchify PC bundles, for this host.
 
-The runtime is standalone CPython with numpy, regex, KenLM and textslinger,
+The runtime is standalone CPython with numpy, KenLM and textslinger,
 plus the binary n-gram model. Every download is checked against
 textslinger/runtime.json. Build tools: uv, git, a C++ compiler.
 """
@@ -23,8 +23,10 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 PINS = ROOT / 'textslinger/runtime.json'
-PATCH = ROOT / 'textslinger/lazy-torch-imports.patch'
 PYTHON_LICENSES = ROOT / 'textslinger/licenses/python-build-standalone'
+# The interpreter's major.minor version, which names its macOS paths. A test
+# checks it against the pinned Python.
+PYTHON = '3.13'
 # The bridge never imports these parts of the standard library.
 TRIM_STDLIB = ['test', 'tkinter', 'idlelib', 'ensurepip', 'lib2to3', 'turtledemo', 'pydoc_data',
                'unittest/test', 'ctypes/test', 'sqlite3/test', 'distutils/tests', 'site-packages']
@@ -49,7 +51,8 @@ def layout(target):
     """Paths inside the runtime, relative to its root."""
     if target.endswith('windows-msvc'):
         return {'python': 'python.exe', 'stdlib': 'Lib', 'site': 'Lib/site-packages'}
-    return {'python': 'bin/python3.10', 'stdlib': 'lib/python3.10', 'site': 'lib/python3.10/site-packages'}
+    return {'python': f'bin/python{PYTHON}', 'stdlib': f'lib/python{PYTHON}',
+            'site': f'lib/python{PYTHON}/site-packages'}
 
 
 def requirements(pins, target):
@@ -139,7 +142,7 @@ def safe_extract(archive, destination):
 def build_kenlm(pins, target, uv, base_python, work):
     """Build the KenLM wheel from its hash-checked source with the model's order."""
     kenlm = pins['kenlm']
-    source = download(kenlm['url'], work / 'kenlm-0.2.0.tar.gz', kenlm['sha256'])
+    source = download(kenlm['url'], work / f'kenlm-{kenlm["version"]}.tar.gz', kenlm['sha256'])
     wheels = work / 'kenlm-wheel'
     shutil.rmtree(wheels, ignore_errors=True)
     venv = work / 'build-venv'
@@ -166,7 +169,7 @@ def build_kenlm(pins, target, uv, base_python, work):
         env['_CL_'] = '/MT'
     run([venv_python, '-m', 'pip', 'wheel', '--no-cache-dir', '--no-build-isolation', '--no-deps',
          '-w', wheels, source], env=env)
-    built = sorted(wheels.glob('kenlm-0.2.0-*.whl'))
+    built = sorted(wheels.glob(f'kenlm-{kenlm["version"]}-*.whl'))
     if len(built) != 1:
         raise SystemExit('The KenLM wheel was not built')
     licenses = work / 'kenlm-licenses'
@@ -174,7 +177,7 @@ def build_kenlm(pins, target, uv, base_python, work):
     licenses.mkdir()
     with tarfile.open(source) as tar:
         def member(name):
-            return tar.extractfile(f'kenlm-0.2.0/{name}').read()
+            return tar.extractfile(f'kenlm-{kenlm["version"]}/{name}').read()
         for name in ('LICENSE', 'COPYING', 'COPYING.3', 'COPYING.LESSER.3'):
             (licenses / name).write_bytes(member(name))
         # Code compiled into the extension under its own licences.
@@ -208,7 +211,7 @@ def trim(runtime, target):
         for path in runtime.rglob('*.pdb'):
             path.unlink()
     else:
-        for name in ('include', 'share', 'lib/pkgconfig', 'lib/python3.10/config-3.10-darwin'):
+        for name in ('include', 'share', 'lib/pkgconfig', f'lib/python{PYTHON}/config-{PYTHON}-darwin'):
             shutil.rmtree(runtime / name, ignore_errors=True)
         for pattern in ('tcl[89]*', 'tk[89]*', 'itcl*', 'thread*', 'libtcl*', 'libtk*'):
             for path in (runtime / 'lib').glob(pattern):
@@ -216,27 +219,15 @@ def trim(runtime, target):
         # The interpreter links Python statically and extensions resolve its
         # symbols from it, so the shared library is unused. The dependency
         # check fails the build if anything still loads it.
-        (runtime / 'lib/libpython3.10.dylib').unlink(missing_ok=True)
+        (runtime / f'lib/libpython{PYTHON}.dylib').unlink(missing_ok=True)
         for pattern in ('_test*', '_ctypes_test*', '_tkinter*'):
-            for path in (runtime / 'lib/python3.10/lib-dynload').glob(pattern):
+            for path in (runtime / f'lib/python{PYTHON}/lib-dynload').glob(pattern):
                 path.unlink()
         # Keep the real interpreter only; zip archives do not hold symlinks.
         for path in (runtime / 'bin').iterdir():
-            if path.name != 'python3.10':
+            if path.name != f'python{PYTHON}':
                 path.unlink()
     (runtime / paths['site']).mkdir(parents=True, exist_ok=True)
-
-
-def apply_patch(site, runtime):
-    # git apply inside a repository resolves paths from its root and skips
-    # ignored files, so stop it from finding the repository above the runtime.
-    env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(runtime.resolve()))
-    # The wheel's files use LF; a CRLF checkout of the patch would not apply.
-    patch = PATCH.read_bytes().replace(b'\r\n', b'\n')
-    print('+ git apply', PATCH.name, flush=True)
-    subprocess.run(['git', 'apply', '--whitespace=nowarn', '-'], input=patch, cwd=site, env=env, check=True)
-    if '_precision_to_torch' not in (site / 'textslinger/helpers.py').read_text():
-        raise SystemExit('The lazy import patch was not applied')
 
 
 def clean(runtime, site):
@@ -293,16 +284,12 @@ packages are in their `*.dist-info` folders under `{layout(target)['site']}`.
 | CPython (python-build-standalone {pins['python']['release']}) | {pins['python']['version']} | PSF-2.0; libraries built into it (OpenSSL, libffi, SQLite, xz, zlib, bzip2, expat, mpdecimal and others) keep their own licences, in `python/` | https://github.com/astral-sh/python-build-standalone |
 | textslinger | {packages['textslinger']['version']} | MIT | https://github.com/kdv123/textslinger |
 | numpy | {packages['numpy']['version']} | BSD-3-Clause and bundled licences | https://pypi.org/project/numpy/ |
-| regex | {packages['regex']['version']} | Apache-2.0 | https://pypi.org/project/regex/ |
 | KenLM | {pins['kenlm']['version']} | LGPL-2.1-or-later; bundled double-conversion (BSD-3-Clause), string_piece (BSD-3-Clause) and integer_to_string (MIT) notices are in `kenlm/`; murmur_hash is public domain | {pins['kenlm']['url']} |
 | {model['name']} | | {model['permission']} | {model['source']}, {model['url']} |
 
 KenLM is built from the unmodified source above with `MAX_ORDER={pins['kenlm']['max_order']}`, as the
 separate `kenlm` Python extension module, which you may replace with your own build. That
 source is included as `kenlm/kenlm-{pins['kenlm']['version']}.tar.gz`.
-
-textslinger {packages['textslinger']['version']} includes a small patch so that it imports PyTorch only for
-the models that need it; see https://github.com/kdv123/textslinger/pull/2.
 """)
 
 
@@ -519,7 +506,6 @@ def package(output, work, uv='uv', target=None):
     run([uv, 'pip', 'install', '--python', base_python, '--no-deps', '--require-hashes',
          '--target', site, '-r', reqs])
     run([uv, 'pip', 'install', '--python', base_python, '--no-deps', '--target', site, kenlm_wheel])
-    apply_patch(site, runtime)
     clean(runtime, site)
 
     model = pins['model']

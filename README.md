@@ -14,8 +14,8 @@ Each release carries `textslinger-runtime-<target>.zip` and a `.sha256` file for
 - `aarch64-apple-darwin`
 - `x86_64-apple-darwin`
 
-See [docs/textslinger-runtime.md](docs/textslinger-runtime.md) for what is inside,
-how to build it, and the temporary upstream patch.
+See [docs/textslinger-runtime.md](docs/textslinger-runtime.md) for what is inside
+and how to build it.
 
 ## Releasing
 

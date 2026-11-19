@@ -1,3 +1,2 @@
-# The TextSlinger patch applies to LF files from the PyPI wheel.
-textslinger/*.patch text eol=lf
+# Licence texts are stored as the upstream LF files.
 textslinger/licenses/** text eol=lf
