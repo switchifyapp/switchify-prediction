@@ -323,7 +323,8 @@ print("smoke test:", words, cased)
 WINDOWS_SYSTEM_DLLS = {
     'advapi32.dll', 'bcrypt.dll', 'cabinet.dll', 'comctl32.dll', 'comdlg32.dll', 'crypt32.dll',
     'dbghelp.dll', 'gdi32.dll', 'imm32.dll', 'iphlpapi.dll', 'kernel32.dll', 'msi.dll',
-    'msvcrt.dll', 'mswsock.dll', 'normaliz.dll', 'ntdll.dll', 'ole32.dll', 'oleaut32.dll', 'psapi.dll',
+    'msvcrt.dll', 'mswsock.dll', 'normaliz.dll', 'ntdll.dll', 'ole32.dll', 'oleaut32.dll', 'propsys.dll',
+    'psapi.dll',
     'rpcrt4.dll', 'secur32.dll', 'setupapi.dll', 'shell32.dll', 'shlwapi.dll', 'sspicli.dll',
     'user32.dll', 'userenv.dll', 'version.dll', 'winhttp.dll', 'winmm.dll', 'wintrust.dll',
     'ws2_32.dll',
