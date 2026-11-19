@@ -1,54 +1,46 @@
 {
   "format_version": 1,
   "python": {
-    "version": "3.10.22",
-    "release": "20261009",
+    "version": "3.12.16",
+    "release": "20261110",
     "targets": {
       "x86_64-pc-windows-msvc": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-x86_64-pc-windows-msvc-install_only.tar.gz",
-        "bytes": 39573204,
-        "sha256": "cb023e83e42d8937ba77c7cf83641083c3b81e88e1226e1c694a347ae1924d54"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only.tar.gz",
+        "bytes": 47438699,
+        "sha256": "e23fe5b16926de1d81661b1a97352e89fb167549c55a6825796ccd0f32ec7f1b"
       },
       "aarch64-apple-darwin": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-aarch64-apple-darwin-install_only.tar.gz",
-        "bytes": 25843371,
-        "sha256": "02d1a66b5fe8676e6df5084f4e0b71779a4e6f1c46f192d3d3a12b7eb3a789ec"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-apple-darwin-install_only.tar.gz",
+        "bytes": 25371130,
+        "sha256": "e956e60bc9465d577ef8062059aa05cd3a2665b4b8678a2ed24e432368330b8f"
       },
       "x86_64-apple-darwin": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.10.22%2B20261009-x86_64-apple-darwin-install_only.tar.gz",
-        "bytes": 25562770,
-        "sha256": "998d4159933724eba107bbb0e01ed920d267d59c815b256fc39ffe8658df1350"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-apple-darwin-install_only.tar.gz",
+        "bytes": 25078514,
+        "sha256": "83f2922437e6d546d0fcdb8c11f150a8e52787e8d9ea8651b1974e20908eb1bc"
       }
     }
   },
   "packages": {
     "textslinger": {
-      "version": "0.4.0",
+      "version": "0.5.0",
       "sha256": {
-        "any": "d33238e58c2f18403f5b777bd4b8f1148638a6e4c4d6a1094f3b487d01f46f22"
+        "any": "a890ccb94c98026794a149aa31c266ba14012f1bbd4910b6039783def86d2679"
       }
     },
     "numpy": {
-      "version": "1.26.4",
+      "version": "2.5.5",
       "sha256": {
-        "x86_64-pc-windows-msvc": "b97fe8060236edf3662adfc2c633f56a08ae30560c56310562cb4f95500022d5",
-        "aarch64-apple-darwin": "2e4ee3380d6de9c9ec04745830fd9e2eccb3e6cf790d39d7b98ffd19b0dd754a",
-        "x86_64-apple-darwin": "9ff0f4f29c51e2803569d7a51c2304de5554655a60c5d776e35b4a41413830d0"
-      }
-    },
-    "regex": {
-      "version": "2026.9.29",
-      "sha256": {
-        "x86_64-pc-windows-msvc": "23ae6fdad9e63e54038f5ef78aba2933faca61e24d432786589e737bc5522ebb",
-        "aarch64-apple-darwin": "1d9fe8091b2e89d470df68a9331111ed008ae8aae6bf1e8e1fba4086a495c84e",
-        "x86_64-apple-darwin": "8873c4a11c50b9989168881aeb3f08859f469d809941866aa1feefd8be5431f6"
+        "x86_64-pc-windows-msvc": "919eb420662b0b4ba34889df503f3d5329775b0c1d5f7e5f5af4fba8315b1e30",
+        "aarch64-apple-darwin": "b96e9ee49ccbdb5676359f852a4497f7a9c5df6c377d8877f5330d6fd3ff42e4",
+        "x86_64-apple-darwin": "7da9a248f149cfbb220c6da964a59c8d051d516704f7758acfb81eb382a05d97"
       }
     }
   },
   "kenlm": {
-    "version": "0.2.0",
-    "url": "https://files.pythonhosted.org/packages/source/k/kenlm/kenlm-0.2.0.tar.gz",
-    "sha256": "c2dc1dc09d3c150e6a1777ef0fd5cac3688e1dc1cc13e41472d0284e5e88ac7f",
+    "version": "0.3.0",
+    "url": "https://files.pythonhosted.org/packages/source/k/kenlm/kenlm-0.3.0.tar.gz",
+    "sha256": "c4628bb9fb63c8a6f9240035b8b037385cfc404cb72e933cf48878291edac1e8",
     "max_order": 12
   },
   "build_tools": [
