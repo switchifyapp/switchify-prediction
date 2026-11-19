@@ -10,7 +10,7 @@ archive by hash at build time. Installed apps never download it.
 
 | Path | Contents |
 |---|---|
-| `python.exe` or `bin/python3.12` | Standalone CPython 3.12.16 from python-build-standalone 20261110, without tests, tkinter, idlelib, ensurepip or turtledemo |
+| `python.exe` or `bin/python3.12` | Standalone CPython 3.12.16 from python-build-standalone 20261110, without tests, tkinter, idlelib, ensurepip, lib2to3 or turtledemo |
 | site-packages | numpy, textslinger and KenLM; no PyTorch |
 | `model/mix_case_c4_0.90_subtitle_0.75_12gram_4e-9.kenlm` | The binary mixed-case 12-gram character model (letters in both cases, apostrophe and space), redistributed with the TextSlinger authors' permission |
 | `manifest.json` | Target, interpreter and model paths, the model's alphabet, component versions |
