@@ -1,23 +1,23 @@
 {
   "format_version": 1,
   "python": {
-    "version": "3.13.18",
+    "version": "3.12.16",
     "release": "20261110",
     "targets": {
       "x86_64-pc-windows-msvc": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-x86_64-pc-windows-msvc-install_only.tar.gz",
-        "bytes": 48466149,
-        "sha256": "7e93813bd362c6413f30788b248590e2f169df2d17dcac81aafbcc7a6eeb542c"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only.tar.gz",
+        "bytes": 47438699,
+        "sha256": "e23fe5b16926de1d81661b1a97352e89fb167549c55a6825796ccd0f32ec7f1b"
       },
       "aarch64-apple-darwin": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-aarch64-apple-darwin-install_only.tar.gz",
-        "bytes": 25598083,
-        "sha256": "1afd3983237c2a10277345f235be730e9cb49a123e0574ed252dbf3a841a24e4"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-apple-darwin-install_only.tar.gz",
+        "bytes": 25371130,
+        "sha256": "e956e60bc9465d577ef8062059aa05cd3a2665b4b8678a2ed24e432368330b8f"
       },
       "x86_64-apple-darwin": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-x86_64-apple-darwin-install_only.tar.gz",
-        "bytes": 25349864,
-        "sha256": "a46bcdeecd28ba253522b321dcb3806da1b0ff581479fc1d27e9613e3ac44764"
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-apple-darwin-install_only.tar.gz",
+        "bytes": 25078514,
+        "sha256": "83f2922437e6d546d0fcdb8c11f150a8e52787e8d9ea8651b1974e20908eb1bc"
       }
     }
   },
@@ -31,9 +31,9 @@
     "numpy": {
       "version": "2.5.5",
       "sha256": {
-        "x86_64-pc-windows-msvc": "e0608d1585557b68dcb6a70a41654f7536567960afad79d91752d2863b242b68",
-        "aarch64-apple-darwin": "7e71ac4284c700afa654e2d15b1b174166710dca932f24045e5dc92001b5bda0",
-        "x86_64-apple-darwin": "228e3d90e967495d61ddc79dd64e95267aae3bcf1b1c516a6186429106a0b444"
+        "x86_64-pc-windows-msvc": "919eb420662b0b4ba34889df503f3d5329775b0c1d5f7e5f5af4fba8315b1e30",
+        "aarch64-apple-darwin": "b96e9ee49ccbdb5676359f852a4497f7a9c5df6c377d8877f5330d6fd3ff42e4",
+        "x86_64-apple-darwin": "7da9a248f149cfbb220c6da964a59c8d051d516704f7758acfb81eb382a05d97"
       }
     }
   },

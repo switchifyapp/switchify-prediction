@@ -87,18 +87,18 @@ class Trim(unittest.TestCase):
 
     def test_macos_keeps_only_the_real_interpreter(self):
         with tempfile.TemporaryDirectory() as root:
-            touch(root, 'bin/python3.13', 'bin/pip3', 'bin/idle3.13', 'lib/libpython3.13.dylib',
+            touch(root, 'bin/python3.12', 'bin/pip3', 'bin/idle3.12', 'lib/libpython3.12.dylib',
                   'lib/libtcl8.6.dylib', 'lib/tcl8.6/init.tcl', 'lib/tcl9.0/init.tcl', 'lib/tk9.0/tk.tcl',
-                  'lib/python3.13/os.py', 'lib/python3.13/lib-dynload/_ctypes_test.so',
-                  'lib/python3.13/config-3.13-darwin/libpython3.13.a', 'lib/python3.13/test/x.py',
-                  'lib/python3.13/lib-dynload/_ctypes.so', 'lib/python3.13/lib-dynload/_tkinter.so',
-                  'lib/python3.13/lib-dynload/_testcapi.so', 'share/man/x', 'include/python3.13/x.h')
+                  'lib/python3.12/os.py', 'lib/python3.12/lib-dynload/_ctypes_test.so',
+                  'lib/python3.12/config-3.12-darwin/libpython3.12.a', 'lib/python3.12/test/x.py',
+                  'lib/python3.12/lib-dynload/_ctypes.so', 'lib/python3.12/lib-dynload/_tkinter.so',
+                  'lib/python3.12/lib-dynload/_testcapi.so', 'share/man/x', 'include/python3.12/x.h')
             if os.name != 'nt':  # Symlinks need privileges on Windows.
-                os.symlink('python3.13', Path(root, 'bin/python3'))
+                os.symlink('python3.12', Path(root, 'bin/python3'))
             pkg.trim(Path(root), 'aarch64-apple-darwin')
             kept = {p.relative_to(root).as_posix() for p in Path(root).rglob('*') if p.is_file()}
-            self.assertEqual(kept, {'bin/python3.13', 'lib/python3.13/os.py',
-                                    'lib/python3.13/lib-dynload/_ctypes.so'})
+            self.assertEqual(kept, {'bin/python3.12', 'lib/python3.12/os.py',
+                                    'lib/python3.12/lib-dynload/_ctypes.so'})
 
 
 class NativeDependencies(unittest.TestCase):
@@ -112,7 +112,7 @@ class NativeDependencies(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             runtime = Path(directory, 'runtime')
             touch(runtime, 'site/numpy/core/_multiarray.so', 'site/numpy/.dylibs/libopenblas.dylib',
-                  'lib/libpython3.13.dylib')
+                  'lib/libpython3.12.dylib')
             touch(directory, 'outside/libz.dylib')
             module = runtime / 'site/numpy/core/_multiarray.so'
             dependencies = [
@@ -120,9 +120,9 @@ class NativeDependencies(unittest.TestCase):
                 '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation',
                 '@loader_path/../.dylibs/libopenblas.dylib',      # resolves inside
                 '@loader_path/../.dylibs/libgfortran.dylib',      # missing
-                '@rpath/libpython3.13.dylib',                     # via the second rpath
+                '@rpath/libpython3.12.dylib',                     # via the second rpath
                 '@rpath/libz.dylib',                              # only outside the runtime
-                '@executable_path/../lib/libpython3.13.dylib',    # resolves from bin/
+                '@executable_path/../lib/libpython3.12.dylib',    # resolves from bin/
                 '/usr/local/opt/xz/lib/liblzma.5.dylib',
             ]
             rpaths = ['/usr/local/lib', '@loader_path/../../../lib', str(Path(directory, 'outside'))]
@@ -310,20 +310,20 @@ class Zip(unittest.TestCase):
     def test_archive_is_deterministic_and_keeps_executables(self):
         with tempfile.TemporaryDirectory() as directory:
             runtime = Path(directory, 'runtime')
-            touch(runtime, 'bin/python3.13', 'lib/python3.13/os.py')
-            os.chmod(runtime / 'bin/python3.13', 0o755)
-            os.chmod(runtime / 'lib/python3.13/os.py', 0o644)
+            touch(runtime, 'bin/python3.12', 'lib/python3.12/os.py')
+            os.chmod(runtime / 'bin/python3.12', 0o755)
+            os.chmod(runtime / 'lib/python3.12/os.py', 0o644)
             first, second = Path(directory, 'a.zip'), Path(directory, 'b.zip')
             pkg.write_zip(runtime, first)
             pkg.write_zip(runtime, second)
             self.assertEqual(first.read_bytes(), second.read_bytes())
             with zipfile.ZipFile(first) as zf:
-                self.assertEqual(zf.namelist(), ['bin/python3.13', 'lib/python3.13/os.py'])
+                self.assertEqual(zf.namelist(), ['bin/python3.12', 'lib/python3.12/os.py'])
                 modes = {i.filename: (i.external_attr >> 16) for i in zf.infolist()}
-            self.assertTrue(stat.S_ISREG(modes['bin/python3.13']))
+            self.assertTrue(stat.S_ISREG(modes['bin/python3.12']))
             if os.name != 'nt':
-                self.assertEqual(modes['bin/python3.13'] & 0o777, 0o755)
-                self.assertEqual(modes['lib/python3.13/os.py'] & 0o777, 0o644)
+                self.assertEqual(modes['bin/python3.12'] & 0o777, 0o755)
+                self.assertEqual(modes['lib/python3.12/os.py'] & 0o777, 0o644)
 
 
 if __name__ == '__main__':

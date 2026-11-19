@@ -26,7 +26,7 @@ PINS = ROOT / 'textslinger/runtime.json'
 PYTHON_LICENSES = ROOT / 'textslinger/licenses/python-build-standalone'
 # The interpreter's major.minor version, which names its macOS paths. A test
 # checks it against the pinned Python.
-PYTHON = '3.13'
+PYTHON = '3.12'
 # The bridge never imports these parts of the standard library.
 TRIM_STDLIB = ['test', 'tkinter', 'idlelib', 'ensurepip', 'lib2to3', 'turtledemo', 'pydoc_data',
                'unittest/test', 'ctypes/test', 'sqlite3/test', 'distutils/tests', 'site-packages']
